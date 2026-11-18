@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=78"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "octo-gens"
+version = "0.2.0"
+description = "Desktop agent trading studio for tokenized stocks and crypto spot markets"
+dependencies = ["pywebview==6.2.1", "mcp==1.30.0"]
+requires-python = ">=3.11"
+readme = "README.md"
+authors = [{name = "Octo Gens contributors"}]
+license = "GPL-3.0-only"
+
+[project.gui-scripts]
+octo-gens = "octogens.desktop:main"
+
+[tool.setuptools]
+packages = ["octogens"]
+
+[tool.setuptools.package-data]
+octogens = ["icon.png", "ui/*.html", "ui/*.css", "ui/*.js"]
+
+[[tool.cxfreeze.executables]]
+script = "launcher.py"
+base = "gui"
+target-name = "OctoGens"
+icon = "assets/octogens"
+shortcut-name = "Octo Gens"
+shortcut-dir = "ProgramMenuFolder"
+
+[[tool.cxfreeze.executables]]
+script = "venue_launcher.py"
+base = "console"
+target-name = "OctoVenue"
+icon = "assets/octogens"
+
+[tool.cxfreeze.build_exe]
+include-files = [["LICENSE", "LICENSE.txt"], ["octogens/ui", "lib/octogens/ui"]]
+packages = ["webview", "mcp", "pydantic", "pydantic_core", "jsonschema_specifications"]
+excludes = ["tkinter", "IPython", "pytest", "PySide6", "PyQt6", "PyQt5", "wx", "gi", "flask"]
+include-msvcr = true
+silent-level = 1
+
+[tool.cxfreeze.bdist_msi]
+product-name = "Octo Gens"
+upgrade-code = "{82ABCAA4-B77B-466D-9BEA-D34C88EAD608}"
+initial-target-dir = '[LocalAppDataFolder]Programs\Octo Gens'
+all-users = false
+launch-on-finish = true
+install-icon = "assets/octogens.ico"
+
+[tool.cxfreeze.bdist_msi.data]
+Directory = [["ProgramMenuFolder", "TARGETDIR", "."], ["LocalAppDataFolder", "TARGETDIR", "."]]
+
+[tool.cxfreeze.bdist_mac]
+bundle-name = "Octo Gens"
+iconfile = "assets/octogens.icns"
+codesign-identity = "-"
+plist-items = [
+    ["CFBundleIdentifier", "org.octogens.desktop"],
+    ["CFBundleDisplayName", "Octo Gens"],
+    ["CFBundleShortVersionString", "0.2.0"],
+    ["CFBundleVersion", "2"],
+    ["LSApplicationCategoryType", "public.app-category.finance"],
+]
+
+[tool.cxfreeze.bdist_dmg]
+volume-label = "Octo Gens"
+applications-shortcut = true

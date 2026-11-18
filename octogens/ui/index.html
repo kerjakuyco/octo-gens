@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-__NONCE__' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Octo Gens · Trading Studio</title>
+  <style>/* STUDIO_STYLE */</style>
+</head>
+<body>
+  <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-mark" viewBox="0 0 32 32"><path d="M10 3h12l7 7v12l-7 7H10l-7-7V10z M8 20l6-7 4 4 6-7"/></symbol>
+    <symbol id="i-desk" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="10" rx="2"/><rect x="14" y="3" width="7" height="6" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="8" height="5" rx="2"/></symbol>
+    <symbol id="i-runs" viewBox="0 0 24 24"><path d="M2 13h5l3-8 4 15 3-9 2 2h3"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M4 7l13-4v4M4 7h16v13H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zM20 12h-6v4h6"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="m14 6 4 4m-7-1 4 4m-7-1 4 4m3-12-4 4 5 5 4-4M5 13l-2 2 5 5 2-2M6 18l-3 3"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.1 6.9L21 12l-6.9 2.1L12 21l-2.1-6.9L3 12l6.9-2.1z"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M3 8h17m-5-5 5 5-5 5M21 16H4m5 5-5-5 5-5"/></symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 3v3m6-3v3m3 3h3m-3 6h3m-6 3v3m-6-3v3m-6-6h3M3 9h3"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M3 7h9m4 0h5M3 17h3m4 0h11"/><circle cx="14" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19 8a8 8 0 1 0 1 8m0-13v6h-6"/></symbol>
+    <symbol id="i-cross" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-layer" viewBox="0 0 24 24"><path d="m12 3 10 5-10 5L2 8zm-9 10 9 5 9-5m-18 5 9 5 9-5"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h1m-1 6h1m-1 6h1"/></symbol>
+  </svg>
+  <div class="shell">
+    <aside class="rail">
+      <div class="brand"><svg class="brandmark"><use href="#i-mark"/></svg><div>Octo Gens<small>TRADING STUDIO</small></div></div>
+      <div class="rail-label">WORKSPACE</div>
+      <nav aria-label="Workspace">
+        <button data-page="desk" class="nav active" title="Market desk"><svg><use href="#i-desk"/></svg><span>Market desk</span></button>
+        <button data-page="runs" class="nav" title="Agent runs"><svg><use href="#i-runs"/></svg><span>Agent runs</span></button>
+        <button data-page="portfolio" class="nav" title="Portfolio"><svg><use href="#i-wallet"/></svg><span>Portfolio</span></button>
+        <button data-page="links" class="nav" title="Connections"><svg><use href="#i-plug"/></svg><span>Connections</span><b id="link-count">0</b></button>
+      </nav>
+      <div class="rail-foot"><button class="nav" data-act="settings" title="Model settings"><svg><use href="#i-sliders"/></svg><span>Model settings</span></button>
+      <div class="engine"><i class="dot green"></i><span>Local engine<small>DESKTOP RUNTIME</small></span></div></div>
+    </aside>
+    <main>
+      <header class="top"><div class="crumb">Studio <span>/</span> <strong id="crumb">Market desk</strong></div>
+        <div class="top-actions"><button class="command" data-act="focus" title="Focus agent prompt">Ask agent <kbd id="hotkey">Ctrl K</kbd></button>
+        <label class="source"><i class="dot"></i><select id="source" aria-label="Active price source"><option>Sample tape</option></select></label></div>
+      </header>
+      <div id="workline" role="status" aria-live="polite" hidden></div>
+      <article id="view"><div class="boot"><svg><use href="#i-mark"/></svg><p>Opening your trading desk…</p></div></article>
+    </main>
+  </div>
+  <dialog id="modal" aria-labelledby="dialog-title"><div id="dialog-body"></div></dialog>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <script nonce="__NONCE__">/* STUDIO_SCRIPT */</script>
+</body></html>
