@@ -1,0 +1,57 @@
+name: Bug report
+description: Something does not work the way it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Never paste API keys, secrets or account numbers.** Redact them from anything you share.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Switch the feed to OKX
+        2. Type "buy 0.01 BTC"
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Octo Gens version
+      description: Shown in Settings under About.
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: Operating system
+      options: [Windows, macOS, Linux]
+    validations:
+      required: true
+  - type: dropdown
+    id: feed
+    attributes:
+      label: Price feed
+      options: [Sample tape, Binance, Bybit, OKX, Not relevant]
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      description: For assistant problems. For example "Built-in agents" or the OpenRouter model id.
+  - type: textarea
+    id: details
+    attributes:
+      label: Error text or run trace
+      description: The message the app showed, or the steps from the run in Activity. Remove anything private.
+      render: text
