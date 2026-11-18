@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  core:
+    name: Core (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      # The stdio MCP transport is tested against a real child process started with Node.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Installs the toolchain named in rust-toolchain.toml.
+      - run: rustup show
+      - name: Format
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo fmt --all --check
+      - name: Lint
+        run: cargo clippy -p octogens-core --all-targets -- -D warnings
+      - name: Test
+        run: cargo test -p octogens-core
+
+  interface:
+    name: Interface
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # pnpm comes from the `packageManager` field in package.json.
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+
+  app:
+    name: App (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libxdo-dev libssl-dev xvfb
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: rustup show
+      # A debug build with the interface bundled in, as the smoke test needs.
+      - run: pnpm tauri build --debug --no-bundle
+      - name: Lint the shell
+        run: cargo clippy -p octogens-desktop --all-targets -- -D warnings
+      # Types an order into the real window, confirms the ticket and checks the fill.
+      - name: Smoke test
+        if: runner.os != 'Linux'
+        run: pnpm smoke
+      - name: Smoke test (virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a pnpm smoke
