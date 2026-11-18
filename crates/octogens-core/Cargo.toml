@@ -1,0 +1,40 @@
+[package]
+name = "octogens-core"
+description = "Trading core of Octo Gens: exchanges, paper ledger, indicators and the assistant loop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+base64 = "0.23"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+futures-util = "0.3"
+hex = "0.4"
+hmac = "0.13"
+reqwest = { version = "0.13", features = ["json", "stream", "gzip"] }
+rmcp = { version = "3", default-features = false, features = [
+    "client",
+    "transport-child-process",
+    "transport-streamable-http-client-reqwest",
+    "reqwest",
+] }
+rusqlite = { version = "0.43", features = ["bundled"] }
+rust_decimal = "1"
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "0.11"
+thiserror = "2"
+tokio.workspace = true
+tokio-util.workspace = true
+url = "2"
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tempfile = "3"
+wiremock = "0.6"

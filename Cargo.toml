@@ -1,0 +1,34 @@
+[workspace]
+resolver = "3"
+members = ["crates/octogens-core", "src-tauri"]
+
+[workspace.package]
+version = "0.3.0"
+edition = "2024"
+license = "GPL-3.0-only"
+repository = "https://github.com/kerjakuyco/octo-gens"
+homepage = "https://github.com/kerjakuyco/octo-gens"
+authors = ["Octo Gens contributors"]
+rust-version = "1.90"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "process", "io-util"] }
+tokio-util = "0.7"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "warn"
+
+# Size-focused release build: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

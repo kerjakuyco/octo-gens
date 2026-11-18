@@ -1,0 +1,488 @@
+/* Portfolio, Connections, Activity and Settings. */
+
+/* ------------------------------------------------------------- portfolio */
+
+/* Headline figures sit on one line, divided by rules rather than boxed into cards. */
+.headline-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 0;
+  margin-top: 26px;
+}
+
+.headline-figure {
+  padding: 0 28px;
+  border-left: 1px solid var(--line);
+}
+
+.headline-figure:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.headline-figure dt {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.headline-figure dd {
+  margin-top: 2px;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+}
+
+.headline-figure dd small {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.side-buy {
+  color: var(--ring);
+  font-weight: 600;
+}
+
+.side-sell {
+  color: var(--down);
+  font-weight: 600;
+}
+
+.balance-block + .balance-block {
+  margin-top: 22px;
+}
+
+.balance-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.balance-head h3 {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+/* ----------------------------------------------------------- connections */
+
+.venue {
+  margin-top: 40px;
+}
+
+.venue-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.venue-name {
+  font-size: var(--text-lg);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.venue-row {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 6px 20px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.venue-row:last-child {
+  border-bottom: 0;
+}
+
+.venue-row-title {
+  font-weight: 600;
+}
+
+.venue-row-text {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.venue-row-text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.venue-row .actions {
+  justify-content: flex-end;
+}
+
+.tool-list {
+  display: grid;
+  gap: 2px;
+  max-height: 208px;
+  margin: 0 -8px;
+  overflow-y: auto;
+}
+
+.tool-option {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 6px;
+}
+
+.tool-option:hover {
+  background: var(--raised);
+}
+
+.tool-option[aria-checked="true"] {
+  background: var(--raised);
+  box-shadow: inset 2px 0 0 var(--ring);
+}
+
+.tool-option-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.tool-option-text {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-block {
+  max-height: 200px;
+  margin: 0;
+  padding: 10px 12px;
+  overflow: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: var(--field);
+  font-family: var(--mono);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+details.reveal summary {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 550;
+  cursor: pointer;
+}
+
+details.reveal summary:hover {
+  color: var(--text);
+}
+
+details.reveal[open] summary {
+  margin-bottom: 8px;
+}
+
+/* -------------------------------------------------------------- activity */
+
+.pattern-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.pattern-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 14px;
+  color: var(--muted);
+}
+
+.journal-row {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.journal-row:last-child {
+  border-bottom: 0;
+}
+
+.journal-summary {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 10px;
+  width: 100%;
+  padding: 11px 0;
+}
+
+.journal-summary:hover .journal-title {
+  color: var(--ring);
+}
+
+.journal-summary > svg {
+  color: var(--muted);
+  transition: transform 0.12s;
+}
+
+.journal-summary[aria-expanded="true"] > svg {
+  transform: rotate(90deg);
+}
+
+.journal-title,
+.journal-meta {
+  display: block;
+}
+
+.journal-title {
+  overflow: hidden;
+  font-weight: 550;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journal-meta {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journal-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.journal-detail {
+  padding: 0 0 16px 24px;
+}
+
+.status-complete {
+  color: var(--up);
+}
+
+.status-failed {
+  color: var(--down);
+}
+
+.status-stopped,
+.status-running {
+  color: var(--muted);
+}
+
+/* -------------------------------------------------------------- settings */
+
+.settings-row {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 8px 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.settings-row:last-child {
+  border-bottom: 0;
+}
+
+.settings-label {
+  font-weight: 600;
+}
+
+.settings-label small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.settings-control {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.settings-control > .input,
+.settings-control > .model-browser,
+.settings-control > .field {
+  justify-self: stretch;
+}
+
+.switch-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.switch-text {
+  line-height: 1.5;
+}
+
+.switch-text small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.key-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  justify-self: stretch;
+}
+
+.key-row .input {
+  flex: 1 1 240px;
+}
+
+.model-browser {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.model-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.model-tools .input {
+  flex: 1 1 180px;
+}
+
+.model-tools .check {
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.model-tools select.input {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.model-list {
+  max-height: 318px;
+  overflow-y: auto;
+}
+
+.model-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 16px;
+  width: 100%;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.model-option:last-child {
+  border-bottom: 0;
+}
+
+.model-option:hover {
+  background: var(--raised);
+}
+
+.model-option[aria-checked="true"] {
+  background: var(--raised);
+  box-shadow: inset 2px 0 0 var(--ring);
+}
+
+.model-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-weight: 600;
+}
+
+.model-id {
+  overflow: hidden;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-figures {
+  grid-row: span 2;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.model-figures b {
+  color: var(--text);
+  font-weight: 550;
+}
+
+.model-state {
+  padding: 18px 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.model-footer {
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.save-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .venue-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .venue-row-title {
+    grid-column: 1 / -1;
+  }
+
+  .settings-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pattern-form {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .pattern-form .actions {
+    grid-column: 1 / -1;
+  }
+}
