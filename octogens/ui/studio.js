@@ -99,7 +99,7 @@
   }
   function composer(){
     return `<section class="composer"><div class="between"><div class="row"><span class="glyph">${icon("spark")}</span><h2>Ask the desk</h2></div>
-      <span class="micro">${esc(state.model||"BUILT-IN AGENTS")}</span></div>
+      <span class="micro">${esc(state.modelLabel||"BUILT-IN AGENTS")}</span></div>
       <form id="askform" class="composebox"><input id="prompt" aria-label="Agent prompt" maxlength="2500" autocomplete="off" placeholder="Research a token, compare assets, or draft a trade…" value="${esc(promptValue)}"><button class="btn send" aria-label="Run agent" title="Run agent">${icon("send")}</button></form>
       <div class="chips">${["Compare TSLAx and NVDAx","Review my portfolio","Buy 0.5 TSLAx"].map(p=>`<button class="chip" data-prompt="${esc(p)}">${esc(p)}</button>`).join("")}</div></section>`;
   }
@@ -119,7 +119,7 @@
     `<div class="section-grid"><section class="panel"><div class="between"><h2>Pattern agent</h2>${badge(state.watch?"Watching":"On demand",!!state.watch)}</div><p class="desc">Compares three daily returns with five earlier patterns. Four agreeing matches and a matching mean direction trigger a paper trade.</p>
     <form id="strategyform"><div class="formrow">${field("Instrument",`<select id="strategyPair">${pairOptions(strategyPair)}</select>`)}${field("Maximum trade · USDT",`<input id="cap" value="${esc(strategyCap)}" inputmode="decimal" required>`)}</div>
     <div class="actions"><button class="btn" type="submit">${icon("runs")} Run once</button><button type="button" class="ghost" data-act="${state.watch?"stop":"watch"}">${state.watch?"Stop watch":"Watch every 15 min"}</button></div></form></section>
-    <section class="panel"><div class="micro">RUNTIME</div><h2 class="space">${esc(state.model||"Built-in agent engine")}</h2><p class="desc">Research reads the active spot feed. The portfolio agent reads its paper ledger. Every run records the tools used and elapsed time.</p>
+    <section class="panel"><div class="micro">RUNTIME</div><h2 class="space">${esc(state.modelLabel||"Built-in agent engine")}</h2><p class="desc">Research reads the active spot feed. The portfolio agent reads its paper ledger. A connected model explains the readings and cannot submit an order.</p>
     <div class="space">${badge(state.watch?`Watching ${state.watch.pair} · ${state.watch.budget} USDT`:"No active watch",!!state.watch)}</div></section></div>
     ${composer()}<div class="section-head between"><h2>Run journal</h2><span class="micro">LATEST ${state.runs.length}</span></div><div class="panel">${runList(state.runs,true)}</div>`;
   }
@@ -203,9 +203,38 @@
     const args={};for(const k of t.schema.required||[])args[k]=({pair:state.focus,category:"spot",symbol:state.focus.replace("/","")})[k]??"";
     $("#toolargs").value=JSON.stringify(args,null,2);$("#toolout").hidden=true;
   }
+  let modelHits=[];
   function settings(){
-    dialog("model","Local model","Built-in agents run on-device. Add an installed Ollama model for natural-language research explanations.",
-      `<form id="modelform">${field("Ollama model tag",`<input name="model" value="${esc(state.model)}" placeholder="qwen3:4b">`)}<p class="help">Local endpoint: 127.0.0.1:11434. Leave blank to use the built-in engine.</p>${submit("Save settings")}</form>`);
+    dialog("model","Model","Built-in agents run on this computer. Ollama stays local. OpenRouter uses the model you pick and cannot place an order.",
+      `<form id="modelform">${field("Provider",`<select name="provider" id="provider">${options([["builtin","Built-in agents"],["openrouter","OpenRouter"],["ollama","Ollama · local"]],state.provider||"builtin")}</select>`)}
+      <div id="providerfields"></div>${submit("Save model")}</form>`);
+    providerFields(state.provider||"builtin");
+  }
+  function providerFields(provider){
+    const box=$("#providerfields"); if(!box)return;
+    if(provider==="openrouter"){
+      box.innerHTML=`${field("OpenRouter key",`<input name="key" id="orkey" type="password" autocomplete="off" placeholder="${state.openrouter?"Saved on this computer — paste to replace":"sk-or-…"}">`)}
+      <div class="actions"><button type="button" class="ghost" data-act="load-models">${icon("refresh")} Load models</button></div>
+      ${field("Search models",`<input id="modelsearch" placeholder="claude, gemini, free…" autocomplete="off">`)}
+      <div class="model-list" id="modellist"></div><input type="hidden" name="model" id="chosenmodel" value="${esc(state.provider==="openrouter"?state.model:"")}">
+      <p class="help">The key is stored in your Octo Gens data folder and is not written into run traces. Leave it blank to keep the saved key.</p>`;
+      if(state.openrouter)loadModels("");
+    } else if(provider==="ollama"){
+      box.innerHTML=field("Ollama model tag",`<input name="model" value="${esc(state.provider==="ollama"?state.model:"")}" placeholder="qwen3:4b" required>`)+`<p class="help">Local endpoint: 127.0.0.1:11434. Use the name from ollama list.</p>`;
+    } else box.innerHTML=`<p class="help">Research, portfolio, tickets, and the paper pattern agent run without a language model.</p><input type="hidden" name="model" value="">`;
+  }
+  function renderModels(query=""){
+    const list=$("#modellist"), chosen=$("#chosenmodel"); if(!list||!chosen)return;
+    const q=query.trim().toLowerCase();
+    const shown=modelHits.filter(m=>!q||`${m.name} ${m.id}`.toLowerCase().includes(q)).slice(0,80);
+    list.innerHTML=shown.length?shown.map(m=>`<button type="button" class="model-pick ${m.id===chosen.value?"sel":""}" data-model="${esc(m.id)}"><strong>${esc(m.name)}</strong><small>${esc(m.id)} · ${m.context?Math.round(m.context/1000)+"k":"—"} · $${esc(m.price||"?")}/1M</small></button>`).join(""):`<p class="empty">${modelHits.length?"No models match that search.":"Load models to browse OpenRouter."}</p>`;
+  }
+  async function loadModels(key){
+    const response=await call("models",{key},"Loading OpenRouter models");
+    if(!response)return;
+    modelHits=response.result.models;
+    renderModels($("#modelsearch")?.value||"");
+    message(`${modelHits.length} OpenRouter models`);
   }
   function focus(){if(!["desk","runs"].includes(page))navigate("desk");$("#prompt")?.focus();}
   document.addEventListener("click",async e=>{
@@ -221,6 +250,8 @@
     if(el.dataset.feed){await call("source",{source:el.dataset.feed},"Switching venue");return;}
     if(el.dataset.tools){await inspect(el.dataset.tools);return;}
     if(a==="settings")settings();
+    if(a==="load-models")await loadModels($("#orkey")?.value||"");
+    if(el.dataset.model){const chosen=$("#chosenmodel"); if(chosen){chosen.value=el.dataset.model; renderModels($("#modelsearch")?.value||"");}}
     if(a==="ticket")showTicket();
     if(a==="refresh")await call("select",{pair:state.focus},"Refreshing quote");
     if(a==="stop")await call("stop",{},"Stopping watch");
@@ -232,10 +263,11 @@
       if(busy){render();return;} const v=e.target.value;if(v==="add")navigate("links");else await call("source",{source:v},"Switching venue");
     }
     if(e.target.id==="transport")transportFields($("#connectform").dataset.venue,e.target.value);
+    if(e.target.id==="provider")providerFields(e.target.value);
     if(e.target.id==="toolname")toolFields();
     if(e.target.id==="strategyPair")strategyPair=e.target.value;
   });
-  document.addEventListener("input",e=>{if(e.target.id==="prompt")promptValue=e.target.value;if(e.target.id==="cap")strategyCap=e.target.value;});
+  document.addEventListener("input",e=>{if(e.target.id==="prompt")promptValue=e.target.value;if(e.target.id==="cap")strategyCap=e.target.value;if(e.target.id==="modelsearch")renderModels(e.target.value);});
   document.addEventListener("submit",async e=>{
     e.preventDefault();if(busy)return;
     const f=e.target,p=Object.fromEntries(new FormData(f));

@@ -18,7 +18,14 @@ class _NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def request_json(url, *, body=None, headers=None, timeout=12, method=None, wire=None):
+def _detail(data, fallback):
+    error = data.get("error") if isinstance(data, dict) else None
+    if isinstance(error, dict):
+        error = error.get("message") or error.get("code")
+    return str(data.get("message") or data.get("msg") or data.get("retMsg") or error or fallback)[:240]
+
+
+def request_json(url, *, body=None, headers=None, timeout=12, method=None, wire=None, limit=2_000_000):
     host = urlsplit(url).hostname
     req = Request(
         url, data=wire if wire is not None else (json.dumps(body).encode() if body is not None else None),
@@ -32,16 +39,15 @@ def request_json(url, *, body=None, headers=None, timeout=12, method=None, wire=
         handlers.append(HTTPSHandler(context=ssl.create_default_context(cafile="/etc/ssl/cert.pem")))
     try:
         with build_opener(*handlers).open(req, timeout=timeout) as response:
-            raw = response.read(2_000_001)
-        if len(raw) > 2_000_000:
+            raw = response.read(limit + 1)
+        if len(raw) > limit:
             raise DeskError(f"{host} returned an unexpectedly large response.")
         return json.loads(raw)
     except HTTPError as exc:
         with exc:
             try:
                 data = json.loads(exc.read(8192))
-                detail = str(data.get("message") or data.get("msg") or data.get("retMsg")
-                             or data.get("error") or exc.reason)[:240]
+                detail = _detail(data, exc.reason)
             except (ValueError, AttributeError):
                 detail = str(exc.reason)
         raise DeskError(f"{host} ({exc.code}): {detail}") from None

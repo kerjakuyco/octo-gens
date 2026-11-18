@@ -6,7 +6,7 @@ The installed app includes its own runtime and opens from Start or Applications.
 
 ## Install
 
-- **Windows:** run `dist/Octo Gens-0.2.0-win64.msi`, then open **Octo Gens** from Start.
+- **Windows:** run `dist/Octo Gens-0.2.1-win64.msi`, then open **Octo Gens** from Start.
 - **macOS:** build `Octo Gens.dmg` on a Mac and drag the app to Applications. See [Build the installers](#build-the-installers).
 
 On first launch the desk opens on **TSLAx/USDT** with **100,000 USDT** in a local paper account. No exchange key or model download is required.
@@ -46,7 +46,11 @@ Paper prices come from the built-in spot adapter, which normalizes the venue res
 - **Order** turns `Buy 0.5 TSLAx` into a ticket. It does not submit the order.
 - **Pattern** buys, sells, or holds in the paper account. **Watch every 15 min** runs only while the app is open and stops when you switch feeds or close the window.
 
-An optional local Ollama model can explain research. Open **Model settings** and enter a model from `ollama list`, for example `qwen3:4b`. The model receives desk readings and returns text; it cannot submit an order. Leave the field blank to use only the built-in agents.
+Open **Model settings** to explain research with a language model. The model receives desk readings and returns text; it cannot submit an order.
+
+- **Built-in agents** need no model.
+- **OpenRouter:** paste a key from [openrouter.ai/keys](https://openrouter.ai/keys), load the catalog, and pick any chat model. The key stays in your Octo Gens data folder and is not copied into run traces. Leave the key blank later to keep the saved one.
+- **Ollama:** enter a local model from `ollama list`, for example `qwen3:4b`.
 
 ## Run from source
 

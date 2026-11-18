@@ -5,7 +5,7 @@ import re
 from statistics import mean
 
 from .domain import ALIASES, SAMPLES, Account, DeskError, Quote, Ticket, decimal_text, price_text, symbol, usd
-from .network import request_json
+from .providers import ollama_explain
 
 
 HELP = ("Ask “Analyze AAPL”, “Compare BTC and ETH”, or “Review my portfolio”. "
@@ -85,31 +85,6 @@ def mentioned_symbols(prompt):
     if len(found) > 4:
         raise DeskError("Compare up to four instruments per question.")
     return found
-
-
-def ollama_explain(model, prompt, facts, history, fetch=request_json):
-    local = "http://127.0.0.1:11434/api"
-    info = fetch(local + "/show", body={"model": model})
-    if not isinstance(info, dict):
-        raise DeskError("Ollama returned invalid model details.")
-    if info.get("remote_model") or info.get("remote_host") or re.search(r"[:-]cloud(?:$|:)", model, re.I):
-        raise DeskError("Choose a locally installed Ollama model.")
-    if not isinstance(info.get("model_info"), dict):
-        raise DeskError("Ollama did not report an installed model.")
-    messages = [{"role": "system", "content":
-                 "You explain research inside a desktop trading assistant. Use the supplied desk facts "
-                 "for prices, holdings, dates and calculations. Distinguish sample from market data. "
-                 "Explain uncertainty and do not claim to place orders. Be concise."}]
-    messages.extend({"role": role, "content": text[:2400]} for role, text in history[-6:]
-                    if role in ("user", "assistant"))
-    messages.append({"role": "user", "content": f"Current desk facts:\n{facts}\n\nQuestion: {prompt}"})
-    result = fetch(local + "/chat", body={"model": model, "messages": messages, "stream": False,
-                                          "options": {"num_predict": 480}}, timeout=90)
-    message = result.get("message") if isinstance(result, dict) else None
-    answer = message.get("content") if isinstance(message, dict) else None
-    if not isinstance(answer, str) or not answer.strip():
-        raise DeskError("The local model returned an empty reply.")
-    return answer.strip()
 
 
 @dataclass(frozen=True)

@@ -13,13 +13,14 @@ from threading import RLock, Timer
 from time import perf_counter
 from uuid import uuid4
 
-from .agents import ollama_explain, pattern_outcomes, pct
+from .agents import pattern_outcomes, pct
 from .domain import DeskError, Quote, Ticket, Workspace, decimal_text
 from .instruments import DEFAULT_PAIR, UNIVERSE, VENUES, in_prompt, instrument
 from .market import sample_quote
 from .mcp_link import Harness, Link
 from .mcp_presets import PACKAGES, node_runtime, official_stdio
 from .paper import PaperBook
+from .providers import MODEL_ID, ollama_explain, openrouter_explain, openrouter_key, openrouter_models
 from .strategy import run_pattern, trade_budget
 
 
@@ -82,10 +83,16 @@ class Studio:
         directory.mkdir(parents=True, exist_ok=True)
         self.directory, self.connect, self.lock = directory, connect, RLock()
         self.prefs = directory / "preferences.json"
+        self.provider, self.model, self.openrouter_key = "builtin", "", ""
         try:
-            self.model = str(json.loads(self.prefs.read_text(encoding="utf8"))["model"])
-        except (OSError, KeyError, TypeError, ValueError):
-            self.model = ""
+            saved = json.loads(self.prefs.read_text(encoding="utf8"))
+            self.provider = saved.get("provider") or ("ollama" if saved.get("model") else "builtin")
+            self.model = str(saved.get("model") or "")
+            self.openrouter_key = str(saved.get("openrouter_key") or "")
+        except (OSError, TypeError, ValueError):
+            pass
+        if self.provider not in ("builtin", "ollama", "openrouter"):
+            self.provider, self.model = "builtin", ""
         self.links, self.draft, self.timer, self.watch = {}, None, None, None
         self.active, self.focus, self.feed_error = None, DEFAULT_PAIR, ""
         self.desk = SpotDesk(directory, "sample", None)
@@ -95,6 +102,18 @@ class Studio:
             self.runs = deque((json.loads(r[0]) for r in db.execute(
                 "SELECT entry FROM runs ORDER BY seq DESC LIMIT 40")), maxlen=40)
 
+    def model_label(self):
+        if self.provider == "openrouter" and self.model:
+            return "OpenRouter · " + self.model
+        if self.provider == "ollama" and self.model:
+            return "Ollama · " + self.model
+        return "Built-in agents"
+
+    def _save_prefs(self):
+        self.prefs.write_text(json.dumps({
+            "provider": self.provider, "model": self.model, "openrouter_key": self.openrouter_key,
+        }), encoding="utf8")
+
     def bootstrap(self):
         if self.desk.source == "sample" and not self.desk.quotes:
             for pair in UNIVERSE:
@@ -103,7 +122,9 @@ class Studio:
     def state(self):
         return {"assets": [i.view() for i in UNIVERSE.values()], "source": self.desk.source, "focus": self.focus,
                 "quotes": {k: render_quote(v) for k, v in self.desk.quotes.items()}, "feedError": self.feed_error,
-                "account": render_account(self.desk.account()), "model": self.model, "watch": self.watch,
+                "account": render_account(self.desk.account()), "model": self.model,
+                "provider": self.provider, "modelLabel": self.model_label(),
+                "openrouter": bool(self.openrouter_key), "watch": self.watch,
                 "runs": list(self.runs), "links": {k: self._link_view(k) for k in VENUES},
                 "runtime": {"node": node_runtime() is not None}, "packages": PACKAGES}
 
@@ -194,15 +215,19 @@ class Studio:
                 reports.append("Five-session ranking: " + "  /  ".join(f"{s} {r:+.2f}%" for r, s in sorted(momentum, reverse=True)))
             return "\n\n".join(reports)
         output = step("research.patterns", f"{len(quotes)} spot instrument(s)", analyze)
-        if self.model:
+        if self.provider in ("ollama", "openrouter") and self.model:
             try:
-                explanation = step("ollama.chat", self.model, lambda: ollama_explain(
-                    self.model, question, output, ()))
+                explanation = step(self.provider + ".chat", self.model, lambda: self._explain(question, output))
                 output = explanation + "\n\n" + output
             except DeskError as exc:
-                output += f"\n\nLocal model unavailable: {exc}"
+                output += f"\n\nModel unavailable: {exc}"
         self.focus, self.feed_error = quotes[0].symbol, ""
         return output, None
+
+    def _explain(self, question, facts):
+        if self.provider == "openrouter":
+            return openrouter_explain(self.openrouter_key, self.model, question, facts, ())
+        return ollama_explain(self.model, question, facts, ())
 
     def _prepare(self, raw, side, qty, destination, step):
         i = instrument(raw)
@@ -365,12 +390,24 @@ class Studio:
             return {"tools": list(link.tools.values())}
         elif op == "tool":
             return self.tool(p["venue"], p["name"], p["args"])
+        elif op == "models":
+            key = p.get("key") or self.openrouter_key
+            return {"models": openrouter_models(key)}
         elif op == "model":
-            name = p["model"].strip()
-            if name and not re.fullmatch(r"[\w.][\w./:-]{0,159}", name):
-                raise DeskError("Enter a locally installed Ollama model tag.")
-            self.prefs.write_text(json.dumps({"model": name}), encoding="utf8")
-            self.model = name
+            provider = p.get("provider") or "builtin"
+            if provider not in ("builtin", "ollama", "openrouter"):
+                raise DeskError("Choose built-in agents, Ollama, or OpenRouter.")
+            name = str(p.get("model") or "").strip()
+            if provider == "builtin":
+                name = ""
+            elif not MODEL_ID.fullmatch(name):
+                raise DeskError("Choose a model before saving.")
+            key = self.openrouter_key
+            if provider == "openrouter":
+                supplied = str(p.get("key") or "").strip()
+                key = openrouter_key(supplied or key)
+            self.provider, self.model, self.openrouter_key = provider, name, key
+            self._save_prefs()
         elif op != "state":
             raise DeskError("Unknown studio action.")
 
