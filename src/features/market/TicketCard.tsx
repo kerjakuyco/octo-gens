@@ -1,114 +1,115 @@
-import { useState } from "react";
-import type { TicketView, VenueId } from "../../api/types";
+import { type ReactNode, useState } from "react";
+import type { TicketView } from "../../api/types";
 import { Icon } from "../../components/Icon";
-import { baseOf, money, price, units } from "../../lib/format";
-import { feedName, ticketNumber, ticketStatus } from "../../lib/ticket";
-import { dismissTicket, submitTicket, useApp, useSnapshot } from "../../state/app";
+import { leverage, money, price, units } from "../../lib/format";
+import { instrumentFor } from "../../lib/market";
+import { confirmLabel, ticketAction, ticketStatus } from "../../lib/ticket";
+import { dismissTicket, focusMarket, submitTicket, useApp, useSnapshot } from "../../state/app";
+
+function Line({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="fact">
+      <dt>{label}</dt>
+      <dd className="num">{children}</dd>
+    </div>
+  );
+}
 
 /**
- * An order ticket: a paper slip the user confirms or dismisses. Nothing is
- * sent to a paper account or an exchange until the confirm button is pressed.
+ * An order waiting for the trader. Nothing is sent to the exchange until the confirm
+ * button is pressed, and a mainnet order also needs the box ticked.
  */
 export function TicketCard({ ticket }: { ticket: TicketView }) {
   const snapshot = useSnapshot();
-  const working = useApp((state) => state.working);
+  const working = useApp((state) => Boolean(state.working));
   const status = ticketStatus(ticket, snapshot);
-  const live = ticket.destination === "exchange";
-  const venue = live ? feedName(ticket.feed as VenueId) : "";
-  const base = baseOf(ticket.pair);
+  const real = ticket.network === "mainnet";
+  const instrument = instrumentFor(snapshot, ticket.symbol);
+  const quote = instrument.quote || "USDT";
+  const action = ticketAction(ticket);
   const [acknowledged, setAcknowledged] = useState(false);
-  // Stamp with a thump only when this card watched the ticket go from pending to done.
-  const [mountedPending] = useState(status.state === "pending");
 
   return (
-    <section
-      className="ticket"
-      data-side={ticket.side}
-      data-state={status.state}
-      data-live={live}
-      aria-label={`${live ? "Live" : "Paper"} ticket to ${ticket.side} ${units(ticket.qty)} ${base}`}
-    >
-      <div className="ticket-stub">
-        <div className="ticket-side">{ticket.side === "buy" ? "Buy" : "Sell"}</div>
-        <div className="ticket-number">
-          Ticket <b>{ticketNumber(ticket.id)}</b>
-        </div>
-      </div>
+    <section className="card ticket" data-state={status.state} aria-label={`${action} ${instrument.base} ticket`}>
+      <header className="card-head">
+        <span className="ticket-title">
+          <span className="chip" data-tone={ticket.side === "buy" ? "up" : "down"}>
+            {action}
+          </span>
+          <button type="button" className="symbol" onClick={() => void focusMarket(ticket.symbol)}>
+            <span className="symbol-name">
+              {instrument.base} / {quote}
+            </span>
+          </button>
+        </span>
+        <span className="chip" data-tone={real ? "warn" : undefined}>
+          {real ? "Mainnet · Real funds" : "Testnet"}
+        </span>
+      </header>
 
-      <div className="ticket-body">
-        {live ? (
-          <div className="ticket-live-band">
-            <Icon name="alert" size={16} />
-            Live order. Real funds on {venue}.
-          </div>
-        ) : null}
-        <div className="ticket-kind">{live ? `Market order on ${venue}` : "Paper trade, market order"}</div>
-        <div className="ticket-amount">
-          {units(ticket.qty)} {base}
-        </div>
+      <p className="ticket-effect">{ticket.effect}</p>
 
-        <dl className="ticket-lines">
-          <dt>Pair</dt>
-          <dd>{ticket.pair}</dd>
-          <dt>Reference price</dt>
-          <dd>{price(ticket.price)} USDT</dd>
-          <dt>Estimated value</dt>
-          <dd>{money(ticket.value)} USDT</dd>
-          <dt>Priced from</dt>
-          <dd>{ticket.feed === "sample" ? "Sample tape, fictional prices" : `${feedName(ticket.feed)} spot`}</dd>
-          <dt>Goes to</dt>
-          <dd>{live ? `Your ${venue} account` : "Paper account"}</dd>
-        </dl>
-
-        {ticket.rationale ? <p className="ticket-rationale">{ticket.rationale}</p> : null}
-
-        {status.state === "pending" ? (
+      <dl className="facts facts-two">
+        <Line label="Quantity">
+          {units(ticket.qty)} {instrument.base}
+        </Line>
+        <Line label="Value">
+          {money(ticket.notional)} {quote}
+        </Line>
+        {ticket.reduceOnly ? null : (
           <>
-            {live ? (
-              <label className="ticket-confirm">
-                <input
-                  type="checkbox"
-                  checked={acknowledged}
-                  onChange={(event) => setAcknowledged(event.target.checked)}
-                />
-                <span>
-                  I understand this sends a real market order on {venue} and cannot be undone.
-                </span>
-              </label>
-            ) : null}
-            <div className="ticket-actions">
-              <button
-                type="button"
-                className="btn btn-ink"
-                disabled={Boolean(working) || (live && !acknowledged)}
-                onClick={() => void submitTicket(ticket.id)}
-              >
-                {live ? "Send live order" : "Place paper order"}
-              </button>
-              <button
-                type="button"
-                className="btn btn-paper"
-                disabled={Boolean(working)}
-                onClick={() => void dismissTicket()}
-              >
-                Dismiss
-              </button>
-            </div>
+            <Line label="Leverage">{leverage(ticket.leverage)}</Line>
+            <Line label="Margin">
+              {money(ticket.margin)} {quote}
+            </Line>
           </>
-        ) : null}
+        )}
+        {ticket.estLiquidation ? <Line label="Est. liquidation">{price(ticket.estLiquidation)}</Line> : null}
+        {ticket.stopLoss ? <Line label="Stop-loss">{price(ticket.stopLoss)}</Line> : null}
+        {ticket.takeProfit ? <Line label="Take-profit">{price(ticket.takeProfit)}</Line> : null}
+      </dl>
 
-        {status.state === "done" ? <p className="ticket-note">{status.note}</p> : null}
-        {status.state === "expired" ? (
-          <p className="ticket-note">This ticket is no longer valid. Draft a new one to trade.</p>
-        ) : null}
-      </div>
+      {ticket.rationale ? <p className="ticket-why">{ticket.rationale}</p> : null}
+
+      {status.state === "pending" ? (
+        <>
+          {real ? (
+            <label className="check ticket-ack">
+              <input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />
+              <span>I am trading real funds</span>
+            </label>
+          ) : null}
+          <div className="ticket-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={working || (real && !acknowledged)}
+              onClick={() => void submitTicket(ticket.id)}
+            >
+              {confirmLabel(ticket)}
+            </button>
+            <button type="button" className="btn btn-ghost" disabled={working} onClick={() => void dismissTicket()}>
+              Dismiss
+            </button>
+          </div>
+        </>
+      ) : null}
 
       {status.state === "done" ? (
-        <div className="ticket-stamp" data-fresh={mountedPending}>
-          {live ? "Sent" : "Filled"}
-        </div>
+        <p className="note" data-tone="ok">
+          <Icon name="check" size={16} />
+          <span>{status.note}</span>
+        </p>
       ) : null}
-      {status.state === "expired" ? <div className="ticket-stamp">Expired</div> : null}
+      {status.state === "failed" ? (
+        <p className="note" data-tone="warn" role="alert">
+          <Icon name="alert" size={16} />
+          <span>
+            <strong>Not confirmed.</strong> {status.note}
+          </span>
+        </p>
+      ) : null}
+      {status.state === "expired" ? <p className="ticket-expired">Expired</p> : null}
     </section>
   );
 }

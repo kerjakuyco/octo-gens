@@ -1,134 +1,145 @@
 /*
  * Design tokens.
  *
- * The palette comes from the blue-ringed octopus: night water, an ochre body,
- * electric-blue rings. Each colour has one job:
- *   ring   anything you can act on, and keyboard focus
- *   ochre  the assistant's own voice and the brand mark
- *   up / down   price direction only
- * Order tickets are printed on their own paper stock (see ticket.css) and keep
- * the same colours in both themes, the way a paper slip would.
+ * A calm, neutral interface: greys carry the structure, and colour is kept for
+ * money. Each colour has one job:
+ *   up / down   price direction, long and short, profit and loss
+ *   warn        something the trader must read before acting
+ *   focus       keyboard focus, nothing else
  *
- * Dark ("night water") is the default. Light ("sand") applies when the user
- * picks it, or follows the system when the theme is "system". The light values
- * appear twice below because CSS cannot share a block between a selector and a
- * media query; keep the two copies identical.
+ * Light is the base. Dark applies when the user picks it, or follows the
+ * system when the theme is "system". The dark values appear twice below
+ * because CSS cannot share a block between a selector and a media query; keep
+ * the two copies identical.
  */
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --bg: #0d1b26;
-  --surface: #132633;
-  --raised: #193243;
-  --field: #0a161f;
-  --line: #27445a;
-  --line-soft: #1c3445;
-  --text: #f1ece0;
-  --muted: #9fb3c2;
+  --bg: #ffffff;
+  --sidebar: #f9f9f9;
+  --surface: #f4f4f4;
+  --surface-strong: #ececec;
+  --popover: #ffffff;
+  --raised: #ffffff;
+  --sidebar-hover: #ececec;
+  --border: #e5e5e5;
+  --border-strong: #cdcdcd;
+  --text: #0d0d0d;
+  --muted: #5d5d5d;
+  --faint: #8f8f8f;
 
-  --ring: #5aa9ff;
-  --ring-strong: #83beff;
-  --ring-soft: rgba(90, 169, 255, 0.16);
-  --on-ring: #06192b;
+  --primary: #0d0d0d;
+  --primary-hover: #2f2f2f;
+  --on-primary: #ffffff;
 
-  --ochre: #e2b45a;
-  --ochre-ink: #e2b45a;
-  --ochre-soft: rgba(226, 180, 90, 0.11);
+  --up: #06733b;
+  --up-soft: rgba(6, 115, 59, 0.1);
+  --down: #c5221f;
+  --down-soft: rgba(197, 34, 31, 0.09);
+  --warn: #8a5a00;
+  --warn-soft: rgba(214, 150, 20, 0.16);
 
-  --up: #4fd1a5;
-  --down: #ff7a6b;
-  --down-soft: rgba(255, 122, 107, 0.12);
+  --focus: #2563eb;
+  /* Chart overlays: two moving averages that must not read as up or down. */
+  --line-a: #2563eb;
+  --line-b: #b45fd0;
 
-  --scrim: rgba(3, 10, 15, 0.62);
-  --shadow: 0 18px 50px -18px rgba(0, 0, 0, 0.7);
-
-  /* Ticket paper. Buy slips were blue and sell slips salmon in the trading pits. */
-  --stock-buy: #cfe0f7;
-  --stock-sell: #f6c4b3;
-  --stamp-buy: #1c4aa6;
-  --stamp-sell: #9c2f1e;
-  --ink: #14283a;
-  --ink-soft: rgba(20, 40, 58, 0.74);
-  --ink-line: rgba(20, 40, 58, 0.34);
-  --ink-wash: rgba(20, 40, 58, 0.07);
+  --scrim: rgba(0, 0, 0, 0.38);
+  --shadow: 0 10px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
 
   --font: system-ui, -apple-system, Roboto, "Noto Sans", sans-serif;
   --mono: ui-monospace, monospace;
 
-  /* Type scale: 12 / 13 / 14 / 16 / 20 / 28 / 40 */
-  --text-xs: 0.75rem;
+  /* Chat text 16, interface 14, meta 12.5. */
+  --text-meta: 0.78125rem;
   --text-sm: 0.8125rem;
-  --text-base: 0.875rem;
-  --text-md: 1rem;
-  --text-lg: 1.25rem;
+  --text-ui: 0.875rem;
+  --text-chat: 1rem;
+  --text-lg: 1.125rem;
   --text-xl: 1.75rem;
-  --text-2xl: 2.5rem;
 
-  --radius: 6px;
-  --radius-lg: 10px;
+  --r-composer: 28px;
+  --r-bubble: 18px;
+  --r-card: 14px;
+  --r-control: 10px;
+  --r-small: 8px;
+  --r-pill: 999px;
 
-  --rail-width: 208px;
-  --panel-width: 360px;
-  --measure: 720px;
+  --sidebar-width: 260px;
+  --panel-width: 400px;
+  --measure: 768px;
+  --bar-height: 52px;
 }
 
-:root[data-theme="light"] {
-  color-scheme: light;
+:root[data-theme="dark"] {
+  color-scheme: dark;
 
-  --bg: #f4efe4;
-  --surface: #fffdf8;
-  --raised: #ebe4d4;
-  --field: #ffffff;
-  --line: #d6cbb4;
-  --line-soft: #e6decd;
-  --text: #14283a;
-  --muted: #4f6272;
+  --bg: #212121;
+  --sidebar: #181818;
+  --surface: #2f2f2f;
+  --surface-strong: #3a3a3a;
+  --popover: #2f2f2f;
+  --raised: #4a4a4a;
+  --sidebar-hover: #2a2a2a;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.22);
+  --text: #ececec;
+  --muted: #b4b4b4;
+  --faint: #8e8e8e;
 
-  --ring: #1f5fd6;
-  --ring-strong: #174cb0;
-  --ring-soft: rgba(31, 95, 214, 0.14);
-  --on-ring: #ffffff;
+  --primary: #ffffff;
+  --primary-hover: #dcdcdc;
+  --on-primary: #0d0d0d;
 
-  --ochre: #a8771c;
-  --ochre-ink: #855b0e;
-  --ochre-soft: rgba(168, 119, 28, 0.11);
+  --up: #3ecf8e;
+  --up-soft: rgba(62, 207, 142, 0.14);
+  --down: #ff8a80;
+  --down-soft: rgba(255, 138, 128, 0.14);
+  --warn: #f2b84b;
+  --warn-soft: rgba(242, 184, 75, 0.14);
 
-  --up: #0a6c4d;
-  --down: #ad3524;
-  --down-soft: rgba(185, 58, 42, 0.1);
+  --focus: #7aa7ff;
+  --line-a: #7aa7ff;
+  --line-b: #d49be6;
 
-  --scrim: rgba(20, 40, 58, 0.36);
-  --shadow: 0 18px 50px -18px rgba(20, 40, 58, 0.4);
+  --scrim: rgba(0, 0, 0, 0.56);
+  --shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-@media (prefers-color-scheme: light) {
+@media (prefers-color-scheme: dark) {
   :root[data-theme="system"] {
-    color-scheme: light;
+    color-scheme: dark;
 
-    --bg: #f4efe4;
-    --surface: #fffdf8;
-    --raised: #ebe4d4;
-    --field: #ffffff;
-    --line: #d6cbb4;
-    --line-soft: #e6decd;
-    --text: #14283a;
-    --muted: #4f6272;
+    --bg: #212121;
+    --sidebar: #181818;
+    --surface: #2f2f2f;
+    --surface-strong: #3a3a3a;
+    --popover: #2f2f2f;
+    --raised: #4a4a4a;
+    --sidebar-hover: #2a2a2a;
+    --border: rgba(255, 255, 255, 0.1);
+    --border-strong: rgba(255, 255, 255, 0.22);
+    --text: #ececec;
+    --muted: #b4b4b4;
+    --faint: #8e8e8e;
 
-    --ring: #1f5fd6;
-    --ring-strong: #174cb0;
-    --ring-soft: rgba(31, 95, 214, 0.14);
-    --on-ring: #ffffff;
+    --primary: #ffffff;
+    --primary-hover: #dcdcdc;
+    --on-primary: #0d0d0d;
 
-    --ochre: #a8771c;
-    --ochre-ink: #855b0e;
-    --ochre-soft: rgba(168, 119, 28, 0.11);
+    --up: #3ecf8e;
+    --up-soft: rgba(62, 207, 142, 0.14);
+    --down: #ff8a80;
+    --down-soft: rgba(255, 138, 128, 0.14);
+    --warn: #f2b84b;
+    --warn-soft: rgba(242, 184, 75, 0.14);
 
-    --up: #0a6c4d;
-    --down: #ad3524;
-    --down-soft: rgba(185, 58, 42, 0.1);
+    --focus: #7aa7ff;
+    --line-a: #7aa7ff;
+    --line-b: #d49be6;
 
-    --scrim: rgba(20, 40, 58, 0.36);
-    --shadow: 0 18px 50px -18px rgba(20, 40, 58, 0.4);
+    --scrim: rgba(0, 0, 0, 0.56);
+    --shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 }

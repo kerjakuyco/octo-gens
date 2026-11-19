@@ -169,7 +169,7 @@ pub fn pattern_outcomes(closes: &[Decimal]) -> Vec<f64> {
 }
 
 /// Rounds to six significant figures: enough for any price without float noise.
-fn tidy(value: f64) -> f64 {
+pub(crate) fn tidy(value: f64) -> f64 {
     if value == 0.0 || !value.is_finite() {
         return 0.0;
     }
@@ -177,7 +177,7 @@ fn tidy(value: f64) -> f64 {
     (value * magnitude).round() / magnitude
 }
 
-fn two(value: f64) -> f64 {
+pub(crate) fn two(value: f64) -> f64 {
     (value * 100.0).round() / 100.0
 }
 
@@ -188,10 +188,10 @@ fn pct_between(to: f64, from: f64) -> Option<f64> {
 /// A full technical reading of one pair on one timeframe.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Analysis {
+    /// Market symbol, e.g. `BTCUSDT`.
     pub pair: String,
     pub timeframe: Timeframe,
     pub source: String,
-    pub sample: bool,
     pub bars: usize,
     pub price: f64,
     /// `(bars back, percent change)`.
@@ -224,7 +224,6 @@ pub fn analyze(
     candles: &[Candle],
     price: Decimal,
     source: &str,
-    sample: bool,
 ) -> Analysis {
     let f = |d: Decimal| d.to_f64().unwrap_or(0.0);
     let closes: Vec<f64> = candles.iter().map(|c| f(c.c)).collect();
@@ -272,7 +271,6 @@ pub fn analyze(
         pair: pair.to_string(),
         timeframe,
         source: source.to_string(),
-        sample,
         bars: candles.len(),
         price,
         returns,
@@ -316,10 +314,9 @@ impl Analysis {
             })
         };
         json!({
-            "pair": self.pair,
+            "symbol": self.pair,
             "timeframe": self.timeframe.as_str(),
             "source": self.source,
-            "sample_data": self.sample,
             "bars": self.bars,
             "price": tidy(self.price),
             "returns": returns,
@@ -362,54 +359,13 @@ impl Analysis {
             "daily_pattern_matches": pattern,
         })
     }
-
-    /// A few plain sentences for the built-in agents, which have no model to phrase them.
-    pub fn summary(&self) -> String {
-        let mut lines = Vec::new();
-        if let Some((bars, change)) = self.returns.iter().find(|(bars, _)| *bars == 5) {
-            let span = match self.timeframe {
-                Timeframe::M15 => "15-minute",
-                Timeframe::H1 => "hourly",
-                Timeframe::H4 => "4-hour",
-                Timeframe::D1 => "daily",
-            };
-            lines.push(format!("Change over {bars} {span} bars: {change:+.2}%."));
-        }
-        if let (Some(fast), Some(slow)) = (self.ema20, self.ema50) {
-            lines.push(format!("Trend: {} (EMA20 {}, EMA50 {}).", self.trend, tidy(fast), tidy(slow)));
-        }
-        if let Some(value) = self.rsi14 {
-            let read = if value >= 70.0 {
-                "stretched to the upside"
-            } else if value <= 30.0 {
-                "stretched to the downside"
-            } else {
-                "neutral"
-            };
-            lines.push(format!("RSI(14) {value:.1}, {read}."));
-        }
-        if let Some(value) = self.atr14.filter(|_| self.price != 0.0) {
-            lines.push(format!("Average true range {:.2}% of price.", value / self.price * 100.0));
-        }
-        if !self.pattern.is_empty() {
-            let rose = self.pattern.iter().filter(|v| **v > 0.0).count();
-            lines.push(format!(
-                "{rose} of {} closest historical patterns rose the next session (examples, not odds).",
-                self.pattern.len()
-            ));
-        }
-        if lines.is_empty() {
-            lines.push("Too little price history for a technical reading.".to_string());
-        }
-        lines.join("\n")
-    }
 }
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use super::*;
-    use crate::instruments::resolve;
-    use crate::sample::sample_candles;
 
     fn near(actual: f64, expected: f64) {
         assert!((actual - expected).abs() < 1e-6, "{actual} != {expected}");
@@ -470,14 +426,35 @@ mod tests {
         assert!(pattern_outcomes(&closes[..4]).is_empty());
     }
 
+    /// A reproducible wavy uptrend: enough structure for every indicator to have a value.
+    fn candles(count: usize) -> Vec<Candle> {
+        let price = |i: usize| 100.0 + i as f64 * 0.4 + (i as f64 / 5.0).sin();
+        let dec = |value: f64| Decimal::try_from((value * 100.0).round() / 100.0).expect("decimal");
+        (0..count)
+            .map(|i| {
+                let (open, close) = (price(i), price(i + 1));
+                Candle {
+                    t: 1_700_000_000_000 + i as i64 * 86_400_000,
+                    o: dec(open),
+                    h: dec(open.max(close) + 1.5),
+                    l: dec(open.min(close) - 1.5),
+                    c: dec(close),
+                    v: dec(50.0 + (i % 7) as f64 * 10.0),
+                }
+            })
+            .collect()
+    }
+
     #[test]
     fn analysis_reports_every_reading_with_enough_history_and_nulls_without() {
-        let btc = resolve("BTC").expect("btc");
-        let candles = sample_candles(&btc, Timeframe::D1, 240).expect("candles");
+        let candles = candles(240);
         let price = candles[239].c;
-        let full = analyze("BTC/USDT", Timeframe::D1, &candles, price, "Sample tape", true);
+        let full = analyze("BTCUSDT", Timeframe::D1, &candles, price, "Mainnet");
         let json = full.to_json();
-        assert_eq!(json["sample_data"], true);
+        assert_eq!(
+            (&json["symbol"], &json["source"], &json["timeframe"]),
+            (&json!("BTCUSDT"), &json!("Mainnet"), &json!("1d"))
+        );
         for path in [
             "/trend/ema200",
             "/momentum/rsi14",
@@ -488,13 +465,12 @@ mod tests {
             assert!(json.pointer(path).is_some_and(|v| v.is_number()), "{path} missing in {json}");
         }
         assert_eq!(json["daily_pattern_matches"]["closest_matches"], 5);
-        assert!(full.summary().contains("RSI(14)"));
+        assert_eq!(full.trend, "uptrend");
 
-        let short = analyze("BTC/USDT", Timeframe::H1, &candles[..10], price, "Sample tape", true);
+        let short = analyze("BTCUSDT", Timeframe::H1, &candles[..10], price, "Mainnet");
         let json = short.to_json();
         assert!(json["trend"]["ema20"].is_null() && json["momentum"]["rsi14"].is_null());
         assert!(json["daily_pattern_matches"].is_null());
         assert_eq!(short.trend, "not enough history");
-        assert!(short.summary().contains("Change over") || short.summary().contains("Too little"));
     }
 }

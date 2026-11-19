@@ -1,0 +1,827 @@
+/* The conversation: messages, what the assistant did, cards, tickets, the message box. */
+
+.chat {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.chat[data-empty="true"] {
+  justify-content: center;
+  padding-bottom: 10vh;
+}
+
+.chat-hello {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 0 24px 28px;
+}
+
+.chat-title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  width: min(100%, var(--measure));
+  margin-top: 8px;
+}
+
+.tile {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  text-align: left;
+  transition: background-color 0.12s;
+}
+
+.tile:hover {
+  background: var(--surface);
+}
+
+.tile-name {
+  font-weight: 600;
+}
+
+.tile-kind {
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+
+@media (max-width: 620px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.thread {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.thread-inner {
+  display: grid;
+  gap: 28px;
+  width: 100%;
+  max-width: calc(var(--measure) + 48px);
+  margin: 0 auto;
+  padding: 12px 24px 32px;
+}
+
+.chat-foot {
+  flex: none;
+  width: 100%;
+  max-width: calc(var(--measure) + 48px);
+  margin: 0 auto;
+  padding: 0 24px 20px;
+}
+
+/* ---------------------------------------------------------------- composer */
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 10px 10px 20px;
+  border: 1px solid transparent;
+  border-radius: var(--r-composer);
+  background: var(--surface);
+  transition: border-color 0.12s;
+}
+
+/* The box shows focus, since the field inside it has no edge of its own. */
+.composer:focus-within {
+  border-color: var(--faint);
+}
+
+.composer textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: 200px;
+  padding: 6px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: var(--text-chat);
+  line-height: 1.5;
+  resize: none;
+}
+
+.composer textarea::placeholder {
+  color: var(--muted);
+}
+
+.send {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--on-primary);
+  transition:
+    background-color 0.12s,
+    opacity 0.12s;
+}
+
+.send:not(:disabled):hover {
+  background: var(--primary-hover);
+}
+
+.send:disabled {
+  opacity: 0.25;
+}
+
+.send > svg {
+  animation: swap 0.14s ease-out;
+}
+
+@keyframes swap {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 16px;
+}
+
+.suggestion {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  color: var(--muted);
+  transition:
+    background-color 0.12s,
+    color 0.12s;
+}
+
+.suggestion:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------------- turns */
+
+.turn {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.said {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.bubble {
+  max-width: min(85%, 560px);
+  padding: 10px 16px;
+  border-radius: var(--r-bubble);
+  background: var(--surface);
+  font-size: var(--text-chat);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.answer {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  font-size: var(--text-chat);
+  line-height: 1.6;
+}
+
+.activity {
+  min-width: 0;
+}
+
+.activity-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px 0;
+  color: var(--muted);
+  font-size: var(--text-ui);
+  line-height: 1.45;
+  text-align: left;
+  transition: color 0.12s;
+}
+
+.activity-line:not(:disabled):hover {
+  color: var(--text);
+}
+
+.activity-line > svg:first-child {
+  color: var(--warn);
+}
+
+.activity-line > svg:last-child {
+  color: var(--faint);
+  transition: transform 0.12s;
+}
+
+.activity-line[aria-expanded="true"] > svg:last-child {
+  transform: rotate(90deg);
+}
+
+/* While the assistant works, a dot and the line breathe; nothing else moves. */
+.activity-text[data-running="true"] {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.activity-text[data-running="true"]::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.activity-time::before {
+  content: "· ";
+}
+
+.activity-detail {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: var(--r-card);
+  background: var(--surface);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  animation: fade-in 0.16s ease-out;
+}
+
+.reasoning {
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.activity-meta {
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+
+.activity-meta:empty {
+  display: none;
+}
+
+.steps {
+  display: grid;
+  gap: 8px;
+}
+
+.step {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.step-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 19px;
+  color: var(--muted);
+}
+
+.step[data-status="error"] .step-mark {
+  color: var(--down);
+}
+
+.step-body {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+}
+
+.step-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.step-name {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.step-time {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--text-meta);
+  white-space: nowrap;
+}
+
+/* What a tool answered is raw data: two lines of it are enough to recognise. */
+.step-preview {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.turn-actions {
+  display: flex;
+  gap: 2px;
+  margin: -4px 0 0 -8px;
+}
+
+.turn-stopped {
+  color: var(--muted);
+  font-size: var(--text-ui);
+}
+
+/* ------------------------------------------------------------------- cards */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 10px;
+}
+
+.card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--bg);
+  font-size: var(--text-ui);
+  line-height: 1.45;
+  animation: fade-in 0.18s ease-out;
+}
+
+.card-wide {
+  grid-column: 1 / -1;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.card-empty {
+  color: var(--muted);
+}
+
+.symbol {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  /* An icon and a letter mark sit on different baselines; the name stays level with its row either way. */
+  vertical-align: middle;
+  border-radius: 6px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.symbol .muted {
+  font-weight: 400;
+}
+
+.symbol:hover .symbol-name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rows {
+  display: grid;
+  margin: -6px 0;
+}
+
+.row {
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  border-top: 1px solid var(--border);
+}
+
+.row:first-child {
+  border-top: 0;
+}
+
+.quote-row {
+  grid-template-columns: minmax(0, 1fr) auto 68px 128px 56px;
+}
+
+.mover-row {
+  grid-template-columns: 16px minmax(0, 1fr) auto 68px 84px;
+}
+
+.position-row {
+  grid-template-columns: minmax(0, 1fr) auto 84px 92px;
+}
+
+.news-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.news-head .muted {
+  font-weight: 400;
+}
+
+/* A headline on its own line, with who reported it and how long ago beneath: it reads at any width. */
+.news-row {
+  grid-template-columns: minmax(0, auto) 1fr;
+  gap: 2px 10px;
+  padding: 10px 0;
+}
+
+.news-title {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-width: 0;
+  border-radius: 6px;
+  text-align: left;
+  text-wrap: pretty;
+}
+
+.news-title:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.news-source,
+.news-age {
+  font-size: var(--text-meta);
+}
+
+.row-price,
+.row-change,
+.row-extra {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.rank {
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+
+.facts {
+  display: grid;
+  gap: 6px;
+}
+
+.facts-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 28px;
+}
+
+.fact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.fact dt {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.fact dd {
+  min-width: 0;
+  text-align: right;
+}
+
+/* The three figures a card leads with. */
+.levels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.levels .fact {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--r-control);
+  background: var(--surface);
+}
+
+.levels .fact dt {
+  font-size: var(--text-meta);
+}
+
+.levels .fact dd {
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.rsi {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rsi-track {
+  position: relative;
+  width: 56px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-strong);
+}
+
+/* The band between 30 and 70, where a reading is neither stretched nor washed out. */
+.rsi-track::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 30%;
+  width: 40%;
+  background: var(--border-strong);
+}
+
+.rsi-dot {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--text);
+}
+
+.share {
+  display: grid;
+  gap: 6px;
+}
+
+.share-bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--down);
+}
+
+.share-bid {
+  display: block;
+  height: 100%;
+  border-right: 2px solid var(--bg);
+  background: var(--up);
+}
+
+.share-legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-meta);
+}
+
+/* ------------------------------------------------------------------ ticket */
+
+.ticket {
+  width: 100%;
+  max-width: 520px;
+}
+
+.dialog .ticket {
+  max-width: none;
+}
+
+.ticket-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ticket-effect {
+  font-size: var(--text-chat);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ticket-why {
+  color: var(--muted);
+}
+
+.ticket-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ticket-expired {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.ticket[data-state="expired"] .ticket-effect,
+.ticket[data-state="expired"] .facts,
+.ticket[data-state="expired"] .ticket-why {
+  opacity: 0.55;
+}
+
+/* ---------------------------------------------------------------- markdown */
+
+.md {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.md ul,
+.md ol {
+  display: grid;
+  gap: 4px;
+  padding-left: 22px;
+}
+
+.md ul {
+  list-style: disc;
+}
+
+.md ol {
+  list-style: decimal;
+}
+
+.md li > ul,
+.md li > ol {
+  margin-top: 4px;
+}
+
+.md li::marker {
+  color: var(--muted);
+}
+
+.md-h {
+  margin-top: 6px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.md-h1 {
+  font-size: 1.375rem;
+}
+
+.md-h2 {
+  font-size: 1.1875rem;
+}
+
+.md-h3 {
+  font-size: 1.0625rem;
+}
+
+.md-h4,
+.md-h5,
+.md-h6 {
+  font-size: 1rem;
+}
+
+.md code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 0.875em;
+}
+
+.md-code {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  border-radius: var(--r-control);
+  background: var(--surface);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.md-code code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+.md blockquote {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 14px;
+  border-left: 3px solid var(--border-strong);
+  color: var(--muted);
+}
+
+.md hr {
+  width: 100%;
+  margin: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.md-table {
+  overflow-x: auto;
+}
+
+.md-table table {
+  border-collapse: collapse;
+  font-size: var(--text-ui);
+  line-height: 1.4;
+}
+
+.md-table th,
+.md-table td {
+  padding: 7px 14px 7px 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.md-table th {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.md-table .md-right {
+  padding: 7px 0 7px 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.md-table .md-center {
+  text-align: center;
+}
+
+.md-link {
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+}
+
+.md-link-open {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  border-radius: 4px;
+  color: var(--muted);
+  vertical-align: -3px;
+}
+
+.md-link-open:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* The mark at the end of text that is still arriving. */
+.md-caret {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-left: 5px;
+  border-radius: 50%;
+  background: var(--text);
+  animation: pulse 1s ease-in-out infinite;
+}

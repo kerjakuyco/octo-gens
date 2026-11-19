@@ -11,57 +11,6 @@ fn runtime() -> (PathBuf, PathBuf) {
 }
 
 #[test]
-fn official_launches_pin_the_package_and_keep_secrets_out_of_the_command_line() {
-    let runtime = runtime();
-    let bybit =
-        official_launch(VenueId::Bybit, "id-1", "secret-1", true, None, Some(&runtime)).expect("bybit");
-    assert_eq!(bybit.program, runtime.0);
-    assert_eq!(
-        bybit.args,
-        ["/opt/node/lib/node_modules/npm/bin/npx-cli.js", "-y", "bybit-official-trading-server@2.1.28"]
-    );
-    assert!(!bybit.args.join(" ").contains("secret-1"));
-    assert_eq!(
-        (
-            bybit.env["BYBIT_API_KEY"].as_str(),
-            bybit.env["BYBIT_API_SECRET"].as_str(),
-            bybit.env["BYBIT_TESTNET"].as_str()
-        ),
-        ("id-1", "secret-1", "true")
-    );
-
-    let market = official_launch(VenueId::Bybit, "", "", false, None, Some(&runtime)).expect("market data");
-    assert!(!market.env.contains_key("BYBIT_API_KEY") && !market.env.contains_key("BYBIT_TESTNET"));
-    assert!(
-        official_launch(VenueId::Bybit, "id-1", "", false, None, Some(&runtime)).is_err(),
-        "half a credential is refused"
-    );
-
-    let okx = official_launch(VenueId::Okx, "", "", false, Some("market"), Some(&runtime)).expect("okx");
-    assert_eq!(okx.args[2..], ["@okx_ai/okx-trade-mcp@1.5.1", "--modules", "market"]);
-    let demo = official_launch(VenueId::Okx, "", "", false, Some("demo"), Some(&runtime)).expect("okx demo");
-    assert_eq!(demo.args[3..], ["--profile", "demo", "--modules", "all"]);
-    assert!(
-        okx.env.keys().all(|k| !k.to_ascii_lowercase().contains("key")),
-        "OKX profiles come from its own config file"
-    );
-    assert!(official_launch(VenueId::Okx, "", "", false, Some("everything"), Some(&runtime)).is_err());
-
-    assert!(
-        official_launch(VenueId::Binance, "", "", false, None, Some(&runtime))
-            .expect_err("none")
-            .to_string()
-            .contains("does not publish")
-    );
-    assert!(
-        official_launch(VenueId::Okx, "", "", false, None, None)
-            .expect_err("no node")
-            .to_string()
-            .contains("Install Node.js")
-    );
-}
-
-#[test]
 fn typed_commands_resolve_to_real_executables_never_shell_wrappers() {
     let runtime = runtime();
     let args = vec!["-y".to_string(), "some-mcp@1".to_string()];
@@ -168,7 +117,7 @@ async fn a_remote_server_is_negotiated_catalogued_and_called() {
         .await;
 
     let request = McpConnectRequest::Http {
-        venue: VenueId::Okx,
+        id: "fixture".to_string(),
         url: format!("{}/mcp", server.uri()),
         token: Some("  t0ken ".to_string()),
     };
@@ -218,7 +167,7 @@ async fn a_remote_server_is_negotiated_catalogued_and_called() {
     assert!(called, "tool calls carry the negotiated session");
 
     let refused = McpConnectRequest::Http {
-        venue: VenueId::Okx,
+        id: "fixture".to_string(),
         url: "http://example.com/mcp".to_string(),
         token: None,
     };
@@ -250,7 +199,7 @@ async fn a_local_server_runs_as_a_child_process_with_its_own_environment() {
     let script = folder.path().join("server.js");
     std::fs::write(&script, STDIO_SERVER).expect("script");
     let request = McpConnectRequest::Stdio {
-        venue: VenueId::Bybit,
+        id: "local".to_string(),
         command: "node".to_string(),
         args: vec![script.to_string_lossy().to_string(), "--flag".to_string()],
         env: HashMap::from([("FIXTURE_MARKER".to_string(), "from-the-desk".to_string())]),
@@ -269,7 +218,7 @@ async fn a_local_server_runs_as_a_child_process_with_its_own_environment() {
     assert!(!link.connected().await);
 
     let missing = McpConnectRequest::Stdio {
-        venue: VenueId::Bybit,
+        id: "local".to_string(),
         command: "definitely-not-installed-anywhere".to_string(),
         args: Vec::new(),
         env: HashMap::new(),
@@ -279,23 +228,17 @@ async fn a_local_server_runs_as_a_child_process_with_its_own_environment() {
 
 #[test]
 fn connect_requests_arrive_from_the_ui_tagged_by_transport() {
-    let official: McpConnectRequest = serde_json::from_value(
-        json!({"venue": "bybit", "transport": "official", "key": "k", "secret": "s", "testnet": true}),
-    )
-    .expect("official");
-    assert!(matches!(official, McpConnectRequest::Official { venue: VenueId::Bybit, testnet: true, .. }));
     let stdio: McpConnectRequest = serde_json::from_value(
-        json!({"venue": "okx", "transport": "stdio", "command": "node", "args": ["a.js"], "env": {"A": "1"}}),
+        json!({"id": "news", "transport": "stdio", "command": "node", "args": ["a.js"], "env": {"A": "1"}}),
     )
     .expect("stdio");
-    assert_eq!(stdio.venue(), VenueId::Okx);
-    let http: McpConnectRequest = serde_json::from_value(
-        json!({"venue": "binance", "transport": "http", "url": "https://x.example/mcp"}),
-    )
-    .expect("http");
+    assert_eq!(stdio.id(), "news");
+    let http: McpConnectRequest =
+        serde_json::from_value(json!({"id": "docs", "transport": "http", "url": "https://x.example/mcp"}))
+            .expect("http");
     assert!(matches!(http, McpConnectRequest::Http { token: None, .. }));
     assert!(
-        serde_json::from_value::<McpConnectRequest>(json!({"venue": "okx", "transport": "carrier-pigeon"}))
+        serde_json::from_value::<McpConnectRequest>(json!({"id": "x", "transport": "carrier-pigeon"}))
             .is_err()
     );
     assert_eq!(
@@ -308,4 +251,24 @@ fn connect_requests_arrive_from_the_ui_tagged_by_transport() {
         .expect("json")["readOnly"],
         true
     );
+    for (id, ok) in [
+        ("news", true),
+        ("my_tools-2", true),
+        ("", false),
+        ("has space", false),
+        ("@x", false),
+        (&"x".repeat(25), false),
+    ] {
+        assert_eq!(valid_id(id), ok, "{id}");
+    }
+}
+
+#[tokio::test]
+async fn a_server_needs_a_plain_name() {
+    let request = McpConnectRequest::Http {
+        id: "not a name".to_string(),
+        url: "https://example.com/mcp".to_string(),
+        token: None,
+    };
+    assert!(McpLink::connect(&request).await.expect_err("bad id").to_string().contains("short name"));
 }

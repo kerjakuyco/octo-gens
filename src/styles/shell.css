@@ -1,243 +1,330 @@
-/* App frame: navigation rail, main area, and the page scaffold shared by every page but the assistant. */
+/* The window: sidebar, top bar, page, market panel. */
 
 .app {
-  display: grid;
-  grid-template-columns: var(--rail-width) minmax(0, 1fr);
+  display: flex;
   height: 100%;
-}
-
-.rail {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-height: 0;
-  padding: 14px 10px 12px;
-  border-right: 1px solid var(--line);
-  background: var(--surface);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 8px 22px;
-  font-size: var(--text-md);
-  font-weight: 650;
-  letter-spacing: -0.015em;
-  white-space: nowrap;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 8px;
-  color: var(--muted);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.nav-item:hover {
-  background: var(--raised);
-  color: var(--text);
-}
-
-.nav-item[aria-current="page"] {
-  background: var(--raised);
-  color: var(--text);
-}
-
-.nav-item[aria-current="page"] svg {
-  color: var(--ring);
-}
-
-.nav-count {
-  margin-left: auto;
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
-
-.rail-spacer {
-  flex: 1;
 }
 
 .main {
-  position: relative;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   min-width: 0;
-  height: 100%;
-  min-height: 0;
+  background: var(--bg);
 }
 
-/* A thin line across the top while a command is in flight. */
-.progress {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  z-index: 30;
-  height: 2px;
-  overflow: hidden;
-  pointer-events: none;
+.drag {
+  align-self: stretch;
 }
 
-.progress::after {
-  content: "";
-  position: absolute;
+.scrim {
+  position: fixed;
   inset: 0;
-  width: 40%;
-  background: var(--ring);
-  animation: progress 1.1s ease-in-out infinite;
-}
-
-@keyframes progress {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(250%);
-  }
-}
-
-/* ------------------------------------------------------------------ pages */
-
-.page {
-  height: 100%;
-  overflow-y: auto;
-}
-
-.page-inner {
-  max-width: 940px;
-  margin: 0 auto;
-  padding: 34px clamp(20px, 4vw, 44px) 72px;
-}
-
-.page-title {
-  font-size: var(--text-xl);
-  font-weight: 650;
-  line-height: 1.15;
-  letter-spacing: -0.025em;
-}
-
-.page-lead {
-  max-width: 64ch;
-  margin-top: 8px;
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.section {
-  margin-top: 40px;
-}
-
-.section-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px 16px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line);
-}
-
-.section-title {
-  font-size: var(--text-md);
-  font-weight: 650;
-  letter-spacing: -0.01em;
-}
-
-.section-note {
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-
-.section-body {
-  padding-top: 14px;
-}
-
-.section-text {
-  max-width: 66ch;
-  margin-bottom: 16px;
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.empty {
-  max-width: 60ch;
-  padding: 18px 0 4px;
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.empty strong {
-  display: block;
-  margin-bottom: 2px;
-  color: var(--text);
-  font-weight: 600;
-}
-
-.empty .btn {
-  margin-top: 12px;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
+  z-index: 20;
+  background: var(--scrim);
 }
 
 .boot {
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: 14px;
+  gap: 20px;
   height: 100%;
   padding: 24px;
-  color: var(--muted);
   text-align: center;
 }
 
-.boot-error {
-  max-width: 52ch;
-  color: var(--text);
-  line-height: 1.55;
+.boot-text {
+  max-width: 420px;
+  color: var(--muted);
 }
 
-/* Below this width the rail keeps only its icons, so the conversation gets the room. */
-@media (max-width: 1180px) {
-  .app {
-    --rail-width: 58px;
-  }
+/* ---------------------------------------------------------------- sidebar */
 
-  .rail {
-    padding-right: 8px;
-    padding-left: 8px;
-  }
+.sidebar {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  min-height: 0;
+  background: var(--sidebar);
+}
 
-  .brand {
-    justify-content: center;
-    padding-right: 0;
-    padding-left: 0;
-  }
+.sidebar[data-overlay="true"] {
+  position: fixed;
+  z-index: 30;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(var(--sidebar-width), 86vw);
+  box-shadow: var(--shadow);
+}
 
-  .nav-item {
-    justify-content: center;
-    padding-right: 0;
-    padding-left: 0;
-  }
+.sidebar-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: var(--bar-height);
+  padding: 0 10px 0 16px;
+}
 
-  .brand-name,
-  .nav-label,
-  .nav-count {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+/*
+ * The macOS app draws its window buttons over the top-left corner: keep that corner clear.
+ * The buttons are centred on the bar (`trafficLightPosition` in tauri.conf.json: the window
+ * library centres them in a strip as tall as a button plus `y`, so `y` is the bar's height
+ * less a button's 14). Newer macOS draws them larger and further apart, ending near 80px;
+ * what follows starts a clear gap after that.
+ */
+:root[data-platform="macos"] .sidebar-head,
+:root[data-platform="macos"] .topbar[data-inset="true"] {
+  padding-left: 96px;
+}
+
+.sidebar-nav {
+  display: grid;
+  flex: none;
+  gap: 1px;
+  padding: 4px 8px 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--r-control);
+  text-align: left;
+  transition: background-color 0.12s;
+}
+
+.nav-item:not(:disabled):hover,
+.nav-item[aria-current="page"],
+.nav-item[aria-expanded="true"] {
+  background: var(--sidebar-hover);
+}
+
+.nav-item:disabled {
+  opacity: 0.5;
+}
+
+.nav-item > svg {
+  color: var(--muted);
+}
+
+.nav-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface-strong);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.sidebar-threads {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 8px 12px;
+}
+
+.thread-group {
+  padding: 16px 10px 6px;
+  color: var(--muted);
+  font-size: var(--text-meta);
+  font-weight: 500;
+}
+
+.thread-row {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  border-radius: var(--r-control);
+}
+
+.thread-row:hover,
+.thread-row:focus-within,
+.thread-row[data-current="true"] {
+  background: var(--sidebar-hover);
+}
+
+.thread-link {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  padding: 0 10px;
+  border-radius: inherit;
+  text-align: left;
+}
+
+.thread-link:disabled {
+  opacity: 0.5;
+}
+
+.thread-more {
+  width: 28px;
+  height: 28px;
+  margin-right: 4px;
+  opacity: 0;
+}
+
+.thread-row:hover .thread-more,
+.thread-row:focus-within .thread-more,
+.thread-more[aria-expanded="true"] {
+  opacity: 1;
+}
+
+.thread-more:not(:disabled):hover,
+.thread-more[aria-expanded="true"] {
+  background: transparent;
+}
+
+@media (hover: none) {
+  .thread-more {
+    opacity: 1;
   }
+}
+
+.thread-row[data-confirm="true"] {
+  gap: 4px;
+  padding: 0 4px 0 10px;
+  background: var(--sidebar-hover);
+  font-size: var(--text-sm);
+}
+
+.thread-row[data-confirm="true"] .btn {
+  height: 28px;
+  padding: 0 8px;
+}
+
+.sidebar-foot {
+  flex: none;
+  padding: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-foot .menu-anchor {
+  display: flex;
+}
+
+.sidebar-foot .nav-item {
+  height: 40px;
+}
+
+.sidebar-foot .nav-item > svg:last-child {
+  color: var(--faint);
+}
+
+/* ---------------------------------------------------------------- top bar */
+
+.topbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: var(--bar-height);
+  padding: 0 10px;
+}
+
+.model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 280px;
+  height: 36px;
+  padding: 0 8px 0 10px;
+  border-radius: var(--r-control);
+  font-size: 1.0625rem;
+  font-weight: 500;
+  transition: background-color 0.12s;
+}
+
+.model-btn:hover,
+.model-btn[aria-expanded="true"] {
+  background: var(--surface);
+}
+
+.model-btn > svg {
+  color: var(--faint);
+}
+
+.topbar-title {
+  padding: 0 10px;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 0.12s;
+}
+
+.pill:hover,
+.pill[aria-expanded="true"] {
+  background: var(--surface);
+}
+
+.pill > svg {
+  color: var(--muted);
+}
+
+.pill-note {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+/* On mainnet the whole pill is marked, not only its words. */
+.pill:has(.pill-note) {
+  border-color: transparent;
+  background: var(--warn-soft);
+}
+
+/* ------------------------------------------------------------------- page */
+
+.page {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Pages lay themselves out by their own width, which the sidebar and the panel change. */
+  container: page / inline-size;
+}
+
+.page-inner {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 8px 24px 40px;
 }

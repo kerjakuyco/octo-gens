@@ -1,10 +1,9 @@
-//! Model Context Protocol client: attach an exchange's own tool server.
+//! Model Context Protocol client: give the assistant extra read-only tools.
 //!
-//! Market data and orders use the native adapters in [`crate::venues`]. MCP is
-//! for everything else a venue offers through its official server, or through a
-//! server the trader chooses. Three ways to attach one:
+//! Market data and orders use the native exchange client. MCP is for anything
+//! else the trader wants the assistant to be able to look up, through a tool
+//! server they choose. Two ways to attach one:
 //!
-//! - **official**: the venue's pinned npm package, started with Node;
 //! - **stdio**: any local command that speaks MCP over stdin/stdout;
 //! - **http**: a remote Streamable HTTP endpoint (HTTPS, or HTTP on loopback).
 //!
@@ -25,48 +24,31 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::error::Result;
-use crate::model::VenueId;
 use crate::{bail, desk_err};
 
 const CALL_TIMEOUT: Duration = Duration::from_secs(35);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(35);
-/// The first launch of an official server downloads its package.
-const OFFICIAL_TIMEOUT: Duration = Duration::from_secs(180);
-
-/// The pinned package of each venue's official MCP server. Binance publishes none.
-pub fn official_package(venue: VenueId) -> Option<&'static str> {
-    match venue {
-        VenueId::Bybit => Some("bybit-official-trading-server@2.1.28"),
-        VenueId::Okx => Some("@okx_ai/okx-trade-mcp@1.5.1"),
-        VenueId::Binance => None,
-    }
-}
+/// Longer for local commands: `npx` may download a package on first use.
+const STDIO_TIMEOUT: Duration = Duration::from_secs(120);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Transport {
-    Official,
     Stdio,
     Http,
+}
+
+/// A server id is a short name the trader picks, e.g. `news`.
+pub fn valid_id(id: &str) -> bool {
+    (1..=24).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-'))
 }
 
 /// How to attach a server. Mirrors `McpConnectRequest` in the UI contract.
 #[derive(Clone, Deserialize)]
 #[serde(tag = "transport", rename_all = "lowercase")]
 pub enum McpConnectRequest {
-    Official {
-        venue: VenueId,
-        #[serde(default)]
-        key: String,
-        #[serde(default)]
-        secret: String,
-        #[serde(default)]
-        testnet: bool,
-        #[serde(default)]
-        profile: Option<String>,
-    },
     Stdio {
-        venue: VenueId,
+        id: String,
         command: String,
         #[serde(default)]
         args: Vec<String>,
@@ -74,7 +56,7 @@ pub enum McpConnectRequest {
         env: HashMap<String, String>,
     },
     Http {
-        venue: VenueId,
+        id: String,
         url: String,
         #[serde(default)]
         token: Option<String>,
@@ -82,9 +64,9 @@ pub enum McpConnectRequest {
 }
 
 impl McpConnectRequest {
-    pub fn venue(&self) -> VenueId {
+    pub fn id(&self) -> &str {
         match self {
-            Self::Official { venue, .. } | Self::Stdio { venue, .. } | Self::Http { venue, .. } => *venue,
+            Self::Stdio { id, .. } | Self::Http { id, .. } => id,
         }
     }
 }
@@ -202,54 +184,6 @@ pub fn launchable(
     }
 }
 
-/// The launch command for a venue's official server. Secrets go in the child's
-/// environment, never on its command line where other processes could read them.
-pub fn official_launch(
-    venue: VenueId,
-    key: &str,
-    secret: &str,
-    testnet: bool,
-    profile: Option<&str>,
-    runtime: Option<&(PathBuf, PathBuf)>,
-) -> Result<Launch> {
-    let Some(package) = official_package(venue) else {
-        bail!(
-            "{} does not publish an MCP server. Its market data and orders work without one.",
-            venue.name()
-        );
-    };
-    let Some((node, npx)) = runtime else {
-        bail!("Install Node.js 20 or newer to launch the official {} MCP server.", venue.name());
-    };
-    let mut args = vec![npx.to_string_lossy().to_string(), "-y".to_string(), package.to_string()];
-    let mut env = HashMap::from([
-        ("CI".to_string(), "true".to_string()),
-        ("npm_config_update_notifier".to_string(), "false".to_string()),
-    ]);
-    match venue {
-        VenueId::Bybit => {
-            if key.trim().is_empty() != secret.trim().is_empty() {
-                bail!("Enter both the Bybit API key and secret, or leave both blank for market data only.");
-            }
-            if !key.trim().is_empty() {
-                env.insert("BYBIT_API_KEY".to_string(), key.trim().to_string());
-                env.insert("BYBIT_API_SECRET".to_string(), secret.trim().to_string());
-            }
-            if testnet {
-                env.insert("BYBIT_TESTNET".to_string(), "true".to_string());
-            }
-        }
-        _ => match profile.unwrap_or("market") {
-            "market" => args.extend(["--modules", "market"].map(str::to_string)),
-            profile @ ("live" | "demo") => {
-                args.extend(["--profile", profile, "--modules", "all"].map(str::to_string))
-            }
-            _ => bail!("Choose market tools, or an existing live or demo OKX profile."),
-        },
-    }
-    Ok(Launch { program: node.clone(), args, env })
-}
-
 /// Only HTTPS is accepted for remote servers; plain HTTP is for this machine only.
 fn checked_url(raw: &str) -> Result<String> {
     let url = url::Url::parse(raw.trim())
@@ -264,8 +198,8 @@ fn checked_url(raw: &str) -> Result<String> {
     Ok(url.to_string())
 }
 
-fn failure(venue: VenueId, error: impl std::fmt::Display) -> crate::error::DeskError {
-    desk_err!("{} MCP connection failed: {error}", venue.name())
+fn failure(id: &str, error: impl std::fmt::Display) -> crate::error::DeskError {
+    desk_err!("Could not attach the {id} tool server: {error}")
 }
 
 /// A live session with one MCP server.
@@ -292,30 +226,23 @@ impl std::fmt::Debug for McpLink {
 impl McpLink {
     /// Starts or reaches the server, negotiates the session and reads its tool catalog.
     pub async fn connect(request: &McpConnectRequest) -> Result<Self> {
-        let venue = request.venue();
-        let runtime = node_runtime();
-        let (transport, timeout, service) = match request {
+        let id = request.id();
+        if !valid_id(id) {
+            bail!("Give the tool server a short name: letters, digits, dashes or underscores.");
+        }
+        let (transport, service) = match request {
             McpConnectRequest::Http { url, token, .. } => {
                 let mut config = StreamableHttpClientTransportConfig::with_uri(checked_url(url)?);
                 if let Some(token) = token.as_deref().map(str::trim).filter(|t| !t.is_empty()) {
                     config = config.auth_header(token);
                 }
                 let serving = ().serve(StreamableHttpClientTransport::from_config(config));
-                (Transport::Http, CONNECT_TIMEOUT, tokio::time::timeout(CONNECT_TIMEOUT, serving).await)
+                (Transport::Http, tokio::time::timeout(CONNECT_TIMEOUT, serving).await)
             }
-            other => {
-                let (kind, timeout, launch) = match other {
-                    McpConnectRequest::Official { key, secret, testnet, profile, .. } => (
-                        Transport::Official,
-                        OFFICIAL_TIMEOUT,
-                        official_launch(venue, key, secret, *testnet, profile.as_deref(), runtime.as_ref())?,
-                    ),
-                    McpConnectRequest::Stdio { command, args, env, .. } => {
-                        let (program, args) = launchable(command, args, runtime.as_ref())?;
-                        (Transport::Stdio, CONNECT_TIMEOUT, Launch { program, args, env: env.clone() })
-                    }
-                    McpConnectRequest::Http { .. } => unreachable!("handled above"),
-                };
+            McpConnectRequest::Stdio { command, args, env, .. } => {
+                let runtime = node_runtime();
+                let (program, args) = launchable(command, args, runtime.as_ref())?;
+                let launch = Launch { program, args, env: env.clone() };
                 let command = tokio::process::Command::new(&launch.program).configure(|command| {
                     command.args(&launch.args).envs(&launch.env).kill_on_drop(true);
                 });
@@ -323,21 +250,22 @@ impl McpLink {
                 let (process, _) = TokioChildProcess::builder(command)
                     .stderr(Stdio::null())
                     .spawn()
-                    .map_err(|error| failure(venue, error))?;
-                (kind, timeout, tokio::time::timeout(timeout, ().serve(process)).await)
+                    .map_err(|error| failure(id, error))?;
+                // A first launch through npx may have to download the package.
+                (Transport::Stdio, tokio::time::timeout(STDIO_TIMEOUT, ().serve(process)).await)
             }
         };
         let service = match service {
             Ok(Ok(service)) => service,
-            Ok(Err(error)) => return Err(failure(venue, error)),
-            Err(_) => return Err(failure(venue, format!("no answer within {} seconds", timeout.as_secs()))),
+            Ok(Err(error)) => return Err(failure(id, error)),
+            Err(_) => return Err(failure(id, "it did not answer in time")),
         };
         let info = service.peer_info().and_then(|info| info.server_info.clone());
         let listed = tokio::time::timeout(CONNECT_TIMEOUT, service.list_all_tools()).await;
         let tools = match listed {
             Ok(Ok(tools)) => tools,
-            Ok(Err(error)) => return Err(failure(venue, error)),
-            Err(_) => return Err(failure(venue, "the tool catalog did not arrive in time")),
+            Ok(Err(error)) => return Err(failure(id, error)),
+            Err(_) => return Err(failure(id, "its tool catalog did not arrive in time")),
         };
         let tools = tools
             .into_iter()

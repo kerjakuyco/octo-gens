@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/octogens-core", "src-tauri"]
 
 [workspace.package]
-version = "0.3.0"
+version = "0.5.0"
 edition = "2024"
 license = "GPL-3.0-only"
 repository = "https://github.com/kerjakuyco/octo-gens"
@@ -14,7 +14,7 @@ rust-version = "1.90"
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "process", "io-util"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "process", "io-util", "net"] }
 tokio-util = "0.7"
 
 [workspace.lints.rust]
@@ -26,9 +26,10 @@ todo = "warn"
 unwrap_used = "warn"
 
 # Size-focused release build: https://tauri.app/concept/size/#cargo-configuration
+# Panics unwind rather than abort. A fault in one task (a tool call, a refresh) must
+# not stop the process while another task is placing an order and its stop-loss.
 [profile.release]
 codegen-units = 1
 lto = true
 opt-level = 3
-panic = "abort"
 strip = true

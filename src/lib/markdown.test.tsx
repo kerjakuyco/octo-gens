@@ -8,8 +8,8 @@ function html(text: string, streaming = false): string {
 
 describe("blocks", () => {
   it("splits paragraphs and keeps single newlines as line breaks", () => {
-    expect(html("BTC 84,215.50 USDT\nSample tape\n\nNext paragraph")).toBe(
-      '<div class="md"><p>BTC 84,215.50 USDT<br/>Sample tape</p><p>Next paragraph</p></div>',
+    expect(html("BTC 62,786.40 USDT\nTestnet\n\nNext paragraph")).toBe(
+      '<div class="md"><p>BTC 62,786.40 USDT<br/>Testnet</p><p>Next paragraph</p></div>',
     );
   });
 

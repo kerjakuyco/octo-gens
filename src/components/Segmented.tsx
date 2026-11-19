@@ -12,10 +12,19 @@ interface SegmentedProps<T extends string> {
   options: SegmentOption<T>[];
   onChange: (value: T) => void;
   disabled?: boolean;
+  /** Stretch across the available width, with every option the same size. */
+  fill?: boolean;
 }
 
 /** A single-choice strip with radio-group semantics and arrow-key navigation. */
-export function Segmented<T extends string>({ label, value, options, onChange, disabled = false }: SegmentedProps<T>) {
+export function Segmented<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  disabled = false,
+  fill = false,
+}: SegmentedProps<T>) {
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const step = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0;
     if (!step || disabled) return;
@@ -29,7 +38,7 @@ export function Segmented<T extends string>({ label, value, options, onChange, d
   }
 
   return (
-    <div className="segmented" role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
+    <div className="segmented" role="radiogroup" aria-label={label} data-fill={fill} onKeyDown={onKeyDown}>
       {options.map((option) => {
         const checked = option.value === value;
         return (

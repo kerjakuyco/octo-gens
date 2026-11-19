@@ -47,7 +47,7 @@ pub fn unreachable(host: &str, error: reqwest::Error) -> DeskError {
     let lowered = cause.to_ascii_lowercase();
     if lowered.contains("certificate") || lowered.contains("unknownissuer") || lowered.contains("handshake") {
         return desk_err!(
-            "Could not open a secure connection to {host}. Your network may be blocking or intercepting this exchange; try another network or a VPN."
+            "Could not open a secure connection to {host}. Your network may be blocking or intercepting this connection; try another network or a VPN."
         );
     }
     desk_err!("Could not reach {host}: {cause}.")
@@ -59,7 +59,8 @@ pub fn error_detail(data: &Value) -> Option<String> {
         Some(Value::Object(error)) => error.get("message").or_else(|| error.get("code")),
         other => other,
     };
-    [data.get("message"), data.get("msg"), data.get("retMsg"), nested]
+    let listed = data.get("errors").and_then(|errors| errors.get(0)).and_then(|first| first.get("message"));
+    [data.get("message"), data.get("msg"), data.get("retMsg"), nested, listed]
         .into_iter()
         .flatten()
         .find_map(|v| match v {
@@ -131,7 +132,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn error_bodies_from_every_venue_yield_their_own_message() {
+    fn error_bodies_from_every_service_yield_their_own_message() {
         assert_eq!(
             error_detail(&json!({"code": -1121, "msg": "Invalid symbol."})).as_deref(),
             Some("Invalid symbol.")
@@ -145,7 +146,14 @@ mod tests {
             Some("Insufficient credits")
         );
         assert_eq!(error_detail(&json!({"error": "model not found"})).as_deref(), Some("model not found"));
+        assert_eq!(
+            error_detail(
+                &json!({"success": false, "errors": [{"code": 10000, "message": "Authentication error"}]})
+            )
+            .as_deref(),
+            Some("Authentication error")
+        );
         assert_eq!(error_detail(&json!({"ok": false})), None);
-        assert_eq!(host_of("https://api.binance.com/api/v3/order?signature=abc"), "api.binance.com");
+        assert_eq!(host_of("https://api.example.com/fapi/v3/order?signature=abc"), "api.example.com");
     }
 }

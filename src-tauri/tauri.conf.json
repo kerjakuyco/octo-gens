@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Octo Gens",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "identifier": "org.octogens.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -17,8 +17,10 @@
         "width": 1280,
         "height": 832,
         "minWidth": 760,
-        "minHeight": 550,
-        "backgroundColor": "#0d1b26"
+        "minHeight": 560,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 19, "y": 38 }
       }
     ],
     "security": {
@@ -30,8 +32,8 @@
     "active": true,
     "targets": "all",
     "category": "Finance",
-    "shortDescription": "AI trading assistant for crypto spot markets",
-    "longDescription": "Octo Gens is a desktop AI assistant for crypto spot markets. It researches with live exchange data, sizes positions, and drafts orders that you confirm. Paper trading works out of the box.",
+    "shortDescription": "AI trading assistant for perpetual futures",
+    "longDescription": "Octo Gens is a desktop AI assistant for trading perpetual futures with your own web3 wallet. Connect a model from OpenRouter, Cloudflare AI Gateway, Ollama or LM Studio. It researches with live market data, sizes positions from the risk you accept, and drafts orders that you confirm. Practice on testnet with test funds.",
     "copyright": "Octo Gens contributors",
     "license": "GPL-3.0-only",
     "icon": [

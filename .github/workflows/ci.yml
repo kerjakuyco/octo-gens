@@ -79,7 +79,8 @@ jobs:
       - run: pnpm tauri build --debug --no-bundle
       - name: Lint the shell
         run: cargo clippy -p octogens-desktop --all-targets -- -D warnings
-      # Types an order into the real window, confirms the ticket and checks the fill.
+      # Runs the real window against stand-ins for the exchange and for a model: types a message, lets the
+      # model draft a ticket, confirms it, and checks that the signed order and its stop arrived.
       - name: Smoke test
         if: runner.os != 'Linux'
         run: pnpm smoke

@@ -1,50 +1,140 @@
-//! Reads live public market data through an exchange adapter.
+//! Reads live market data from the exchange the way the desk does, on both networks:
+//! the watchlist, the screener, and everything the market panel shows. It is
+//! read-only: no wallet and no model are connected, and nothing is signed or sent.
 //!
-//! ```sh
-//! cargo run -p octogens-core --example probe -- binance BTC
-//! ```
+//!     cargo run -p octogens-core --example probe
 //!
-//! No API keys are involved. Use it to check an adapter against the real venue
-//! after changing it, or to see whether a token is listed.
+//! Useful to check that exchange is reachable from your network and that its
+//! answers still parse after a change to the client.
 
-use octogens_core::instruments::resolve;
-use octogens_core::model::{Timeframe, VenueId};
-use octogens_core::net::http_client;
-use octogens_core::venues::VenueClient;
+use std::sync::Arc;
+
+use octogens_core::model::Network;
+use octogens_core::store::MemorySecrets;
+use octogens_core::studio::view::Snapshot;
+use octogens_core::studio::{Studio, StudioConfig};
+
+fn report(title: &str, snapshot: &Snapshot) {
+    println!("\n== {title} ==");
+    if !snapshot.feed_error.is_empty() {
+        println!("feed error: {}", snapshot.feed_error);
+    }
+    for instrument in &snapshot.instruments {
+        match snapshot.quotes.get(&instrument.symbol) {
+            Some(quote) => println!(
+                "{:<12} last {:>12}  mark {:>12}  24h {:>7}  funding {:>9}  closes {:>2}  {}",
+                instrument.symbol,
+                quote.price,
+                quote.mark_price.as_deref().unwrap_or("-"),
+                quote.change_pct.map_or("-".to_string(), |change| format!("{change:+.2}%")),
+                quote.funding_rate_pct.map_or("-".to_string(), |rate| format!("{rate:+.4}%")),
+                quote.closes.len(),
+                quote.as_of,
+            ),
+            None => println!("{:<12} no quote", instrument.symbol),
+        }
+    }
+}
+
+/// What the market panel reads for one market. Each part is reported on its
+/// own, so one endpoint that changed does not hide the others.
+async fn panel(studio: &Studio, symbol: &str) {
+    match studio.market_overview().await {
+        Ok(rows) => {
+            let mut movers: Vec<_> = rows.iter().filter(|row| row.change_pct.is_some()).collect();
+            movers.sort_by(|a, b| b.change_pct.unwrap_or(0.0).total_cmp(&a.change_pct.unwrap_or(0.0)));
+            let top: Vec<String> = movers
+                .iter()
+                .take(3)
+                .map(|row| format!("{} {:+.2}%", row.symbol, row.change_pct.unwrap_or(0.0)))
+                .collect();
+            println!("screener: {} markets; strongest {}", rows.len(), top.join(", "));
+        }
+        Err(error) => println!("screener: {error}"),
+    }
+    match studio.order_book(symbol).await {
+        Ok(book) => println!(
+            "{symbol} book: mid {}, spread {} bps, {} + {} levels, {}% of resting size on the bid",
+            book.mid,
+            book.spread_bps.map_or("-".to_string(), |bps| format!("{bps:.2}")),
+            book.bids.len(),
+            book.asks.len(),
+            book.bid_share_pct.map_or("-".to_string(), |share| format!("{share:.1}")),
+        ),
+        Err(error) => println!("{symbol} book: {error}"),
+    }
+    match studio.recent_trades(symbol).await {
+        Ok(tape) => match tape.first() {
+            Some(last) => {
+                println!(
+                    "{symbol} tape: {} trades, last {} {} at {}",
+                    tape.len(),
+                    last.side,
+                    last.size,
+                    last.price
+                )
+            }
+            None => println!("{symbol} tape: empty"),
+        },
+        Err(error) => println!("{symbol} tape: {error}"),
+    }
+    match studio.market_funding(symbol).await {
+        Ok(funding) => println!(
+            "{symbol} funding: {}% every {} h ({}% a year), {} settled rates, open interest {} ({} in quote)",
+            funding.rate_pct.map_or("-".to_string(), |rate| format!("{rate:+.4}")),
+            funding.interval_hours.map_or("-".to_string(), |hours| hours.to_string()),
+            funding.annual_pct.map_or("-".to_string(), |annual| format!("{annual:+.2}")),
+            funding.history.len(),
+            funding.open_interest.as_deref().unwrap_or("-"),
+            funding.open_interest_value.as_deref().unwrap_or("-"),
+        ),
+        Err(error) => println!("{symbol} funding: {error}"),
+    }
+    match studio.market_technicals(symbol).await {
+        Ok(technicals) => {
+            for frame in &technicals.frames {
+                println!(
+                    "{symbol} {:<3} {:?}, RSI {}, ATR {}%, support {:?}, resistance {:?}",
+                    frame.timeframe,
+                    frame.trend,
+                    frame.rsi14.map_or("-".to_string(), |rsi| format!("{rsi:.1}")),
+                    frame.atr_pct.map_or("-".to_string(), |atr| format!("{atr:.2}")),
+                    frame.support,
+                    frame.resistance,
+                );
+            }
+        }
+        Err(error) => println!("{symbol} technicals: {error}"),
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), octogens_core::DeskError> {
-    let mut args = std::env::args().skip(1);
-    let venue = VenueId::parse(&args.next().unwrap_or_else(|| "binance".to_string()))?;
-    let instrument = resolve(&args.next().unwrap_or_else(|| "BTC".to_string()))?;
-    let client = VenueClient::new(venue, http_client()?);
+    let folder = std::env::temp_dir().join(format!("octogens-probe-{}", std::process::id()));
+    let studio = Studio::open(StudioConfig::new(folder.clone(), Arc::new(MemorySecrets::default())))?;
 
-    println!("{} on {}: listed = {}", instrument.pair(), venue.name(), client.listed(&instrument).await?);
-    let quote = client.quote(&instrument).await?;
+    let snapshot = studio.boot().await?;
+    report("Mainnet", &snapshot);
+    let series = studio.candles(&snapshot.focus, "4h").await?;
+    let last = series.rows.last().map(|row| row.4.clone()).unwrap_or_default();
     println!(
-        "price {} at {} ({} daily closes, 24h change {:?}%)",
-        quote.price,
-        quote.stamp(),
-        quote.closes.len(),
-        quote.stats.change_pct
+        "{} {} candles: {} rows, last close {last} ({})",
+        series.symbol,
+        series.timeframe,
+        series.rows.len(),
+        series.source
     );
-    println!(
-        "24h high {:?} low {:?} volume {:?} bid {:?} ask {:?}",
-        quote.stats.high, quote.stats.low, quote.stats.volume, quote.stats.bid, quote.stats.ask
-    );
-    for timeframe in Timeframe::ALL {
-        let candles = client.candles(&instrument, timeframe, 5).await?;
-        let last =
-            candles.last().map(|c| format!("t={} o={} h={} l={} c={} v={}", c.t, c.o, c.h, c.l, c.c, c.v));
-        println!("{:>3}: {} candles, newest {}", timeframe.as_str(), candles.len(), last.unwrap_or_default());
+    panel(&studio, &snapshot.focus).await;
+
+    match studio.set_network(Network::Testnet).await {
+        Ok(snapshot) => {
+            report("Testnet", &snapshot);
+            panel(&studio, &snapshot.focus).await;
+        }
+        Err(error) => println!("\n== Testnet ==\nunreachable: {error}"),
     }
-    let book = client.depth(&instrument, 5).await?;
-    println!(
-        "best bid {:?}, best ask {:?}, {} x {} levels",
-        book.bids.first(),
-        book.asks.first(),
-        book.bids.len(),
-        book.asks.len()
-    );
+
+    studio.close().await;
+    let _ = std::fs::remove_dir_all(folder);
     Ok(())
 }

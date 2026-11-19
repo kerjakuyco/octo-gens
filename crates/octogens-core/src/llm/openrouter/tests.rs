@@ -6,6 +6,7 @@ use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use super::*;
+use crate::llm::chat::Assembly;
 use crate::net::http_client;
 
 const KEY: &str = "sk-or-v1-aaaaaaaaaaaaaaaaaaaaaaaa";
@@ -422,4 +423,43 @@ async fn cancelling_returns_promptly_without_waiting_for_the_model() {
         .expect("cancelled reply");
     assert!(reply.cancelled && reply.text.is_empty());
     assert!(started.elapsed() < Duration::from_secs(5), "cancel took {:?}", started.elapsed());
+}
+
+#[test]
+fn thinking_is_handed_back_only_to_the_provider_that_defines_how() {
+    use crate::llm::chat::Flavor;
+
+    let info = model(true);
+    let messages = [
+        json!({"role": "user", "content": "price?"}),
+        json!({"role": "assistant", "content": null, "reasoning": "First the price.",
+            "reasoning_details": [{"type": "reasoning.text", "text": "First the price."}],
+            "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "get_quote", "arguments": "{}"}}]}),
+        json!({"role": "tool", "tool_call_id": "call_1", "content": "{}"}),
+    ];
+    let request = |model| ChatRequest {
+        model,
+        messages: &messages,
+        tools: &[],
+        allow_tools: true,
+        effort: None,
+        max_tokens: 3072,
+    };
+    let router = request(&info).body(Flavor::OpenRouter, true);
+    assert_eq!(router["messages"][1]["reasoning_details"][0]["text"], "First the price.");
+    for flavor in [Flavor::Gateway, Flavor::Local] {
+        let body = request(&info).body(flavor, true);
+        let handed_back = &body["messages"][1];
+        assert!(
+            handed_back.get("reasoning").is_none() && handed_back.get("reasoning_details").is_none(),
+            "{flavor:?}: other providers refuse fields they do not know"
+        );
+        assert_eq!(handed_back["tool_calls"][0]["id"], "call_1", "the call itself is kept");
+        assert_eq!(body["messages"][2], messages[2]);
+    }
+    // Output caps: a server on this computer always gets one; a gateway only for Cloudflare's own models.
+    assert_eq!(request(&info).body(Flavor::Local, true)["max_tokens"], 3072);
+    assert!(request(&info).body(Flavor::Gateway, true).get("max_tokens").is_none());
+    let workers = ModelInfo { id: "@cf/meta/llama-3.3-70b-instruct-fp8-fast".into(), ..model(true) };
+    assert_eq!(request(&workers).body(Flavor::Gateway, true)["max_tokens"], 3072);
 }

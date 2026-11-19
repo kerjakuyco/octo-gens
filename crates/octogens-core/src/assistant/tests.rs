@@ -7,6 +7,7 @@ use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, Request, Respond, ResponseTemplate};
 
 use super::*;
+use crate::llm::openrouter::OpenRouter;
 use crate::net::http_client;
 
 const KEY: &str = "sk-or-v1-aaaaaaaaaaaaaaaaaaaaaaaa";
@@ -51,15 +52,16 @@ fn quote_call(id: &str) -> Value {
     json!({"index": 0, "id": id, "type": "function", "function": {"name": "get_quote", "arguments": "{\"pairs\":[\"BTC\"]}"}})
 }
 
-async fn scripted(responses: Vec<ResponseTemplate>) -> (MockServer, OpenRouter) {
+async fn scripted(responses: Vec<ResponseTemplate>) -> (MockServer, Connection) {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/chat/completions"))
         .respond_with(Script(Mutex::new(responses.into())))
         .mount(&server)
         .await;
-    let llm = OpenRouter::new(http_client().expect("client")).with_base(&server.uri());
-    (server, llm)
+    let http = http_client().expect("client");
+    let endpoint = OpenRouter::new(http.clone()).with_base(&server.uri()).endpoint(KEY).expect("endpoint");
+    (server, Connection::Compatible { http, endpoint })
 }
 
 #[derive(Default)]
@@ -108,10 +110,10 @@ fn model() -> ModelInfo {
     ModelInfo { id: "openai/gpt-test".into(), tools: true, reasoning: true, ..ModelInfo::default() }
 }
 
-fn turn<'a>(llm: &'a OpenRouter, model: &'a ModelInfo, cancel: &'a CancellationToken) -> Turn<'a> {
+fn turn<'a>(llm: &'a Connection, model: &'a ModelInfo, cancel: &'a CancellationToken) -> Turn<'a> {
     Turn {
         llm,
-        key: KEY,
+        limits: Limits::of(llm),
         model,
         effort: None,
         system: "You are Octo.",

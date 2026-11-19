@@ -1,67 +1,106 @@
 import { useEffect, useLayoutEffect } from "react";
-import { BrandMark } from "./components/BrandMark";
-import { Rail } from "./components/Rail";
+import { isDesktop } from "./api";
 import { Toast } from "./components/Toast";
+import { AccountPage } from "./features/account/AccountPage";
 import { ActivityPage } from "./features/activity/ActivityPage";
-import { AssistantPage } from "./features/assistant/AssistantPage";
-import { ConnectionsPage } from "./features/connections/ConnectionsPage";
+import { ChatPage } from "./features/chat/ChatPage";
+import { MarketPanel } from "./features/market/MarketPanel";
 import { TradeDialog } from "./features/market/TradeDialog";
-import { PortfolioPage } from "./features/portfolio/PortfolioPage";
-import { SettingsPage } from "./features/settings/SettingsPage";
-import { app, focusComposer, refreshQuotes, setPanelOpen, start, stopTurn, useApp, useSnapshot } from "./state/app";
+import { MarketsPage } from "./features/markets/MarketsPage";
+import { SettingsDialog } from "./features/settings/SettingsDialog";
+import { Sidebar } from "./features/shell/Sidebar";
+import { TopBar } from "./features/shell/TopBar";
+import { useMedia } from "./lib/hooks";
+import {
+  PANEL_INLINE,
+  SIDEBAR_INLINE,
+  app,
+  closeDrawer,
+  focusComposer,
+  refreshAccount,
+  refreshQuotes,
+  start,
+  stopTurn,
+  useApp,
+  useSnapshot,
+} from "./state/app";
+import { devParams } from "./state/dev";
 
-const REFRESH_MS = 20_000;
+const QUOTES_REFRESH_MS = 20_000;
+const ACCOUNT_REFRESH_MS = 15_000;
+
+/** The desktop app on macOS draws its window buttons over the page, so the bars leave room for them. */
+function platform(): string | undefined {
+  const forced = devParams().platform;
+  if (forced) return forced;
+  return isDesktop() && /Mac/i.test(navigator.userAgent) ? "macos" : undefined;
+}
 
 function Shell() {
   const snapshot = useSnapshot();
   const page = useApp((state) => state.page);
-  const working = useApp((state) => state.working);
+  const sidebarOpen = useApp((state) => state.sidebarOpen);
+  const panelOpen = useApp((state) => state.panelOpen);
+  const drawer = useApp((state) => state.drawer);
+  const sidebarBeside = useMedia(SIDEBAR_INLINE);
+  const panelBeside = useMedia(PANEL_INLINE);
 
-  // A layout effect, so the theme is on the document before any child effect reads design tokens.
+  const sidebarShown = sidebarBeside ? sidebarOpen : drawer === "sidebar";
+  const panelShown = panelBeside ? panelOpen : drawer === "panel";
+  const overlaid = (sidebarShown && !sidebarBeside) || (panelShown && !panelBeside);
+
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = snapshot.theme;
   }, [snapshot.theme]);
 
+  // A drawer belongs to the narrow layout; widening the window puts it away.
+  useEffect(() => {
+    if ((drawer === "sidebar" && sidebarBeside) || (drawer === "panel" && panelBeside)) closeDrawer();
+  }, [drawer, sidebarBeside, panelBeside]);
+
+  // Prices and the account are re-read on a timer, but only while the window is in view.
+  useEffect(() => {
+    const quotes = setInterval(() => {
+      if (!document.hidden) void refreshQuotes();
+    }, QUOTES_REFRESH_MS);
+    const account = setInterval(() => {
+      if (!document.hidden) void refreshAccount();
+    }, ACCOUNT_REFRESH_MS);
+    return () => {
+      clearInterval(quotes);
+      clearInterval(account);
+    };
+  }, []);
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         focusComposer();
-        return;
       }
-      // An open dialog handles Escape itself.
-      if (event.key !== "Escape" || document.querySelector("dialog[open]")) return;
+      // A dialog or a menu that is open handles its own Escape.
+      if (event.key !== "Escape" || event.defaultPrevented || document.querySelector("dialog[open]")) return;
       const state = app.get();
-      if (state.panelOpen) setPanelOpen(false);
+      if (state.drawer) closeDrawer();
       else if (state.live) stopTurn();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // Live prices move; the sample tape does not, and `refreshQuotes` skips it.
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (!document.hidden) void refreshQuotes();
-    }, REFRESH_MS);
-    return () => clearInterval(timer);
-  }, []);
-
   return (
     <div className="app">
-      <Rail />
+      {sidebarShown ? <Sidebar overlay={!sidebarBeside} /> : null}
       <main className="main">
-        {working ? (
-          <div className="progress" role="status">
-            <span className="visually-hidden">{working}</span>
-          </div>
-        ) : null}
-        {page === "assistant" ? <AssistantPage /> : null}
-        {page === "portfolio" ? <PortfolioPage /> : null}
-        {page === "connections" ? <ConnectionsPage /> : null}
+        <TopBar sidebarBeside={sidebarShown && sidebarBeside} panelShown={panelShown} />
+        {page === "chat" ? <ChatPage /> : null}
+        {page === "markets" ? <MarketsPage /> : null}
+        {page === "account" ? <AccountPage /> : null}
         {page === "activity" ? <ActivityPage /> : null}
-        {page === "settings" ? <SettingsPage /> : null}
       </main>
+      {panelShown ? <MarketPanel overlay={!panelBeside} /> : null}
+      {overlaid ? <div className="scrim" onClick={closeDrawer} /> : null}
+      <SettingsDialog />
       <TradeDialog />
       <Toast />
     </div>
@@ -76,21 +115,25 @@ export function App() {
     void start();
   }, []);
 
+  useLayoutEffect(() => {
+    const name = platform();
+    if (name) document.documentElement.dataset.platform = name;
+  }, []);
+
   if (phase === "ready") return <Shell />;
   return (
-    <div className="boot">
-      <BrandMark size={48} />
+    <div className="boot" data-tauri-drag-region>
       {phase === "failed" ? (
         <>
-          <p className="boot-error" role="alert">
-            Octo Gens could not start. {bootError}
+          <p className="boot-text" role="alert">
+            {bootError}
           </p>
           <button type="button" className="btn btn-primary" onClick={() => void start()}>
             Try again
           </button>
         </>
       ) : (
-        <p role="status">Opening your desk</p>
+        <span className="spinner" role="status" aria-label="Starting" />
       )}
     </div>
   );

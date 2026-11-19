@@ -1,0 +1,500 @@
+/* Settings, and the forms shared with the order dialog. */
+
+.settings {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: 176px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.tabs-vertical {
+  flex-direction: column;
+  align-content: start;
+  gap: 2px;
+  padding: 4px 8px 16px 12px;
+  overflow-y: auto;
+  border-radius: 0;
+  background: none;
+}
+
+.tabs-vertical [role="tab"] {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--r-control);
+  font-size: var(--text-ui);
+  text-align: left;
+}
+
+.tabs-vertical [role="tab"] > svg {
+  color: var(--muted);
+}
+
+.tabs-vertical [role="tab"]:hover {
+  background: var(--surface);
+}
+
+.tabs-vertical [role="tab"][aria-selected="true"] {
+  background: var(--surface-strong);
+  box-shadow: none;
+}
+
+.settings-panel {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 4px 24px 24px 16px;
+}
+
+@media (max-width: 640px) {
+  .settings {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .tabs-vertical {
+    flex-direction: row;
+    padding: 0 12px 10px;
+    overflow-x: auto;
+  }
+
+  /* Side by side there is no room for icons. */
+  .tabs-vertical [role="tab"] > svg {
+    display: none;
+  }
+
+  .settings-panel {
+    padding: 4px 16px 20px;
+  }
+}
+
+/* -------------------------------------------------------------------- rows */
+
+/* One row per setting: what it is on the left, its control on the right. */
+.rows {
+  display: grid;
+  /* Lifts the first row so that its label sits level with the first tab. */
+  margin-top: -8px;
+}
+
+.row-list {
+  display: grid;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  align-content: center;
+  gap: 4px 16px;
+  min-height: 52px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+/* A second line of text makes the row taller by that line, so the first line keeps its place. */
+.row[data-lines="2"] {
+  min-height: 72px;
+}
+
+.rows > .row:last-child,
+.rows > :last-child > .row:last-child {
+  border-bottom: 0;
+}
+
+.row-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.row-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 500;
+}
+
+.row-sub {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Something to say about the row, such as why its value was refused. */
+.row-note {
+  grid-column: 1 / -1;
+}
+
+.row-empty {
+  padding: 14px 0;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------- setup */
+
+.setup {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.setup-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: -8px;
+}
+
+.setup-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* A list of models takes the height that is left over and scrolls inside it. */
+.settings-panel:has(> .setup > .models-box) {
+  display: flex;
+  flex-direction: column;
+}
+
+.setup:has(> .models-box) {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.models-box {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.models-caption {
+  flex: none;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-meta);
+  text-align: right;
+}
+
+.models {
+  display: grid;
+  flex: 0 1 auto;
+  align-content: start;
+  gap: 1px;
+  min-height: 98px;
+  margin: 0 -10px;
+  padding: 4px 0;
+  overflow-y: auto;
+}
+
+/* The list scrolls under this line. */
+.models-foot {
+  display: flex;
+  flex: none;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* A borderless button's words start where the list's do. */
+.models-foot > .btn-ghost:first-child {
+  margin-left: -10px;
+}
+
+.model {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 10px;
+  border-radius: var(--r-control);
+  text-align: left;
+}
+
+.model:not(:disabled):hover,
+.model[aria-current="true"] {
+  background: var(--surface);
+}
+
+.model:disabled {
+  opacity: 0.55;
+}
+
+.model-main {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.model-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-weight: 500;
+}
+
+.model-name > svg {
+  color: var(--muted);
+}
+
+.model-id {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.model-facts {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+
+.models-none {
+  padding: 16px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.suggest {
+  display: grid;
+  gap: 1px;
+}
+
+.suggest-item {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: var(--r-small);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.suggest-item:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.form-actions-split {
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ------------------------------------------------------------------ wallet */
+
+.wallets {
+  display: grid;
+  gap: 12px;
+}
+
+.wallet {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+
+.wallet-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wallet-name {
+  margin-right: 2px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.wallet-lines {
+  display: grid;
+  gap: 6px;
+}
+
+.wallet-lines > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 24px;
+}
+
+.wallet-lines dt {
+  color: var(--muted);
+}
+
+.wallet-lines dd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+
+.wallet-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: var(--text-sm);
+}
+
+/* A way out to the exchange's own pages, kept quieter than the buttons beside it. */
+.wallet-actions > .link {
+  color: var(--muted);
+}
+
+.wallet-actions > .link:hover {
+  color: var(--text);
+}
+
+.wallet-pending {
+  display: grid;
+  gap: 8px;
+}
+
+.copy-row {
+  display: flex;
+  gap: 6px;
+}
+
+/* ------------------------------------------------------------------- forms */
+
+/* A number with its unit inside the box, so the box lines up with the controls of the other rows. */
+.leverage-field {
+  position: relative;
+  display: inline-flex;
+}
+
+.leverage-field .input {
+  width: 84px;
+  padding-right: 27px;
+  text-align: right;
+  appearance: textfield;
+}
+
+/* The unit takes the place of the stepper arrows; the arrow keys still step the value. */
+.leverage-field .input::-webkit-inner-spin-button,
+.leverage-field .input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.leverage-unit {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.input-group .input {
+  flex: 1 1 auto;
+}
+
+.input-group .segmented {
+  flex: none;
+}
+
+.form-row:has(.field-narrow) {
+  grid-template-columns: minmax(0, 1fr) 104px;
+}
+
+.check .field-help {
+  display: inline;
+}
+
+/* ------------------------------------------------------------------- tools */
+
+.tool-list {
+  display: grid;
+  gap: 4px;
+  max-height: 208px;
+  overflow-y: auto;
+}
+
+.tool {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-control);
+  text-align: left;
+}
+
+.tool:hover {
+  background: var(--surface);
+}
+
+.tool[aria-checked="true"] {
+  border-color: var(--border-strong);
+  background: var(--surface);
+}
+
+.tool-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 500;
+}
+
+.tool-text {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* ------------------------------------------------------------------- about */
+
+.about {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  /* The name sits level with the first tab. */
+  padding-top: 5px;
+}
+
+.about-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.about-links {
+  display: grid;
+  gap: 6px;
+}

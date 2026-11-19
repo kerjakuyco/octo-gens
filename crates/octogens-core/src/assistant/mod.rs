@@ -5,7 +5,6 @@
 //! What the tools are and what they may do is decided by the [`ToolHost`]; the
 //! loop itself can neither read an account nor touch an order.
 
-pub mod builtin;
 pub mod prompt;
 pub mod tools;
 
@@ -16,14 +15,52 @@ use tokio_util::sync::CancellationToken;
 
 use crate::bail;
 use crate::error::Result;
-use crate::llm::openrouter::{ChatReply, ChatRequest, ChatSink, ModelInfo, OpenRouter, ToolCall, Usage};
+use crate::llm::{ChatReply, ChatRequest, ChatSink, Connection, ModelInfo, ToolCall, Usage};
 
 /// Model rounds that may call tools. One more round is allowed for the answer.
 pub const MAX_TOOL_ROUNDS: usize = 8;
-/// Output budget per round. Thinking counts toward it on reasoning models.
-const MAX_TOKENS: u64 = 4096;
-/// Largest tool result handed back to the model, in bytes.
-const RESULT_LIMIT: usize = 12_000;
+
+/// How much a model is handed and may say. A model on this computer works in
+/// a small context, so it gets shorter tool results and less history.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Limits {
+    /// Largest tool result handed back to the model, in bytes.
+    pub result_bytes: usize,
+    /// Output budget per round. Thinking counts toward it on reasoning models.
+    pub max_tokens: u64,
+    /// Earlier turns of the conversation replayed to the model.
+    pub history_turns: usize,
+    /// How much of each earlier answer is replayed, in characters.
+    pub history_chars: usize,
+    /// Headlines handed back by one news search.
+    pub headlines: usize,
+    /// How much of a web page's text is handed back, in bytes.
+    pub page_bytes: usize,
+}
+
+impl Limits {
+    pub fn of(connection: &Connection) -> Self {
+        if connection.local() {
+            Self {
+                result_bytes: 6_000,
+                max_tokens: 3072,
+                history_turns: 3,
+                history_chars: 1200,
+                headlines: 6,
+                page_bytes: 3_500,
+            }
+        } else {
+            Self {
+                result_bytes: 12_000,
+                max_tokens: 4096,
+                history_turns: 6,
+                history_chars: 2000,
+                headlines: 8,
+                page_bytes: 8_000,
+            }
+        }
+    }
+}
 
 /// Runs the tools a model asks for.
 pub trait ToolHost: Sync {
@@ -56,8 +93,7 @@ impl<E: TurnEvents> ChatSink for Forward<'_, E> {
 
 /// Everything one turn needs.
 pub struct Turn<'a> {
-    pub llm: &'a OpenRouter,
-    pub key: &'a str,
+    pub llm: &'a Connection,
     pub model: &'a ModelInfo,
     /// `low`, `medium` or `high`; `None` leaves the model's default.
     pub effort: Option<&'a str>,
@@ -67,6 +103,7 @@ pub struct Turn<'a> {
     /// The trader's message, already wrapped with the desk block.
     pub user: String,
     pub cancel: &'a CancellationToken,
+    pub limits: Limits,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -97,10 +134,10 @@ pub async fn run<H: ToolHost, E: TurnEvents>(turn: Turn<'_>, host: &H, events: &
             tools: &tools,
             allow_tools,
             effort: turn.effort,
-            max_tokens: MAX_TOKENS,
+            max_tokens: turn.limits.max_tokens,
         };
         events.round_started(round);
-        let reply = turn.llm.chat(turn.key, &request, &mut Forward(events), turn.cancel).await;
+        let reply = turn.llm.chat(&request, &mut Forward(events), turn.cancel).await;
         events.round_finished(round, &reply);
         let reply = reply?;
 
@@ -137,7 +174,7 @@ pub async fn run<H: ToolHost, E: TurnEvents>(turn: Turn<'_>, host: &H, events: &
             let output = if turn.cancel.is_cancelled() {
                 json!({"error": "The trader stopped this turn."}).to_string()
             } else {
-                tools::truncate(host.call(call).await, RESULT_LIMIT)
+                tools::truncate(host.call(call).await, turn.limits.result_bytes)
             };
             // Every call needs a result, or the next request is rejected.
             messages.push(json!({"role": "tool", "tool_call_id": call.id, "content": output}));
