@@ -1,5 +1,7 @@
 # OctoNeo
 
+Website: [octoneo.xyz](https://octoneo.xyz). Download the [latest release](https://github.com/kerjakuyco/octo-neo/releases/latest) for Windows, macOS (Apple silicon) or Linux.
+
 OctoNeo is a desktop AI trading assistant for perpetual futures on a decentralised exchange. You chat with it the way you chat with any AI assistant. It reads live market data, sizes positions from the risk you accept, and drafts order tickets. You trade from your own web3 wallet and confirm every order. It runs on Windows, macOS and Linux.
 
 ![A conversation with the assistant beside the live market panel](docs/images/assistant-dark.png)
