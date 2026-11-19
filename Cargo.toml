@@ -7,7 +7,6 @@ version = "0.5.0"
 edition = "2024"
 license = "GPL-3.0-only"
 repository = "https://github.com/kerjakuyco/octo-gens"
-homepage = "https://github.com/kerjakuyco/octo-gens"
 authors = ["Octo Gens contributors"]
 rust-version = "1.90"
 

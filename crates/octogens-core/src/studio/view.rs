@@ -384,7 +384,7 @@ impl From<&Plan> for PlanView {
             margin: decimal_text(cents(plan.margin)),
             loss_at_stop: decimal_text(cents(plan.loss)),
             risk_pct: plan.loss_pct(),
-            liquidation: Some(decimal_text(plan.liquidation)).filter(|_| !plan.liquidation.is_zero()),
+            liquidation: (!plan.liquidation.is_zero()).then(|| decimal_text(plan.liquidation)),
             stop_safe: plan.stop_safe,
             reward_to_risk: plan.reward_to_risk(),
         }
