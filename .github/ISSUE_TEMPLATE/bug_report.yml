@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for the report. **Never paste API keys, secrets or account numbers.** Redact them from anything you share.
+        Thanks for the report. **Never paste private keys, seed phrases or API keys.** Wallet addresses are public, but redact them if you prefer.
   - type: textarea
     id: what
     attributes:
@@ -18,8 +18,8 @@ body:
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. Switch the feed to OKX
-        2. Type "buy 0.01 BTC"
+        1. Switch to Testnet
+        2. Ask "Long 0.01 BTC with a stop at 60000"
         3. ...
     validations:
       required: true
@@ -38,17 +38,17 @@ body:
     validations:
       required: true
   - type: dropdown
-    id: feed
+    id: network
     attributes:
-      label: Price feed
-      options: [Sample tape, Binance, Bybit, OKX, Not relevant]
+      label: Network
+      options: [Mainnet, Testnet, Both, Not relevant]
     validations:
       required: true
   - type: input
     id: model
     attributes:
       label: Model
-      description: For assistant problems. For example "Built-in agents" or the OpenRouter model id.
+      description: For assistant problems. The provider and the model, for example "OpenRouter, openai/gpt-4.1" or "Ollama, qwen3:8b".
   - type: textarea
     id: details
     attributes:

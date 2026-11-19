@@ -1,12 +1,12 @@
 # Security
 
-Octo Gens can hold exchange API keys and send real orders, so security reports are taken seriously.
+Octo Gens holds a key that can trade on your exchange account, so security reports are taken seriously.
 
 ## Reporting a vulnerability
 
 Please do not open a public issue. Use **Report a vulnerability** under the repository's [Security tab](https://github.com/kerjakuyco/octo-gens/security/advisories/new), which opens a private advisory visible only to the maintainers.
 
-Include what you found, how to reproduce it, and what an attacker could do with it. Never include real API keys; revoke any key that was exposed while testing.
+Include what you found, how to reproduce it, and what an attacker could do with it. Never include a real key or seed phrase; revoke any key that was exposed while testing.
 
 Fixes are released for the latest version only.
 
@@ -14,22 +14,46 @@ Fixes are released for the latest version only.
 
 | Risk | Protection |
 | --- | --- |
-| The model places a trade you did not want | No tool can place, change or cancel an order. The assistant drafts a ticket and you confirm it. Live tickets from the assistant are off by default. |
-| A double click sends an order twice | A draft is consumed by its first submission. Live orders carry a client id, so the exchange rejects a repeat. |
-| Keys leak to disk | The OpenRouter key and remembered exchange keys live in the system keychain. Preferences, the journal and snapshots never contain them. |
-| Keys leak to a model or the interface | Keys never enter prompts, tool results or the web view. Errors and answers are scrubbed of the OpenRouter key. |
+| The app's key is stolen | It is an API wallet approved for perpetual trading only: no spot trading, no withdrawal. It lives in the system keychain. The approval expires, and you can remove it on the exchange at any time. |
+| Your own wallet's key is exposed | It never enters the app. Connecting needs your address and one signature made in your wallet. A pasted key that belongs to the wallet address itself is refused. |
+| The model places a trade you did not want | No tool can place, change or cancel an order, or move funds. The assistant drafts a ticket and you confirm it. Mainnet tickets from the assistant are off by default, and turning them off again discards one that is waiting. |
+| The model opens a reckless position | A ticket from the assistant needs a stop-loss inside the estimated liquidation price, and no ticket may exceed your leverage limit (3x until you raise it). |
+| A double click sends an order twice | A draft is consumed by its first submission. Orders are sent once and never retried. |
+| A lost answer hides an order that was taken | Orders carry a client id. When an answer goes missing or the exchange's side fails, the app looks the order up before saying anything, and tells you plainly if it could not find out. |
+| A ticket is confirmed after the market has moved | The position and the mark price are read again at confirmation. If the position changed, the price moved more than 1%, or the stop-loss no longer protects the position, nothing is sent. |
+| A page in your browser hijacks the wallet approval | The approval page is served on this computer only, on a random port behind a random path, for ten minutes. It answers only that path, refuses other host names, loads nothing from the internet, and the signature must come from the account that connected. |
+| Keys leak to disk, a model or the interface | Preferences, the journal and snapshots never contain a key. Keys never enter prompts, tool results or the web view. Answers and errors are scrubbed of the model provider's key before they are shown or stored. |
+| A mistyped or revoked provider key is stored | A new OpenRouter key is shown to OpenRouter, and a Cloudflare token is proved with one short chat, before either is kept. A key that is turned away replaces nothing. |
+| A model on this computer is reached through someone else's server | Requests to Ollama and LM Studio go to the address you set, never through a system proxy, and are never redirected. |
+| A deleted conversation stays on disk | Deleting a conversation removes its turns from the journal and overwrites the space they took. |
 | A hostile page or tool output hijacks the app | The web view has no network access and can only call the app's own commands. The model is told to treat tool output as data, and the rules above hold even if it is fooled. |
-| A signed request is replayed elsewhere | HTTP redirects are never followed. Signed requests are sent once, to the exchange's main host only. |
-| An MCP server does more than read | The assistant may call only tools a server marks read-only. Official servers are pinned to exact versions. |
+| A news article tells the model what to do | What the assistant reads on the web reaches the model marked as data. Whatever it is talked into, it can still only draft a ticket you must confirm. |
+| A page makes the model send your figures somewhere | The assistant can read only a page a news search showed it, or one you gave it a link to. A link it made up, or one it changed, is never requested, so nothing of yours can leave inside an address. |
+| The assistant is pointed at something on your own network | Only public `https` pages are read. Addresses on this computer or on a private network are refused by name, by number, after a redirect, and when the connection is made. |
+| A signed request is replayed | Each request carries a nonce the exchange accepts once, within about a minute, and is signed for one network. HTTP redirects are never followed. |
+| A tool server does more than read | The assistant may call only tools a server marks read-only. |
 
 ## What you should do
 
-- Create exchange API keys **without withdrawal permission**, and restrict them to your IP address where the exchange allows it.
-- Attach only MCP servers you trust. A custom command runs with your user's permissions.
+- **Never type a seed phrase or your wallet's private key into Octo Gens**, or into any chat. The app never needs them.
+- Read what your wallet asks you to sign. The approval must say `canWithdraw=false`.
+- Choose a short approval period, and remove the API wallet on the exchange's API wallet page when you stop using the app on a computer.
+- Keep the leverage limit low, and practise on testnet first.
+- Attach only tool servers you trust. A local command runs with your user's permissions.
+- Give a Cloudflare API token only the *Workers AI Read* permission. The app needs nothing more.
 - Keep the app up to date.
 
 ## Limits you should know
 
-- If your system has no keychain, keys are kept in memory for the session and must be entered again next launch.
+- **Anyone who can run programs as you can use the key.** Software running under your user account can ask the keychain for it, or drive the app. The key cannot withdraw, but it can trade.
+- **The journal is not encrypted.** It keeps your conversations and what the assistant quoted, which can include account figures. It never contains keys.
+- **A cloud model sees what you ask it.** Your messages, the tool results it gathers and the account summary in each message go to the provider you chose (OpenRouter, or Cloudflare and the provider behind your gateway). A model on this computer keeps all of that here; only the requests to the exchange, to news publishers while web search is on, and to any tool server you attached, leave.
+- **News publishers see that you read them.** With web search on, the app downloads the public feeds of eight news publishers and the articles the assistant reads, from your computer. They see your network address, as any site you visit does. What you type is not sent to them, except the ticker of a share, a fund or a commodity you ask about, which goes to Yahoo Finance. Turn web search off in **Settings** under *Tools* to stop it.
+- **The news can be wrong.** A headline is one newsroom's report. The assistant is told to say who reported it and when, and not to trade on it, but it cannot check it.
+- **A local server's address is yours to choose.** If you point Ollama or LM Studio at another machine, your conversations go to that machine.
+- **The exchange checks the deposit before the signature.** A wallet that has never deposited cannot be verified, so a wrong pasted key shows up only after the first deposit.
+- **The liquidation price on a ticket is an estimate.** It ignores fees, funding and margin tiers. The exchange's own figure appears once the position is open.
+- **A stop-loss is placed after the entry.** If the exchange refuses it, the position is open without one and the ticket says so. Stops trigger market orders and can fill worse than their trigger.
+- If your system has no keychain, keys are kept in memory for the session and the wallet must be connected again next launch.
+- `OCTOGENS_MAINNET_URL` and `OCTOGENS_TESTNET_URL` send a network's requests, signed ones included, to another origin. They exist for tests.
 - Installers are not signed with a developer certificate or notarized, because this repository holds no certificates. macOS builds carry an ad-hoc signature only, so macOS and Windows warn before the first launch of a downloaded copy.
-- The paper account ignores fees and slippage. It is for practice, not a prediction of live results.

@@ -1,68 +1,116 @@
 # Octo Gens
 
-Octo Gens is a desktop AI trading assistant for crypto spot markets. You chat with it; it researches with live exchange data, sizes positions, and drafts order tickets. You confirm every order. It runs on Windows, macOS and Linux.
+Octo Gens is a desktop AI trading assistant for perpetual futures on a decentralised exchange. You chat with it the way you chat with any AI assistant. It reads live market data, sizes positions from the risk you accept, and drafts order tickets. You trade from your own web3 wallet and confirm every order. It runs on Windows, macOS and Linux.
 
-![The assistant comparing two tokens and drafting a paper ticket](docs/images/assistant-dark.png)
+![A conversation with the assistant beside the live market panel](docs/images/assistant-dark.png)
 
-- **An assistant that works the desk.** With an OpenRouter model it plans its own research: quotes, multi-timeframe technical readings, order-book depth, cross-exchange prices, your portfolio, position sizing.
-- **You stay in control.** The assistant can only draft a ticket. Nothing is bought or sold until you confirm it, and live tickets from the assistant are off until you allow them.
-- **Binance, Bybit and OKX with no setup.** Public market data needs no account. Add API keys only for balances and live orders.
-- **Paper trading from the first launch.** Every price feed has its own simulated USDT account. A built-in sample tape works offline.
-- **Works without a model too.** Built-in agents handle quotes, comparisons, your portfolio and typed orders such as `buy 0.01 BTC`.
+- **Just ask.** "BTC outlook", "Top movers", "Long ETH, 1% risk". The assistant plans its own research and shows what it read as cards under the answer: prices, a technical reading, the order book, a position plan.
+- **Bring your own model.** OpenRouter, Cloudflare AI Gateway, or a model on your own computer with Ollama or LM Studio.
+- **Market data in depth.** A screener of every market, a chart, the order book and latest trades, funding history and open interest, and technical readings on four timeframes.
+- **The news, read for you.** Ask why a market is moving. The assistant reads the latest headlines from crypto newsrooms, Yahoo Finance and the Federal Reserve, says who reported what and how long ago, and lists the headlines with links. Ask about a share or a commodity the exchange lists and it reads the news filed under that ticker too. It works with every model, and needs no key.
+- **You stay in control.** The assistant can only draft a ticket. Nothing reaches the exchange until you confirm it, and the assistant may not draft mainnet tickets until you allow it.
+- **Your wallet, your funds.** Your wallet approves a separate trade-only key for the app. The app never sees your wallet's key, and the key it holds cannot withdraw.
+- **Practice first.** Switch to the testnet for the same order flow with test funds.
 
 > [!WARNING]
-> Octo Gens is early software and not financial advice. Markets can move against you quickly. Try the paper account first, and trade live only with money you can afford to lose.
+> Octo Gens is early software and not financial advice. Perpetual futures are leveraged: a position can be liquidated and lose its whole margin quickly. Practise on testnet first, and trade on mainnet only with money you can afford to lose.
 
 ## Install
 
 Installers for Windows, macOS and Linux are attached to each release on the [Releases page](https://github.com/kerjakuyco/octo-gens/releases). If there is no release for your system yet, [build it yourself](#build-from-source).
 
-The app opens on the **sample tape**: fictional prices and 100,000 USDT of paper cash, so you can try everything safely.
+The app opens on **mainnet** prices. Market data needs no wallet, no account and no model.
 
-1. Type **Compare BTC and ETH**. The answer shows each reading and the steps that produced it.
-2. Type **Buy 0.01 BTC**. Review the ticket, then place the paper order.
-3. Pick **Binance**, **Bybit** or **OKX** at the top to switch to live prices.
+1. [Connect a model](#connect-a-model). The first launch asks for one.
+2. Ask **BTC outlook**. The answer comes with the readings it is based on.
+3. Switch to **Testnet** at the top and [connect a wallet](#connect-a-wallet).
+4. Ask **Long 0.01 BTC**. The assistant picks a stop-loss, says where it put it, and drafts a ticket. Review it, then place the order. Ask **Close my BTC** to exit.
 
 `Ctrl+K` (Windows, Linux) or `Cmd+K` (macOS) puts the cursor in the message box. `Esc` stops a running answer.
 
-## Choose a model
+## Connect a model
 
-Open **Settings** and pick who answers.
+Every message is answered by a language model, so the app needs one. Open **Settings**, then **Models**, and pick a provider.
 
-| Option | What you get | What it needs |
+| Provider | Where the model runs | What it needs |
 | --- | --- | --- |
-| Built-in agents | Quotes, comparisons with technical readings, portfolio review, typed orders | Nothing |
-| OpenRouter | The full assistant. A tool-calling model plans its own research and drafts tickets; other models explain readings the desk gathers | An [OpenRouter key](https://openrouter.ai/keys) |
-| Ollama | A model on your computer explains readings the desk gathers | [Ollama](https://ollama.com) running locally |
+| OpenRouter | In the cloud | An [OpenRouter key](https://openrouter.ai/keys). Pick any model that supports tools; the list shows context size and price. OpenRouter bills you for what the model uses. |
+| Cloudflare AI Gateway | In the cloud | Your Cloudflare account ID, an API token with the *Workers AI Read* permission, and a model such as `openai/gpt-4.1` or one of Cloudflare's own. Cloudflare bills your account. |
+| Ollama | On your computer | [Ollama](https://ollama.com) running, with a model that supports tools, for example `ollama pull qwen3:8b`. |
+| LM Studio | On your computer | [LM Studio](https://lmstudio.ai) with its local server started and a model trained for tool use. The app loads the model for you. |
 
-The model list shows which models can call tools, their context size and their price. OpenRouter bills you for what the model uses.
+![Connecting a model in Settings](docs/images/models-light.png)
+
+The app checks a model before it keeps it: the key or token must be accepted, and the model must be able to call tools, because that is how the assistant reads the market and drafts tickets. A model on your computer keeps your conversations on your computer. It works in a smaller context than a cloud model, so pick the largest one your machine runs comfortably.
+
+## Connect a wallet
+
+Octo Gens trades through an **API wallet**: a separate key that your own wallet approves for trading perpetuals. It is approved without spot trading and without withdrawal. Open **Settings**, then **Wallet**, and choose one of two ways. Each network has its own wallet.
+
+| Way | What happens | Good for |
+| --- | --- | --- |
+| Approve in a browser wallet | The app creates a key on your computer and opens a page it serves locally. Your wallet (MetaMask, Rabby and others) signs one approval for that key, for 7 to 180 days. | Most people |
+| Paste an API wallet key | You create an API wallet on the exchange's own API wallet page, which the app opens for you, and paste its key together with your wallet address. | Hardware wallets, or keys you manage yourself |
+
+![Connecting a wallet by approving a trade-only key in the browser](docs/images/wallet-light.png)
+
+Things to know:
+
+- **Deposit first.** The exchange serves an account only after the wallet's first deposit, on testnet too. Until then the app shows the wallet as waiting for its deposit. You deposit and withdraw on the exchange's site, never in this app.
+- **One-way mode.** The app keeps one net position per market. An account in hedge mode is shown with an explanation and is not traded.
+- **Ending access.** *Disconnect* forgets the key on this computer. The approval itself ends on its expiry date, or sooner if you remove it on the exchange's API wallet page.
+
+## Market data
+
+![The screener of every market the exchange lists](docs/images/markets-dark.png)
+
+| Where | What it shows |
+| --- | --- |
+| **Markets** | Every market the exchange lists, most traded first: price, 24h change, volume and funding. Sort by any column, search, and add a market to your watchlist. |
+| The market panel, beside the conversation | A chart on 15m, 1h, 4h and 1d for the market in focus, with its mark price, funding and the time to the next payment. |
+| *Book* | The best bids and asks with their running size, the spread, the share of resting size on each side, and the latest trades. |
+| *Funding* | The rate now and what it comes to over a year, two weeks of settled rates, and open interest. |
+| *Technicals* | Trend, RSI, MACD, ATR, moving averages, support and resistance on four timeframes side by side. |
+| *Watchlist* | Your markets with a 90-day sparkline each. |
+
+The panel follows what the assistant looks at, and it reads straight from the exchange: none of it needs a wallet or a model.
 
 ## What the assistant can do
 
 | It can | It cannot |
 | --- | --- |
-| Read prices, candles, order books and 24h statistics | Place, change or cancel an order |
-| Compute trend, momentum, volatility and support/resistance | See or handle your API keys |
-| Compare a pair across Binance, Bybit and OKX | Call exchange tools that are not marked read-only |
-| Read your paper account, and real balances when you ask | Draft a live ticket unless you allowed it in Settings |
-| Size a position from a stop and a risk percentage | Trade anything but USDT spot pairs |
-| Draft a ticket for you to confirm | |
+| Read prices, mark prices, funding, candles and order books | Place, change or cancel an order |
+| Find the biggest movers across the whole exchange | See or handle any key |
+| Compute trend, momentum, volatility and support/resistance | Withdraw, transfer or deposit |
+| Read your account: equity, positions, liquidation prices, open orders | Draft a mainnet ticket unless you allowed it in Settings |
+| Size a long or a short from a stop and a risk percentage, and check the stop against liquidation | Open or add to a position without a stop-loss |
+| Draft a ticket for you to confirm, with a stop-loss | Call tool-server tools that are not marked read-only |
+| Read recent headlines from crypto newsrooms, Yahoo Finance and the Federal Reserve, and the article behind one | Read a page it was not given: only its news results and links you paste |
+| Call read-only tools of a tool server you attached | Answer without a model: there are no canned replies |
 
-How the assistant is instructed, and every tool it has, is documented in [docs/assistant.md](docs/assistant.md).
+![Headlines the assistant read, with who reported each one and how long ago](docs/images/news-light.png)
 
-## Exchanges
+Conversations are kept in the sidebar. Open one to read it again with what the assistant read at the time, or delete it.
 
-| Exchange | Market data | Balances and live orders | Official MCP server |
-| --- | --- | --- | --- |
-| Binance | Ready | With API keys | None published |
-| Bybit | Ready | With API keys | Optional, needs Node.js 20+ |
-| OKX | Ready | With API keys and passphrase | Optional, needs Node.js 20+ |
+How the assistant is instructed, every tool it has, and how each provider is handled is documented in [docs/assistant.md](docs/assistant.md).
 
-- **Instruments.** USDT spot pairs. The watchlist starts with ten major tokens and four tokenized stocks (xStocks such as `TSLAx`); add any token the active exchange lists. A tokenized stock is its own market: asking for `TSLA` is refused, never swapped for the token.
-- **API keys.** Add them in **Connections**. They are checked with a balance read, held in memory, and stored in your system keychain only if you tick *Remember*. Create keys with trading permission but **without withdrawal permission**.
-- **Live orders** are market orders in token units, sent only after you confirm the ticket.
-- **Blocked networks.** Some networks block exchange domains. Binance market data then falls back to Binance's own public data host. For anything else the app tells you the connection was refused; use another network or a VPN.
-- **MCP servers.** In **Connections** you can attach an exchange's official [Model Context Protocol](https://modelcontextprotocol.io) server, your own command, or a remote HTTPS endpoint. The assistant may call only the tools a server marks read-only. See [docs/exchanges.md](docs/exchanges.md).
+## How orders work
+
+![A ticket the assistant drafted, waiting to be placed](docs/images/ticket-light.png)
+
+- **Tickets.** Every order starts as a ticket: what it does to your position, its value, the margin it needs and an estimated liquidation price. It is checked against your live account before you see it, and sent only when you confirm. A mainnet ticket also asks you to tick an acknowledgement.
+- **Two ways to draft one.** Ask the assistant, or use **Trade** in the market panel, which needs no model.
+- **Checked twice.** When you confirm, the app reads your position and the mark price again. If either has moved away from what the ticket says, nothing is sent and you draft a fresh one.
+- **Market orders.** Tickets are market orders, sized in the asset or by value. Limit orders are not supported yet.
+- **Leverage and margin.** A new position uses the leverage on the ticket, up to your limit, and isolated margin unless you choose cross. A new installation limits leverage to 3x; you can raise the limit to 50x in **Settings** under *Trading*. An existing position keeps the leverage and margin mode it has.
+- **Stop-loss and take-profit.** They are placed right after the entry as reduce-only orders that trigger on the mark price. A stop beyond the estimated liquidation price is refused, because liquidation would come first. If the exchange refuses one after the entry has filled, the ticket says so plainly.
+- **Closing.** Ask the assistant, or press **Close** on a position under **Account**. Either drafts a ticket for the whole position. Confirming it also cancels the reduce-only orders left on that position. One order never flips a long into a short.
+
+**Account** shows equity, positions with the exchange's liquidation prices, and open orders. It is read from the exchange again every 15 seconds while the window is in view. **Activity** lists what the app did on the exchange: each order and cancellation, step by step.
+
+![Positions and their protective orders](docs/images/account-dark.png)
+
+[docs/exchange.md](docs/exchange.md) describes exactly what the app sends to the exchange and how it signs.
 
 ## Your data
 
@@ -70,10 +118,20 @@ Everything stays on your computer.
 
 | What | Where |
 | --- | --- |
-| Paper accounts, run journal, preferences | Windows `%LOCALAPPDATA%\Octo Gens\`, macOS `~/Library/Application Support/Octo Gens/`, Linux `~/.local/share/octo-gens/` |
-| OpenRouter key, remembered exchange keys | Your system keychain |
+| Conversations, activity, preferences | Windows `%LOCALAPPDATA%\Octo Gens\`, macOS `~/Library/Application Support/Octo Gens/`, Linux `~/.local/share/octo-gens/` |
+| API wallet keys, OpenRouter key, Cloudflare API token | Your system keychain |
 
-The interface has no network access of its own. Requests go from the app's core directly to the exchange or model provider you chose, and nowhere else. There is no telemetry. Set `OCTOGENS_DATA_DIR` to use another data folder.
+The interface has no network access of its own. Requests go from the app's core directly to the exchange, to the model provider you chose and, while web search is on, to news publishers. Nowhere else. There is no telemetry.
+
+- With a cloud model, your messages and what the assistant reads for them, including the account summary, go to that provider. With Ollama or LM Studio they stay on your computer.
+- With web search on, the app downloads the public news feeds of [eight publishers](docs/assistant.md#news-and-web-pages) and the articles the assistant reads. They see a request from your computer, as any site you visit does. What you type is not sent to them: a news search is answered on your computer, from the feeds already downloaded. The one exception is the ticker of a share, a fund or a commodity you ask about, which goes to Yahoo Finance because it files its news by ticker. Turn web search off in **Settings** under *Tools*.
+- The journal keeps your conversations, which can include account figures the assistant quoted. Deleting a conversation removes it from the journal.
+
+| Environment variable | Effect |
+| --- | --- |
+| `OCTOGENS_DATA_DIR` | Use another data folder |
+| `OCTOGENS_NO_KEYCHAIN` | Keep keys in memory for the session instead of the system keychain. Meant for tests |
+| `OCTOGENS_MAINNET_URL`, `OCTOGENS_TESTNET_URL` | Send a network's API requests to another origin. Meant for tests; see [docs/exchange.md](docs/exchange.md) |
 
 ## Build from source
 
@@ -90,10 +148,10 @@ To work on the interface alone, `pnpm dev` runs it in a browser against a built-
 ## Project layout
 
 ```
-crates/octogens-core/   Trading core in Rust: exchanges, paper ledger, indicators, assistant. No UI.
+crates/octogens-core/   Trading core in Rust: exchange client, wallet signing, indicators, news, model providers, assistant. No UI.
 src-tauri/              Desktop shell: window, keychain, one command per core action.
 src/                    Interface in React and TypeScript.
-docs/                   Architecture, the assistant, exchanges.
+docs/                   Architecture, the assistant, the exchange.
 scripts/                Smoke test for the built app.
 ```
 

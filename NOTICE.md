@@ -14,8 +14,20 @@ The price chart is drawn with [Lightweight Charts](https://github.com/tradingvie
 | [React](https://react.dev) | Interface | MIT |
 | [rmcp](https://github.com/modelcontextprotocol/rust-sdk) | Model Context Protocol client | Apache-2.0 |
 | [reqwest](https://github.com/seanmonstar/reqwest) | HTTP client | MIT OR Apache-2.0 |
-| [rusqlite](https://github.com/rusqlite/rusqlite) with bundled SQLite | Paper ledger and journal | MIT; SQLite is public domain |
+| [rusqlite](https://github.com/rusqlite/rusqlite) with bundled SQLite | Run journal | MIT; SQLite is public domain |
+| [k256](https://github.com/RustCrypto/elliptic-curves) and [sha3](https://github.com/RustCrypto/hashes) | Signing requests with the API wallet | Apache-2.0 OR MIT |
 | [rust_decimal](https://github.com/paupino/rust-decimal) | Exact decimal arithmetic | MIT |
 | [keyring](https://github.com/open-source-cooperative/keyring-rs) | System keychain | MIT OR Apache-2.0 |
+| [scraper](https://github.com/rust-scraper/scraper) with [html5ever](https://github.com/servo/html5ever) | Reading the text of a web page | ISC; html5ever is MIT OR Apache-2.0, and its selector engine MPL-2.0 |
+| [roxmltree](https://github.com/RazrFalcon/roxmltree) | Reading news feeds | MIT OR Apache-2.0 |
+| [encoding_rs](https://github.com/hsivonen/encoding_rs) | Reading pages that are not UTF-8 | (Apache-2.0 OR MIT) AND BSD-3-Clause |
 
-Binance, Bybit, OKX, OpenRouter, Ollama and TradingView are trademarks of their owners. Octo Gens is an independent project and is not affiliated with or endorsed by any of them.
+## News
+
+Headlines come from the public RSS feeds of CoinDesk, Cointelegraph, The Block, Decrypt, The Defiant, crypto.news and Yahoo Finance, and from the press releases of the Federal Reserve. They are shown with the publisher's name and a link to the article, and remain the work of their publishers. Octo Gens stores none of their articles.
+
+## Coin icons
+
+The icons of well-known coins in `src/assets/coins/` are from [Web3 Icons](https://github.com/0xa3k5/web3icons) (`@web3icons/core` 4.0.60), under the MIT license. Each coin's logo is a trademark of its project and is shown only to identify that coin.
+
+OpenRouter, Cloudflare, Ollama, LM Studio, MetaMask, Rabby, TradingView, CoinDesk, Cointelegraph, The Block, Decrypt, The Defiant, crypto.news and Yahoo Finance are trademarks of their owners. Octo Gens is an independent project and is not affiliated with or endorsed by any of them.
