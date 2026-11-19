@@ -40,6 +40,8 @@
   --warn: #8a5a00;
   --warn-soft: rgba(214, 150, 20, 0.16);
 
+  /* The app's own blue, for its mark. */
+  --brand: #2a63dd;
   --focus: #2563eb;
   /* Chart overlays: two moving averages that must not read as up or down. */
   --line-a: #2563eb;
@@ -99,6 +101,7 @@
   --warn: #f2b84b;
   --warn-soft: rgba(242, 184, 75, 0.14);
 
+  --brand: #78a4ff;
   --focus: #7aa7ff;
   --line-a: #7aa7ff;
   --line-b: #d49be6;
@@ -135,6 +138,7 @@
     --warn: #f2b84b;
     --warn-soft: rgba(242, 184, 75, 0.14);
 
+    --brand: #78a4ff;
     --focus: #7aa7ff;
     --line-a: #7aa7ff;
     --line-b: #d49be6;
