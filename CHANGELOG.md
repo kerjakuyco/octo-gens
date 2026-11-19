@@ -6,7 +6,7 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## 0.5.0
 
-A new interface built around the conversation, four ways to connect a model, much more market data, and the news. Every message is now answered by a model: the rule-based agents and typed orders are gone.
+The app is now called **OctoNeo**. A new interface built around the conversation, four ways to connect a model, much more market data, the news, and deposits and withdrawals without leaving the app. Every message is now answered by a model: the rule-based agents and typed orders are gone.
 
 ### Added
 
@@ -21,18 +21,21 @@ A new interface built around the conversation, four ways to connect a model, muc
 - **Funding**: the rate now, what it comes to over a year, two weeks of settled rates, and open interest.
 - **Technical readings** on 15m, 1h, 4h and 1d side by side: trend, RSI, MACD, ATR, moving averages, support and resistance.
 - **News.** Ask why a market is moving, or for the day's headlines. The assistant reads the latest reports from CoinDesk, Cointelegraph, The Block, Decrypt, The Defiant, crypto.news, Yahoo Finance and the Federal Reserve, says who reported what and how long ago, and shows the headlines with links. For a share, a fund or a commodity the exchange lists, it also reads the news Yahoo Finance files under that ticker. It can read the article behind one, or a page you paste a link to. This works with every model provider, needs no key, and can be turned off in **Settings** under *Tools*.
+- **Deposits and withdrawals in the app.** *Deposit* and *Withdraw* are in **Settings** under *Wallet* and on the **Account** page. Your own wallet sends the deposit or signs the withdrawal, on a page the app serves on your computer, so you never visit the exchange's site. A deposit goes to the exchange's vault, which the app checks with the exchange first, and the vault is allowed exactly the amount. A withdrawal is signed twice by your wallet and paid out only to that wallet. Both are recorded under **Activity**. Mainnet funds move on BNB Smart Chain, Ethereum and Arbitrum One; testnet funds on BNB Smart Chain Testnet and Sepolia. MetaMask cannot sign a withdrawal, because the exchange asks for a signature that names its own network; Rabby and similar wallets can.
 - **Coin icons** for well-known coins, wherever a market is named. A market whose ticker could mean something else keeps its letters.
 - An assistant tool for the biggest gainers, losers and most traded markets across the whole exchange.
 - A new OpenRouter key is checked with OpenRouter when you paste it, not at your first question.
 - **A new app icon**: a white octopus on blue.
+- A read-only check of the deposit transactions against the vaults on every network: `cargo run -p octoneo-core --example funding`.
 
 ### Changed
 
 - **Every message goes to the model you connected.** Tell it `long 0.01 BTC` and it reads the price and your account, picks a stop-loss if you gave none, and drafts the ticket in the same turn. You still confirm every order.
 - A model must be able to call tools to be connected. One that cannot is refused, with the reason.
 - The assistant answers more briefly and in plainer words, and explains a term such as funding or liquidation the first time it matters.
-- Settings, the wallet and tool servers are in one Settings window. Trading limits apply as you change them, each list of models says what its figures mean, a wallet's card links to deposits and withdrawals, and a local model server that is not running says what to start.
+- Settings, the wallet and tool servers are in one Settings window. Trading limits apply as you change them, each list of models says what its figures mean, and a local model server that is not running says what to start.
 - **The name.** Octo Gens is now OctoNeo, in the app, the installers, the documentation and the code. The data folder, the keychain entry and the app's identifier keep their names, so an existing install keeps its wallet, settings and conversations. `OCTOGENS_*` environment variables are now `OCTONEO_*`.
+- **The wallet page** your browser opens was redesigned: it finds the wallets in your browser and lets you pick one, shows each step and where you are in it, and counts down the seconds the exchange gives a signature.
 - The app, its documentation and the assistant's instructions say "the exchange" instead of naming it.
 - **Markets** lists the most traded markets first.
 - The app opens on a new conversation instead of the last one.
@@ -40,7 +43,7 @@ A new interface built around the conversation, four ways to connect a model, muc
 - Requests to a model on this computer never go through a system proxy.
 - Turning off mainnet tickets from the assistant also discards one that is waiting.
 - An account in Multi-Assets mode, where only cross margin exists, now gets cross-margin tickets instead of an error when the order is confirmed. Settings shows that the margin choice does not apply.
-- The app's mark is no longer drawn inside the window; the icon is for the Dock and the installer.
+- The sidebar shows the octopus of the app icon, without its tile, in place of the app's name.
 - While a setting is being applied, for example a local model being loaded, messages and other changes wait for it.
 
 ### Removed

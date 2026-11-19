@@ -16,12 +16,14 @@ Fixes are released for the latest version only.
 | --- | --- |
 | The app's key is stolen | It is an API wallet approved for perpetual trading only: no spot trading, no withdrawal. It lives in the system keychain. The approval expires, and you can remove it on the exchange at any time. |
 | Your own wallet's key is exposed | It never enters the app. Connecting needs your address and one signature made in your wallet. A pasted key that belongs to the wallet address itself is refused. |
-| The model places a trade you did not want | No tool can place, change or cancel an order, or move funds. The assistant drafts a ticket and you confirm it. Mainnet tickets from the assistant are off by default, and turning them off again discards one that is waiting. |
+| The model places a trade you did not want, or moves funds | No tool can place, change or cancel an order, and none can deposit or withdraw. The assistant drafts a ticket and you confirm it. Mainnet tickets from the assistant are off by default, and turning them off again discards one that is waiting. |
 | The model opens a reckless position | A ticket from the assistant needs a stop-loss inside the estimated liquidation price, and no ticket may exceed your leverage limit (3x until you raise it). |
 | A double click sends an order twice | A draft is consumed by its first submission. Orders are sent once and never retried. |
 | A lost answer hides an order that was taken | Orders carry a client id. When an answer goes missing or the exchange's side fails, the app looks the order up before saying anything, and tells you plainly if it could not find out. |
 | A ticket is confirmed after the market has moved | The position and the mark price are read again at confirmation. If the position changed, the price moved more than 1%, or the stop-loss no longer protects the position, nothing is sent. |
-| A page in your browser hijacks the wallet approval | The approval page is served on this computer only, on a random port behind a random path, for ten minutes. It answers only that path, refuses other host names, loads nothing from the internet, and the signature must come from the account that connected. |
+| A page in your browser hijacks the wallet page | The page your wallet works on (for an approval, a deposit or a withdrawal) is served on this computer only, on a random port behind a random path, for ten minutes (twenty for a deposit or a withdrawal). It answers only that path and only the requests of its own task, refuses other host names, loads nothing from the internet, and every signature must come from the account that connected. |
+| Someone withdraws your funds through the app | The key the app holds cannot withdraw. A withdrawal needs two signatures from your own wallet, made in your browser each time, and it names that wallet as its only destination: there is no field for another address. The app checks that both signatures came from the connected wallet before it sends anything. |
+| A deposit is sent to the wrong contract | The vault on each network is fixed in the app, and compared with the one the exchange reports before any transaction is built. If they differ, nothing is built. A token deposit allows the vault exactly the amount you deposit, never an open-ended allowance. |
 | Keys leak to disk, a model or the interface | Preferences, the journal and snapshots never contain a key. Keys never enter prompts, tool results or the web view. Answers and errors are scrubbed of the model provider's key before they are shown or stored. |
 | A mistyped or revoked provider key is stored | A new OpenRouter key is shown to OpenRouter, and a Cloudflare token is proved with one short chat, before either is kept. A key that is turned away replaces nothing. |
 | A model on this computer is reached through someone else's server | Requests to Ollama and LM Studio go to the address you set, never through a system proxy, and are never redirected. |
@@ -36,7 +38,7 @@ Fixes are released for the latest version only.
 ## What you should do
 
 - **Never type a seed phrase or your wallet's private key into OctoNeo**, or into any chat. The app never needs them.
-- Read what your wallet asks you to sign. The approval must say `canWithdraw=false`.
+- Read what your wallet asks you to sign. The approval must say `canWithdraw=false`. A withdrawal must name your own address as its destination, and the amount you typed. A deposit must go to the vault listed in [docs/exchange.md](docs/exchange.md#depositing).
 - Choose a short approval period, and remove the API wallet on the exchange's API wallet page when you stop using the app on a computer.
 - Keep the leverage limit low, and practise on testnet first.
 - Attach only tool servers you trust. A local command runs with your user's permissions.
@@ -51,6 +53,7 @@ Fixes are released for the latest version only.
 - **News publishers see that you read them.** With web search on, the app downloads the public feeds of eight news publishers and the articles the assistant reads, from your computer. They see your network address, as any site you visit does. What you type is not sent to them, except the ticker of a share, a fund or a commodity you ask about, which goes to Yahoo Finance. Turn web search off in **Settings** under *Tools* to stop it.
 - **The news can be wrong.** A headline is one newsroom's report. The assistant is told to say who reported it and when, and not to trade on it, but it cannot check it.
 - **A local server's address is yours to choose.** If you point Ollama or LM Studio at another machine, your conversations go to that machine.
+- **A deposit cannot be taken back.** It is a transaction on a public network. Once your wallet has sent it, neither the app nor the exchange can undo it, so check the network and the amount in your wallet's prompt.
 - **The exchange checks the deposit before the signature.** A wallet that has never deposited cannot be verified, so a wrong pasted key shows up only after the first deposit.
 - **The liquidation price on a ticket is an estimate.** It ignores fees, funding and margin tiers. The exchange's own figure appears once the position is open.
 - **A stop-loss is placed after the entry.** If the exchange refuses it, the position is open without one and the ticket says so. Stops trigger market orders and can fill worse than their trigger.

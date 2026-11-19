@@ -22,6 +22,8 @@ describe("stepLabel", () => {
     expect(stepLabel("load_model")).toBe("Load model");
     expect(stepLabel("exchange.order")).toBe("Order");
     expect(stepLabel("exchange.stop_loss")).toBe("Stop-loss");
+    expect(stepLabel("wallet.deposit")).toBe("Deposit");
+    expect(stepLabel("wallet.withdraw")).toBe("Withdrawal");
     expect(stepLabel("search_news")).toBe("News");
     expect(stepLabel("read_page")).toBe("Article");
   });

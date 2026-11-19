@@ -122,10 +122,7 @@ async fn the_catalog_keeps_text_chat_models_and_reads_their_capabilities() {
         requests[1].headers.get("authorization").and_then(|v| v.to_str().ok()),
         Some(format!("Bearer {KEY}").as_str())
     );
-    assert_eq!(
-        requests[0].headers.get("x-openrouter-title").and_then(|v| v.to_str().ok()),
-        Some("OctoNeo")
-    );
+    assert_eq!(requests[0].headers.get("x-openrouter-title").and_then(|v| v.to_str().ok()), Some("OctoNeo"));
 }
 
 #[test]

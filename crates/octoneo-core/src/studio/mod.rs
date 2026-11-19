@@ -50,11 +50,11 @@ use crate::store::{
 use crate::web::Web;
 use crate::{bail, desk_err};
 use view::{
-    AccountView, AssistantRequest, AssistantView, CandleSeries, CardView, FundingView, InstrumentView,
-    MarketRow, McpView, ModelsRequest, OrderBookView, PendingConnectView, ProviderView, QuoteView,
-    RiskRequest, RiskView, RunStatus, RunView, Snapshot, StepStatus, StepView, TechnicalFrame,
+    AccountView, AssistantRequest, AssistantView, CandleSeries, CardView, FundingRequest, FundingView,
+    InstrumentView, MarketRow, McpView, ModelsRequest, OrderBookView, PendingWalletView, ProviderView,
+    QuoteView, RiskRequest, RiskView, RunStatus, RunView, Snapshot, StepStatus, StepView, TechnicalFrame,
     TechnicalsView, ThreadView, TicketRequest, TicketView, TradeView, WalletBrowserRequest, WalletKeyRequest,
-    WalletView,
+    WalletNoticeView, WalletTask, WalletView,
 };
 
 /// Turns of the open conversation kept in memory and sent to the interface.
@@ -212,9 +212,10 @@ struct Draft {
     view: TicketView,
 }
 
-/// A browser approval that is waiting for the trader's wallet.
-struct PendingConnect {
+/// A wallet page that is waiting for the trader's wallet.
+struct PendingPage {
     network: Network,
+    task: WalletTask,
     url: String,
     cancel: CancellationToken,
 }
@@ -235,9 +236,9 @@ struct State {
     epoch: u64,
     /// Networks whose wallet the exchange will not serve until a first deposit.
     needs_deposit: HashSet<Network>,
-    /// Why the last wallet approval ended without a wallet, if it did.
-    connect_note: String,
-    pending: Option<PendingConnect>,
+    /// How the last wallet page ended, until the next one opens.
+    wallet_notice: Option<WalletNoticeView>,
+    pending: Option<PendingPage>,
     /// The open conversation.
     thread: String,
     /// Conversations, latest first.
@@ -586,7 +587,7 @@ impl Studio {
                 account_error: String::new(),
                 epoch: 0,
                 needs_deposit: HashSet::new(),
-                connect_note: String::new(),
+                wallet_notice: None,
                 pending: None,
                 thread: new_id(),
                 threads,
@@ -766,7 +767,7 @@ impl Studio {
             wallets,
             account: state.account.as_ref().filter(|_| connected).map(AccountView::from),
             account_error: if connected { state.account_error.clone() } else { String::new() },
-            connect_error: state.connect_note.clone(),
+            wallet_notice: state.wallet_notice.clone(),
             assistant: Self::assistant_view(&state),
             risk: RiskView { max_leverage: state.prefs.max_leverage, isolated: state.prefs.isolated },
             theme: state.prefs.theme,
@@ -778,10 +779,11 @@ impl Studio {
             receipts: state.receipts.clone(),
             failures: state.failures.clone(),
             servers: state.servers.clone(),
-            pending_connect: state
-                .pending
-                .as_ref()
-                .map(|p| PendingConnectView { network: p.network, url: p.url.clone() }),
+            pending_wallet: state.pending.as_ref().map(|p| PendingWalletView {
+                network: p.network,
+                task: p.task,
+                url: p.url.clone(),
+            }),
             busy: *self.work.lock().unwrap_or_else(|p| p.into_inner()) == Work::Turn,
         }
     }
@@ -1991,7 +1993,7 @@ impl Studio {
             } else {
                 state.needs_deposit.remove(&network);
             }
-            state.connect_note.clear();
+            state.wallet_notice = None;
             if state.network == network {
                 state.epoch += 1;
                 state.account = None;
@@ -2044,15 +2046,55 @@ impl Studio {
     /// The outcome arrives later through the notifier.
     pub async fn connect_wallet_browser(self: &Arc<Self>, request: WalletBrowserRequest) -> Result<Snapshot> {
         let _hold = self.begin_change("changing wallets")?;
-        let network = request.network;
         let agent = AgentKey::generate()?;
-        let pending = connect::start(Arc::clone(self.client(network)), agent.address(), request.days).await?;
+        let task = connect::Task::Connect { agent: agent.address(), days: request.days };
+        self.open_page(request.network, WalletTask::Connect, task, Some(agent)).await?;
+        Ok(self.snapshot())
+    }
+
+    /// Starts a deposit or a withdrawal: a page on this computer where the
+    /// trader's own wallet sends the deposit, or signs the withdrawal. Nothing
+    /// moves without that wallet, and a withdrawal only ever goes back to it.
+    /// The outcome arrives later through the notifier.
+    pub async fn fund_wallet(self: &Arc<Self>, request: FundingRequest) -> Result<Snapshot> {
+        let network = request.network;
+        let Some(wallet) = self.client(network).wallet() else {
+            bail!("Connect a wallet on {} first.", network.name());
+        };
+        let task = match request.task {
+            WalletTask::Deposit => connect::Task::Deposit { account: wallet.user },
+            WalletTask::Withdraw => {
+                if self.state().needs_deposit.contains(&network) {
+                    bail!(
+                        "There is nothing to withdraw yet: this wallet has not deposited on {}.",
+                        network.name()
+                    );
+                }
+                connect::Task::Withdraw { account: wallet.user }
+            }
+            WalletTask::Connect => bail!("Choose a deposit or a withdrawal."),
+        };
+        self.open_page(network, request.task, task, None).await?;
+        Ok(self.snapshot())
+    }
+
+    /// Serves a wallet page and waits for it in the background. One page at a
+    /// time: opening another withdraws the one before.
+    async fn open_page(
+        self: &Arc<Self>,
+        network: Network,
+        task: WalletTask,
+        work: connect::Task,
+        agent: Option<AgentKey>,
+    ) -> Result<()> {
+        let pending = connect::start(Arc::clone(self.client(network)), work).await?;
         let url = pending.url.clone();
         let replaced = {
             let mut state = self.state();
-            state.connect_note.clear();
-            state.pending.replace(PendingConnect {
+            state.wallet_notice = None;
+            state.pending.replace(PendingPage {
                 network,
+                task,
                 url: url.clone(),
                 cancel: pending.cancel.clone(),
             })
@@ -2061,54 +2103,144 @@ impl Studio {
             replaced.cancel.cancel();
         }
         let studio = Arc::clone(self);
+        let started = Instant::now();
         tokio::spawn(async move {
             let outcome = pending
                 .outcome
                 .await
-                .unwrap_or_else(|_| Err(DeskError::new("The wallet approval ended unexpectedly.")));
-            studio.finish_connect(network, agent, &url, outcome).await;
+                .unwrap_or_else(|_| Err(DeskError::new("The wallet page ended unexpectedly.")));
+            studio.finish_page(network, task, agent, &url, started, outcome).await;
         });
-        Ok(self.snapshot())
+        Ok(())
+    }
+
+    async fn finish_page(
+        &self,
+        network: Network,
+        task: WalletTask,
+        agent: Option<AgentKey>,
+        url: &str,
+        started: Instant,
+        outcome: Result<connect::Done>,
+    ) {
+        let on_screen = {
+            let mut state = self.state();
+            let on_screen = state.pending.as_ref().is_some_and(|pending| pending.url == url);
+            if on_screen {
+                state.pending = None;
+            }
+            on_screen
+        };
+        // A page the trader cancelled or replaced may not change the desk. A deposit
+        // their wallet already sent is the exception: it happened, so it is recorded.
+        if !on_screen && !matches!(outcome, Ok(connect::Done::Deposited(_))) {
+            return;
+        }
+        let notice = match outcome {
+            Ok(connect::Done::Approved(approval)) => self.finish_connect(network, agent, approval).await,
+            Ok(connect::Done::Deposited(deposit)) => self.finish_deposit(network, started, &deposit).await,
+            Ok(connect::Done::Withdrawn(withdrawn)) => {
+                self.finish_withdrawal(network, started, &withdrawn).await
+            }
+            Err(error) => Err(error),
+        };
+        let (ok, text) = match notice {
+            Ok(text) => (true, text),
+            Err(error) => (false, error.0),
+        };
+        self.state().wallet_notice = Some(WalletNoticeView { network, task, ok, text });
+        self.notify();
     }
 
     async fn finish_connect(
         &self,
         network: Network,
-        agent: AgentKey,
-        url: &str,
-        outcome: Result<connect::Approval>,
-    ) {
-        {
-            // Only the approval that is still on screen may change the desk.
-            let mut state = self.state();
-            if state.pending.as_ref().is_none_or(|pending| pending.url != url) {
-                return;
-            }
-            state.pending = None;
+        agent: Option<AgentKey>,
+        approval: connect::Approval,
+    ) -> Result<String> {
+        let Some(agent) = agent else {
+            bail!("The approval arrived without the key it approves. Connect again.");
+        };
+        self.keep_wallet(
+            network,
+            Wallet { user: approval.user, agent, expires: Some(approval.expires) },
+            false,
+        )?;
+        if network == self.network() {
+            let _ = self.fetch_account(network).await;
+        } else if let Ok(true) = self.client(network).needs_deposit().await {
+            self.state().needs_deposit.insert(network);
         }
-        let kept = outcome.and_then(|approval| {
-            self.keep_wallet(
-                network,
-                Wallet { user: approval.user, agent, expires: Some(approval.expires) },
-                false,
-            )
-        });
-        match kept {
-            Ok(()) if network == self.network() => {
-                let _ = self.fetch_account(network).await;
-            }
-            Ok(()) => {
-                if let Ok(true) = self.client(network).needs_deposit().await {
-                    self.state().needs_deposit.insert(network);
-                }
-            }
-            Err(error) => self.state().connect_note = error.0,
-        }
-        self.notify();
+        Ok(format!("Wallet connected on {}.", network.name()))
     }
 
-    /// Withdraws a browser approval that is still waiting.
-    pub fn cancel_wallet_connect(&self) -> Snapshot {
+    /// Records a deposit the trader's wallet sent, and reads the account again.
+    /// The record keeps the transaction; what is said on screen is kept short.
+    async fn finish_deposit(
+        &self,
+        network: Network,
+        started: Instant,
+        deposit: &connect::Deposit,
+    ) -> Result<String> {
+        let what = format!("{} {}", deposit.amount, deposit.asset);
+        let place = deposit.chain.name;
+        let title = format!("Deposit {what} from {place}");
+        let said = match deposit.confirmed {
+            Some(true) => Ok(format!(
+                "Deposit of {what} confirmed on {place}. The exchange credits it within a few minutes."
+            )),
+            None => Ok(format!(
+                "Deposit of {what} sent on {place}. The page closed before the network confirmed it; the balance changes once it does."
+            )),
+            Some(false) => {
+                Err(desk_err!("The deposit of {what} failed on {place}, so nothing was credited."))
+            }
+        };
+        let kept = match &said {
+            Ok(text) => Ok(format!("{text} Transaction {}.", deposit.hash)),
+            Err(error) => Err(desk_err!("{} Transaction {}.", error.0, deposit.hash)),
+        };
+        let step = StepView {
+            name: "wallet.deposit".to_string(),
+            detail: format!("{what}, {place}"),
+            status: if kept.is_ok() { StepStatus::Ok } else { StepStatus::Error },
+            ms: started.elapsed().as_millis() as u64,
+            preview: kept.as_ref().err().map(|error| error.0.clone()).unwrap_or_default(),
+        };
+        self.record(self.quick_run("Execution", &title, network, started, vec![step], &kept), false);
+        let _ = self.fetch_account(network).await;
+        said
+    }
+
+    /// Records a withdrawal the exchange accepted, and reads the account again.
+    async fn finish_withdrawal(
+        &self,
+        network: Network,
+        started: Instant,
+        withdrawn: &connect::Withdrawn,
+    ) -> Result<String> {
+        let what = format!("{} {}", withdrawn.amount, withdrawn.asset);
+        let title = format!("Withdraw {what} to {}", withdrawn.chain.name);
+        let request =
+            if withdrawn.id.is_empty() { String::new() } else { format!(" Request {}.", withdrawn.id) };
+        let outcome = Ok(format!(
+            "Withdrawal of {what} to {} requested, with a fee of {} {}. It reaches your wallet once the exchange has processed it.{request}",
+            withdrawn.chain.name, withdrawn.fee, withdrawn.asset
+        ));
+        let step = StepView {
+            name: "wallet.withdraw".to_string(),
+            detail: format!("{what}, {}", withdrawn.chain.name),
+            status: StepStatus::Ok,
+            ms: started.elapsed().as_millis() as u64,
+            preview: String::new(),
+        };
+        self.record(self.quick_run("Execution", &title, network, started, vec![step], &outcome), false);
+        let _ = self.fetch_account(network).await;
+        outcome
+    }
+
+    /// Withdraws a wallet page that is still waiting.
+    pub fn cancel_wallet_page(&self) -> Snapshot {
         let pending = self.state().pending.take();
         if let Some(pending) = pending {
             pending.cancel.cancel();
@@ -2128,7 +2260,7 @@ impl Studio {
             let mut state = self.state();
             state.prefs.wallets.remove(network.as_str());
             state.needs_deposit.remove(&network);
-            state.connect_note.clear();
+            state.wallet_notice = None;
             if state.network == network {
                 state.epoch += 1;
                 state.account = None;
@@ -2565,7 +2697,7 @@ impl Studio {
     /// Stops background work and closes attached servers. Call before exit.
     pub async fn close(&self) {
         self.stop_turn();
-        self.cancel_wallet_connect();
+        self.cancel_wallet_page();
         let links: Vec<Arc<McpLink>> = self.links.write().await.drain().map(|(_, link)| link).collect();
         for link in links {
             link.close().await;

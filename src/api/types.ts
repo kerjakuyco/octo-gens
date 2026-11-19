@@ -431,11 +431,25 @@ export interface ThreadView {
   turns: number;
 }
 
-/** A browser approval that is waiting for the user's wallet. */
-export interface PendingConnectView {
+/** What a wallet page in the trader's browser is for: approving the API wallet, a deposit, or a withdrawal. */
+export type WalletTask = "connect" | "deposit" | "withdraw";
+
+/** A wallet page that is waiting for the user's wallet. One at a time. */
+export interface PendingWalletView {
   network: Network;
+  task: WalletTask;
   /** Local page to open in the browser where the wallet extension lives. */
   url: string;
+}
+
+/** How the last wallet page ended. */
+export interface WalletNoticeView {
+  network: Network;
+  task: WalletTask;
+  /** Whether it ended the way the trader meant it to. */
+  ok: boolean;
+  /** A sentence to show as it is. */
+  text: string;
 }
 
 /** Everything the UI renders. Most commands return a fresh copy. */
@@ -456,8 +470,8 @@ export interface Snapshot {
   account: AccountView | null;
   /** Why the account could not be read, or empty. */
   accountError: string;
-  /** Why the last wallet approval ended without a wallet, or empty. Cleared when another one starts. */
-  connectError: string;
+  /** How the last wallet page ended. Cleared when another one opens. */
+  walletNotice: WalletNoticeView | null;
   assistant: AssistantView;
   risk: RiskView;
   theme: Theme;
@@ -480,8 +494,8 @@ export interface Snapshot {
   failures: Record<string, string>;
   /** Attached MCP tool servers. */
   servers: McpView[];
-  /** A wallet approval in progress, if any. */
-  pendingConnect: PendingConnectView | null;
+  /** A wallet page that is open in the browser, if any. */
+  pendingWallet: PendingWalletView | null;
   /** An assistant turn is running. */
   busy: boolean;
 }
@@ -549,6 +563,13 @@ export interface WalletBrowserRequest {
   network: Network;
   /** How long the approval lasts, in days (1 to 365). */
   days: number;
+}
+
+/** Start a deposit or a withdrawal in the browser where the wallet is. */
+export interface FundingRequest {
+  network: Network;
+  /** `deposit` or `withdraw`. */
+  task: WalletTask;
 }
 
 export interface RiskRequest {
@@ -653,9 +674,16 @@ export interface Backend {
   cancelOrder(symbol: string, orderId: string): Promise<Snapshot>;
   cancelAllOrders(symbol: string): Promise<Snapshot>;
   connectWalletKey(request: WalletKeyRequest): Promise<Snapshot>;
-  /** Starts a browser approval. The snapshot's `pendingConnect.url` is opened in the browser by the core; the result arrives through `onSnapshot`. */
+  /** Starts a browser approval. The snapshot's `pendingWallet.url` is opened in the browser by the core; the result arrives through `onSnapshot`. */
   connectWalletBrowser(request: WalletBrowserRequest): Promise<Snapshot>;
-  cancelWalletConnect(): Promise<Snapshot>;
+  /**
+   * Starts a deposit or a withdrawal the same way: a page on this computer where the
+   * trader's own wallet sends the deposit or signs the withdrawal. The outcome arrives
+   * through `onSnapshot` as `walletNotice`.
+   */
+  fundWallet(request: FundingRequest): Promise<Snapshot>;
+  /** Closes the wallet page that is waiting. */
+  cancelWalletPage(): Promise<Snapshot>;
   /** Forgets the API wallet key on this computer. */
   disconnectWallet(network: Network): Promise<Snapshot>;
   saveRisk(request: RiskRequest): Promise<Snapshot>;

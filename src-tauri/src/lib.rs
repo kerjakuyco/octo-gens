@@ -17,9 +17,9 @@ use octoneo_core::mcp::{McpConnectRequest, ToolInfo};
 use octoneo_core::model::Network;
 use octoneo_core::store::{Provider, SecretStore, Theme};
 use octoneo_core::studio::view::{
-    AssistantRequest, CandleSeries, FundingView, MarketRow, ModelsRequest, OrderBookView, RiskRequest,
-    Snapshot, TechnicalsView, TicketRequest, TradeView, TurnEvent, TurnSink, WalletBrowserRequest,
-    WalletKeyRequest,
+    AssistantRequest, CandleSeries, FundingRequest, FundingView, MarketRow, ModelsRequest, OrderBookView,
+    RiskRequest, Snapshot, TechnicalsView, TicketRequest, TradeView, TurnEvent, TurnSink,
+    WalletBrowserRequest, WalletKeyRequest,
 };
 use octoneo_core::studio::{Studio, StudioConfig};
 use tauri::ipc::Channel;
@@ -203,6 +203,15 @@ async fn connect_wallet_key(studio: Desk<'_>, request: WalletKeyRequest) -> Repl
     studio.connect_wallet_key(request).await.map_err(message)
 }
 
+/// Opens the wallet page a command just started. The page is served on this
+/// computer, and the browser is where the trader's wallet lives. If no browser
+/// opens, the interface shows the address to copy.
+fn open_wallet_page(app: &AppHandle, snapshot: &Snapshot) {
+    if let Some(pending) = &snapshot.pending_wallet {
+        let _ = app.opener().open_url(pending.url.as_str(), None::<&str>);
+    }
+}
+
 #[tauri::command]
 async fn connect_wallet_browser(
     app: AppHandle,
@@ -210,17 +219,20 @@ async fn connect_wallet_browser(
     request: WalletBrowserRequest,
 ) -> Reply<Snapshot> {
     let snapshot = studio.inner().connect_wallet_browser(request).await.map_err(message)?;
-    if let Some(pending) = &snapshot.pending_connect {
-        // The approval page is served on this computer, and the browser is where the
-        // trader's wallet lives. If no browser opens, the interface shows the address to copy.
-        let _ = app.opener().open_url(pending.url.as_str(), None::<&str>);
-    }
+    open_wallet_page(&app, &snapshot);
     Ok(snapshot)
 }
 
 #[tauri::command]
-async fn cancel_wallet_connect(studio: Desk<'_>) -> Reply<Snapshot> {
-    Ok(studio.cancel_wallet_connect())
+async fn fund_wallet(app: AppHandle, studio: Desk<'_>, request: FundingRequest) -> Reply<Snapshot> {
+    let snapshot = studio.inner().fund_wallet(request).await.map_err(message)?;
+    open_wallet_page(&app, &snapshot);
+    Ok(snapshot)
+}
+
+#[tauri::command]
+async fn cancel_wallet_page(studio: Desk<'_>) -> Reply<Snapshot> {
+    Ok(studio.cancel_wallet_page())
 }
 
 #[tauri::command]
@@ -394,7 +406,7 @@ pub fn run() {
                 }
             }
             let studio = Studio::open(config).map_err(|error| error.0)?;
-            // Background work (a wallet approval finishing in the browser) pushes its snapshot to the window.
+            // Background work (a wallet page finishing in the browser) pushes its snapshot to the window.
             studio.set_notifier(move |snapshot| {
                 let _ = handle.emit(SNAPSHOT_EVENT, snapshot);
             });
@@ -434,7 +446,8 @@ pub fn run() {
             cancel_all_orders,
             connect_wallet_key,
             connect_wallet_browser,
-            cancel_wallet_connect,
+            fund_wallet,
+            cancel_wallet_page,
             disconnect_wallet,
             save_risk,
             mcp_connect,
@@ -452,7 +465,7 @@ pub fn run() {
     match app {
         Ok(app) => app.run(|handle, event| {
             if let RunEvent::Exit = event {
-                // Withdraw a waiting wallet approval and shut down any tool server this app started.
+                // Close a waiting wallet page and shut down any tool server this app started.
                 if let Some(studio) = handle.try_state::<Arc<Studio>>() {
                     tauri::async_runtime::block_on(studio.close());
                 }

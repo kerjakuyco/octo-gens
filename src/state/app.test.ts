@@ -50,3 +50,31 @@ describe("trading limits", () => {
     expect(state.app.get().notice).toMatchObject({ tone: "error" });
   });
 });
+
+describe("wallet pages", () => {
+  let state: Awaited<ReturnType<typeof started>>;
+
+  beforeAll(async () => {
+    state = await started();
+  });
+
+  it("says once how a deposit ended, and shows the new balance", async () => {
+    const before = Number(state.app.get().snapshot?.account?.walletBalance);
+    state.dismissNotice();
+    expect(await state.fundWallet({ network: "testnet", task: "deposit" })).toBe(true);
+    expect(state.app.get().snapshot?.pendingWallet).toMatchObject({ network: "testnet", task: "deposit" });
+    // The mock stands in for the wallet in the browser and reports back through a pushed snapshot.
+    await vi.waitFor(() => expect(state.app.get().snapshot?.pendingWallet).toBeNull());
+    const notice = state.app.get().notice;
+    expect(notice).toMatchObject({ tone: "info" });
+    expect(notice?.text).toContain("Deposit of 250 USDT confirmed");
+    expect(Number(state.app.get().snapshot?.account?.walletBalance)).toBe(before + 250);
+  });
+
+  it("starts nothing without a wallet, and says why", async () => {
+    state.dismissNotice();
+    expect(await state.fundWallet({ network: "mainnet", task: "withdraw" })).toBe(false);
+    expect(state.app.get().notice).toMatchObject({ tone: "error", text: "Connect a wallet on Mainnet first." });
+    expect(state.app.get().snapshot?.pendingWallet).toBeNull();
+  });
+});

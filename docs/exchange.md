@@ -1,13 +1,13 @@
 # The exchange
 
-OctoNeo trades perpetual futures on one decentralised exchange, through its futures API. This page describes what the app sends, how it signs, and how a wallet is connected. The code is in `crates/octoneo-core/src/exchange` and `crates/octoneo-core/src/connect`.
+OctoNeo trades perpetual futures on one decentralised exchange, through its futures API. This page describes what the app sends, how it signs, how a wallet is connected, and how funds are deposited and withdrawn. The code is in `crates/octoneo-core/src/exchange` and `crates/octoneo-core/src/connect`.
 
 | Network | What it is |
 | --- | --- |
 | Mainnet | Real funds |
 | Testnet | The same order flow with test funds |
 
-Each network has its own API origin and its own site, where you deposit and withdraw. Both are constants at the top of [`exchange/mod.rs`](../crates/octoneo-core/src/exchange/mod.rs); the app opens the site for you where it is needed.
+Each network has its own API origin and its own site. Both are constants at the top of [`exchange/mod.rs`](../crates/octoneo-core/src/exchange/mod.rs). The app reads the site's public API to learn what can be deposited and withdrawn, and links to the site's page for managing API wallets. You never have to visit the site to connect, deposit or withdraw.
 
 ## What the app asks the exchange
 
@@ -25,8 +25,15 @@ Each network has its own API origin and its own site, where you deposit and with
 | `GET /fapi/v3/order` | Yes | Looking an order up by its client id when its answer was lost |
 | `DELETE /fapi/v3/order`, `DELETE /fapi/v3/allOpenOrders` | Yes | Cancelling orders |
 | `POST /fapi/v3/registerAndApproveAgent` | By your wallet | Approving the app's API wallet, once |
+| `GET` deposit assets, withdraw assets (site API) | No | What can be deposited and withdrawn, on which networks |
+| `GET` deposit address (site API) | No | The vault a deposit goes to, compared with the one the app knows |
+| `GET` withdraw fee estimate (site API) | No | What the exchange charges for a withdrawal |
+| `POST /fapi/v3/…/user-withdraw-info` | Yes | What the account may withdraw now, per asset and network |
+| `POST /fapi/v3/…/user-withdraw` | By your wallet, twice | A withdrawal |
 
-The app never calls an endpoint that withdraws or transfers funds.
+A few paths carry the exchange's name; they are shortened here and spelled out in [`exchange/mod.rs`](../crates/octoneo-core/src/exchange/mod.rs).
+
+The key the app holds cannot withdraw or transfer: it is approved without that permission, and the exchange refuses it. Funds move only by what your own wallet does in your browser, described under [Deposits and withdrawals](#deposits-and-withdrawals).
 
 Refreshing the watchlist costs two requests however long the list is, because the ticker and funding endpoints answer for every market at once. The screener of every market costs the same two. Daily history, which draws the sparklines, is read again every ten minutes.
 
@@ -88,10 +95,12 @@ A desktop app cannot talk to a wallet extension, because extensions live in the 
 
 1. The app creates a new API wallet key and keeps it in memory.
 2. It serves the approval page on `127.0.0.1`, on a random port, behind a random path, for ten minutes.
-3. The page connects your wallet, asks the app for the message above, and asks your wallet to sign it with `eth_signTypedData_v4`. The message carries a fresh nonce, so confirm the wallet prompt within about ten seconds.
+3. The page finds the wallets in your browser; when there is more than one, you pick. It connects your wallet, asks the app for the message above, and asks your wallet to sign it with `eth_signTypedData_v4`. The message carries a fresh nonce, so confirm the wallet prompt within about ten seconds.
 4. The app checks that the signature came from the account that connected, sends it to the exchange, and on success stores the API wallet key in the keychain. The page shuts down.
 
-What crosses that page is your wallet's address and one signature. The page loads nothing from the internet, answers only its own secret path, and refuses requests that arrive under another host name.
+What crosses that page is your wallet's address and one signature. The page loads nothing from the internet, answers only its own secret path and only the requests of its own task, and refuses requests that arrive under another host name. It shows each step and where you are in it, and counts down the seconds the exchange gives the signature.
+
+To look at the page without the app, `cargo run -p octoneo-core --example wallet_page -- connect` serves it against a stand-in for the exchange.
 
 ### Pasting an API wallet key
 
@@ -99,10 +108,65 @@ You can instead create an API wallet on the exchange's API wallet page (`/en/api
 
 ### What to expect
 
-- **Deposit first.** The exchange answers every account request with "can only be used after deposit" until the wallet has deposited, on testnet too, and it checks this before it checks the signature. So a wallet that has never deposited is accepted and shown as *waiting for its deposit*; a wrong key only shows up after the deposit, as a rejected signature.
+- **Deposit first.** The exchange answers every account request with "can only be used after deposit" until the wallet has deposited, on testnet too, and it checks this before it checks the signature. So a wallet that has never deposited is accepted and shown as *waiting for its deposit*, with a **Deposit** button; a wrong key only shows up after the deposit, as a rejected signature.
 - **Expiry.** An approval made in the browser lasts as long as you chose. When it ends, the exchange rejects the key and the app asks you to connect again.
 - **Disconnecting** removes the key from this computer. It does not revoke the approval on the exchange; do that on the exchange's API wallet page if you need it gone at once.
 - **Hedge mode** is not supported. The app trades one net position per market and says so if the account is in hedge mode.
+
+## Deposits and withdrawals
+
+Funds move between your own wallet and your trading account on the exchange. Both directions start in **Settings** under *Wallet*, or on the **Account** page, and both happen on the same kind of page as the approval: served on your computer, opened in the browser where your wallet is. The code is in [`exchange/funding.rs`](../crates/octoneo-core/src/exchange/funding.rs).
+
+| Trading network | Funds move on |
+| --- | --- |
+| Mainnet | BNB Smart Chain, Ethereum, Arbitrum One |
+| Testnet | BNB Smart Chain Testnet, Sepolia |
+
+The page must be opened with the wallet that is connected in the app. A deposit is credited to that wallet's account, and a withdrawal is paid out to that wallet. There is no field for another address.
+
+### Depositing
+
+Your wallet sends the deposit; the app only builds the transactions.
+
+1. The page lists the networks and assets the exchange accepts now. Tokenised shares are left out.
+2. You choose a network, an asset and an amount. The app checks the vault it knows for that network against the one the exchange reports at that moment. If they differ, nothing is built and the page says so.
+3. For a token, your wallet first allows the vault to take **exactly that amount**, unless an earlier allowance already covers it. A network's own coin needs no allowance.
+4. Your wallet sends `depositFor(token, your wallet, amount, 1)` to the vault. The last argument names the futures account.
+5. The page tells the app the transaction's hash, waits for the network to confirm it, and tells the app the result. The exchange credits the account a little later, usually within a few minutes.
+
+The deposit and its transaction hash are recorded under **Activity**. If you close the page after the wallet has sent the transaction, the deposit is still recorded, as sent but not seen confirmed. Each transaction costs the network's gas, paid by your wallet.
+
+The vaults are constants in `funding.rs`:
+
+| Network | Vault |
+| --- | --- |
+| BNB Smart Chain | `0x128463A60784c4D3f46c23Af3f65Ed859Ba87974` |
+| Ethereum | `0x604DD02d620633Ae427888d41bfd15e38483736E` |
+| Arbitrum One | `0x9E36CB86a159d479cEd94Fa05036f235Ac40E1d5` |
+| BNB Smart Chain Testnet | `0x62904590b575ea1C3F4aC411EB6A5A3140d6956e` |
+| Sepolia | `0x58D1E4C7b75450EfB2f437CE969aB8552F38371D` |
+
+The mainnet vaults are the ones in the exchange's API documentation. The testnet vaults are the ones its testnet reports.
+
+### Withdrawing
+
+The exchange carries out a withdrawal only when your own wallet has signed it twice. The key the app holds takes no part.
+
+1. The page shows what the account may withdraw now, per asset and network, with the exchange's fee and what is left of the daily limit.
+2. **First signature: the withdrawal.** Your wallet signs typed data that names the amount, the fee, the network and the destination, which is your own wallet:
+
+   ```
+   domain   { name: <the exchange's withdrawal domain>, version: "1", chainId: <the network you withdraw to>, verifyingContract: 0x0000…0000 }
+   type     Action(type, destination, destination Chain, token, amount, fee, nonce, <the exchange's chain field>)
+   message  { type: "Withdraw", destination: <your wallet>, destination Chain: "BSC", token: "USDT", amount: "40", fee: "0.5", nonce: <microseconds>, … }
+   ```
+
+3. **Second signature: the request.** Your wallet signs the request that carries the first signature, as `Message(string msg)` in the same domain trading requests use, with `chainId` `1666` on mainnet and `714` on testnet. This proves to the exchange that you are the one asking. The request is accepted for about a minute, so confirm this prompt promptly.
+4. The app checks that both signatures came from the connected wallet, sends the request once, and records the exchange's id for it under **Activity**.
+
+If no clear answer comes back, the app does not treat that as a refusal. It tells you the withdrawal may or may not have been accepted, and to check your balance before asking again.
+
+**Wallets and the second signature.** Its typed data names the exchange's own network (`1666` or `714`). MetaMask signs typed data only for the network it is on, and that network cannot be added to a wallet, so MetaMask refuses the second signature. Wallets that sign across networks, such as Rabby, do not. When MetaMask refuses, nothing has been sent and nothing is withdrawn; the page explains this.
 
 ## From ticket to order
 
@@ -138,7 +202,7 @@ The exchange's errors are turned into something you can act on:
 
 | The exchange says | The app says |
 | --- | --- |
-| `-5050` | Trading and account data start after the wallet's first deposit, with the site to deposit on |
+| `-5050` | Trading and account data start after the wallet's first deposit |
 | `-1022` | The API wallet's signature was rejected; its approval may have expired or been revoked |
 | `-4168` | The account is in Multi-Assets mode, which allows only cross margin; draft the ticket again |
 | `-1021`, `-4225`, `-4226` | The request's timing was rejected; check this computer's clock |
@@ -169,6 +233,7 @@ cargo test -p octoneo-core                  # the stand-in, in process
 pnpm tauri build --debug --no-bundle
 pnpm smoke                                   # the real window against a stand-in on this computer
 cargo run -p octoneo-core --example probe   # live, read-only: prices, book, trades, funding on both networks
+cargo run -p octoneo-core --example funding # live, read-only: the vaults, and each deposit simulated on its chain
 ```
 
 `OCTONEO_MAINNET_URL` and `OCTONEO_TESTNET_URL` point a network at another origin. The smoke test uses them. Anything you point them at receives your signed requests, so do not use them to route real trading through a server you do not control.
@@ -182,5 +247,11 @@ What has been checked against the live service so far:
 | A wallet's approval of an API wallet | No | Yes, with throwaway keys |
 | Signed account reads | No | Yes, by a funded wallet in the app |
 | Orders | No | No |
+| The vault on each network matches the one the exchange reports | Yes | Yes |
+| A deposit, simulated on its chain without sending it | Yes | Yes |
+| A deposit sent by a wallet | No | No |
+| A withdrawal | No | No |
 
-Account requests cannot be exercised without a wallet that has deposited, so orders are verified against the stand-in, which follows the exchange's API documentation. If you see the exchange answer differently from what this page describes, please [open an issue](https://github.com/kerjakuyco/octo-gens/issues) with the error text.
+Account requests cannot be exercised without a wallet that has deposited, so orders are verified against the stand-in, which follows the exchange's API documentation.
+
+The `funding` example asks a public node on each network to simulate the deposit the app would build. A coin deposit is accepted. A token deposit from a wallet that holds none fails inside the token, at the point where the vault collects the tokens, which shows the vault took the call. A withdrawal needs a funded wallet's own signatures, so it is verified against the stand-in and against signatures produced by an independent implementation of the same typed data, not against the live service. If a withdrawal is refused, the exchange's own words are shown and nothing has moved. If you see the exchange answer differently from what this page describes, please [open an issue](https://github.com/kerjakuyco/octo-gens/issues) with the error text.

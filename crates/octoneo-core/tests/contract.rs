@@ -21,8 +21,9 @@ use octoneo_core::model::{
 use octoneo_core::store::MemorySecrets;
 use octoneo_core::studio::view::{
     AccountView, CandleSeries, CardView, FundingView, InstrumentView, MarketRow, McpView, NewsView,
-    OrderBookView, PendingConnectView, PlanView, QuoteView, RunStatus, RunView, StepStatus, StepView,
-    TechnicalFrame, TechnicalsView, ThreadView, TicketView, TradeView, Trend, TurnEvent, WalletView,
+    OrderBookView, PendingWalletView, PlanView, QuoteView, RunStatus, RunView, StepStatus, StepView,
+    TechnicalFrame, TechnicalsView, ThreadView, TicketView, TradeView, Trend, TurnEvent, WalletNoticeView,
+    WalletTask, WalletView,
 };
 use octoneo_core::studio::{Studio, StudioConfig};
 use rust_decimal::Decimal;
@@ -376,9 +377,28 @@ fn every_view_sends_exactly_the_fields_the_interface_declares() {
         &contract,
     );
     same(
-        "PendingConnectView",
-        &PendingConnectView { network: Network::Testnet, url: "http://127.0.0.1:1/x".into() },
+        "PendingWalletView",
+        &PendingWalletView {
+            network: Network::Testnet,
+            task: WalletTask::Deposit,
+            url: "http://127.0.0.1:1/x".into(),
+        },
         &contract,
+    );
+    same(
+        "WalletNoticeView",
+        &WalletNoticeView {
+            network: Network::Testnet,
+            task: WalletTask::Withdraw,
+            ok: true,
+            text: "Withdrawal requested.".into(),
+        },
+        &contract,
+    );
+    assert_eq!(
+        wire(&[WalletTask::Connect, WalletTask::Deposit, WalletTask::Withdraw]),
+        union("WalletTask"),
+        "the tasks of a wallet page"
     );
     same(
         "ToolInfo",
@@ -444,7 +464,8 @@ fn requests_from_the_interface_are_understood_field_for_field() {
     use octoneo_core::mcp::McpConnectRequest;
     use octoneo_core::store::{Effort, Provider, Theme};
     use octoneo_core::studio::view::{
-        AssistantRequest, ModelsRequest, RiskRequest, TicketRequest, WalletBrowserRequest, WalletKeyRequest,
+        AssistantRequest, FundingRequest, ModelsRequest, RiskRequest, TicketRequest, WalletBrowserRequest,
+        WalletKeyRequest,
     };
 
     let contract = interfaces();
@@ -453,6 +474,7 @@ fn requests_from_the_interface_are_understood_field_for_field() {
         "stopLoss": "64000", "takeProfit": "58000"});
     let key = json!({"network": "testnet", "user": "0xabc", "agentKey": "0xdef"});
     let browser = json!({"network": "mainnet", "days": 30});
+    let funding = json!({"network": "testnet", "task": "withdraw"});
     let risk = json!({"maxLeverage": 5, "isolated": true});
     let assistant = json!({"provider": "cloudflare", "model": "a/b", "key": "token", "account": "abc", "gateway": "desk",
         "url": "http://127.0.0.1:1234", "effort": "medium", "liveTickets": true});
@@ -461,6 +483,7 @@ fn requests_from_the_interface_are_understood_field_for_field() {
         ("TicketRequest", &ticket),
         ("WalletKeyRequest", &key),
         ("WalletBrowserRequest", &browser),
+        ("FundingRequest", &funding),
         ("RiskRequest", &risk),
         ("AssistantRequest", &assistant),
         ("ModelsRequest", &models),
@@ -481,6 +504,8 @@ fn requests_from_the_interface_are_understood_field_for_field() {
         Network::Testnet
     );
     assert_eq!(serde_json::from_value::<WalletBrowserRequest>(browser).expect("browser request").days, 30);
+    let parsed = serde_json::from_value::<FundingRequest>(funding).expect("funding request");
+    assert_eq!((parsed.network, parsed.task), (Network::Testnet, WalletTask::Withdraw));
     assert_eq!(serde_json::from_value::<RiskRequest>(risk).expect("risk request").max_leverage, 5);
     let parsed = serde_json::from_value::<AssistantRequest>(assistant).expect("assistant request");
     assert_eq!(

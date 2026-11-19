@@ -43,17 +43,20 @@ import type {
   McpConnectRequest,
   McpView,
   ModelInfo,
+  FundingRequest,
   ModelsRequest,
   Network,
   OpenOrderView,
   OrderBookView,
-  PendingConnectView,
+  PendingWalletView,
   PlanView,
   PositionView,
   Provider,
   ProviderView,
   QuoteView,
   RiskRequest,
+  WalletNoticeView,
+  WalletTask,
   RiskView,
   RunView,
   Side,
@@ -90,8 +93,11 @@ export interface MockOptions {
   positions?: boolean;
   /** Which ticket a seeded conversation drafts. */
   ticket?: MockTicket;
-  /** Start with a browser approval waiting, and never resolve approvals by themselves. */
-  pending?: boolean;
+  /**
+   * Start with a wallet page waiting, and never resolve wallet pages by themselves:
+   * `true` for an approval, or the deposit or withdrawal that is waiting.
+   */
+  pending?: boolean | WalletTask;
   /** The account is in the exchange's Multi-Assets mode, which allows only cross margin. */
   multi?: boolean;
   /** The model in use. `none` starts with no model connected at all. */
@@ -662,7 +668,8 @@ export function createMockBackend(options: MockOptions = {}): Backend {
   let busy = false;
   let stopRequested = false;
   let wake: (() => void) | null = null;
-  let pendingConnect: PendingConnectView | null = null;
+  let pendingWallet: PendingWalletView | null = null;
+  let walletNotice: WalletNoticeView | null = null;
   let risk: RiskView = { maxLeverage: 10, isolated: true };
   /** Multi-Assets mode on the account: a new position is cross-margined whatever the trader prefers. */
   const crossOnly = options.multi === true;
@@ -697,7 +704,12 @@ export function createMockBackend(options: MockOptions = {}): Backend {
   }
 
   const activeWallet: MockWallet =
-    options.wallet ?? (options.pending ? "none" : network === "testnet" || seed === "liveticket" ? "connected" : "none");
+    options.wallet ??
+    (options.pending === true || options.pending === "connect"
+      ? "none"
+      : network === "testnet" || seed === "liveticket" || options.pending
+        ? "connected"
+        : "none");
   const wallets: Record<Network, Wallet> = {
     mainnet: walletIn(network === "mainnet" ? activeWallet : "none", "mainnet"),
     testnet: walletIn(network === "testnet" ? activeWallet : "connected", "testnet"),
@@ -1320,7 +1332,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
       wallets: NETWORKS.map(walletView),
       account: usable(wallet) ? figures().view : null,
       accountError: wallet.connected && wallet.failing ? ACCOUNT_ERROR : "",
-      connectError: "",
+      walletNotice: walletNotice ? { ...walletNotice } : null,
       assistant: assistantView(),
       risk: { ...risk },
       theme,
@@ -1332,9 +1344,39 @@ export function createMockBackend(options: MockOptions = {}): Backend {
       receipts: { ...receipts },
       failures: { ...failures },
       servers: [...servers.values()].map((server) => ({ ...server })),
-      pendingConnect: pendingConnect ? { ...pendingConnect } : null,
+      pendingWallet: pendingWallet ? { ...pendingWallet } : null,
       busy,
     };
+  }
+
+  /** Where a wallet page would be served: this computer, a random port, a secret path. */
+  function pageUrl(): string {
+    return `http://127.0.0.1:53127/${hash(id()).toString(16).padStart(8, "0")}${hash(id()).toString(16).padStart(8, "0")}`;
+  }
+
+  /** Carries out a pretend deposit or withdrawal on a network's account, and says what happened the way the core does. */
+  function moved(request: FundingRequest): string {
+    const chain = request.network === "mainnet" ? "BNB Smart Chain" : "BNB Smart Chain Testnet";
+    const book = books[request.network];
+    const wallet = wallets[request.network];
+    if (request.task === "deposit") {
+      book.balance += 250;
+      wallets[request.network] = { ...wallet, needsDeposit: false };
+      const text = `Deposit of 250 USDT confirmed on ${chain}. The exchange credits it within a few minutes.`;
+      if (request.network === network) {
+        const done: StepView = { name: "wallet.deposit", detail: `250 USDT, ${chain}`, status: "ok", ms: 41_000, preview: "" };
+        execution(`Deposit 250 USDT from ${chain}`, [done], text);
+      }
+      return text;
+    }
+    const amount = Math.min(40, Math.max(0, Math.floor(book.balance)));
+    book.balance -= amount;
+    const text = `Withdrawal of ${amount} USDT to ${chain} requested, with a fee of 0.5 USDT. It reaches your wallet once the exchange has processed it. Request 9001.`;
+    if (request.network === network) {
+      const done: StepView = { name: "wallet.withdraw", detail: `${amount} USDT, ${chain}`, status: "ok", ms: 23_000, preview: "" };
+      execution(`Withdraw ${amount} USDT to ${chain}`, [done], text);
+    }
+    return text;
   }
 
   function push(): void {
@@ -2338,7 +2380,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
   }
 
   if (options.pending) {
-    pendingConnect = { network, url: `http://127.0.0.1:53127/connect/${id().slice(0, 16)}` };
+    pendingWallet = { network, task: options.pending === true ? "connect" : options.pending, url: pageUrl() };
   }
 
   /** Seeding runs the same scripts a live turn does, so it finishes a few microtasks after the backend is made. */
@@ -2518,7 +2560,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
           needsDeposit: false,
           failing: false,
         };
-        if (pendingConnect?.network === request.network) pendingConnect = null;
+        if (pendingWallet?.network === request.network) pendingWallet = null;
         return snapshot();
       }),
 
@@ -2529,24 +2571,58 @@ export function createMockBackend(options: MockOptions = {}): Backend {
         if (!Number.isInteger(request.days) || request.days < 1 || request.days > 365) {
           throw new Error("Choose how long the approval lasts, from 1 to 365 days.");
         }
-        if (pendingConnect) throw new Error("Another wallet approval is already waiting. Cancel it first.");
-        const url = `http://127.0.0.1:53127/connect/${id().slice(0, 16)}`;
-        pendingConnect = { network: request.network, url };
+        const url = pageUrl();
+        pendingWallet = { network: request.network, task: "connect", url };
+        walletNotice = null;
         if (!options.pending) {
           // Stand in for the trader approving in their browser wallet.
           setTimeout(() => {
-            if (pendingConnect?.url !== url) return;
+            if (pendingWallet?.url !== url) return;
             wallets[request.network] = { ...walletIn("connected", request.network), expires: daysFromNow(request.days) };
-            pendingConnect = null;
+            pendingWallet = null;
+            walletNotice = {
+              network: request.network,
+              task: "connect",
+              ok: true,
+              text: `Wallet connected on ${networkName(request.network)}.`,
+            };
             push();
           }, 2600 * speed);
         }
         return snapshot();
       }),
 
-    cancelWalletConnect: () =>
+    fundWallet: (request: FundingRequest) =>
       settle(() => {
-        pendingConnect = null;
+        knownNetwork(request.network);
+        const wallet = wallets[request.network];
+        if (!wallet.connected) throw new Error(`Connect a wallet on ${networkName(request.network)} first.`);
+        if (request.task !== "deposit" && request.task !== "withdraw") {
+          throw new Error("Choose a deposit or a withdrawal.");
+        }
+        if (request.task === "withdraw" && wallet.needsDeposit) {
+          throw new Error(
+            `There is nothing to withdraw yet: this wallet has not deposited on ${networkName(request.network)}.`,
+          );
+        }
+        const url = pageUrl();
+        pendingWallet = { network: request.network, task: request.task, url };
+        walletNotice = null;
+        if (!options.pending) {
+          // Stand in for the trader's wallet sending the deposit, or signing the withdrawal, in their browser.
+          setTimeout(() => {
+            if (pendingWallet?.url !== url) return;
+            pendingWallet = null;
+            walletNotice = { network: request.network, task: request.task, ok: true, text: moved(request) };
+            push();
+          }, 2600 * speed);
+        }
+        return snapshot();
+      }),
+
+    cancelWalletPage: () =>
+      settle(() => {
+        pendingWallet = null;
         return snapshot();
       }),
 
@@ -2703,7 +2779,7 @@ export function mockOptionsFromUrl(search: string): MockOptions {
     wallet: oneOf(params.get("wallet"), ["connected", "deposit", "none", "error"] as const),
     positions: flag(params.get("positions")),
     ticket: oneOf(params.get("ticket"), ["long", "short", "close"] as const),
-    pending: flag(params.get("pending")),
+    pending: oneOf(params.get("pending"), ["connect", "deposit", "withdraw"] as const) ?? flag(params.get("pending")),
     multi: flag(params.get("multi")),
     provider: oneOf(params.get("provider"), ["none", "openrouter", "cloudflare", "ollama", "lmstudio"] as const),
     local: oneOf(params.get("local"), ["up", "down", "retry"] as const),

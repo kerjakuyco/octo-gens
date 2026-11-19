@@ -34,6 +34,8 @@ const LABELS: Record<string, string> = {
   "exchange.stop_loss": "Stop-loss",
   "exchange.take_profit": "Take-profit",
   "exchange.cancel": "Cancel",
+  "wallet.deposit": "Deposit",
+  "wallet.withdraw": "Withdrawal",
 };
 
 /** A step's name in plain words. An unknown one keeps its own words, without the underscores. */

@@ -119,6 +119,10 @@ struct Exchange {
     slow_account: Option<Duration>,
     /// The exchange's Multi-Assets mode: every asset backs every position, and isolated margin is refused.
     multi_assets: bool,
+    /// The main network a wallet's funds move on here, and what its vault there is.
+    funds_chain: u64,
+    /// The trader's own wallet, once it is known: the only one a withdrawal is paid out to.
+    owner: Option<String>,
 }
 
 impl Exchange {
@@ -148,7 +152,71 @@ impl Exchange {
             fail_open_orders: false,
             slow_account: None,
             multi_assets: false,
+            funds_chain: crate::exchange::funding::chains(network)[0].id,
+            owner: None,
         }
+    }
+
+    /// The network this stand-in trades on, told by its signing chain.
+    fn network(&self) -> Network {
+        if self.chain == Network::Mainnet.chain_id() { Network::Mainnet } else { Network::Testnet }
+    }
+
+    /// What the site's public API answers: a value in its envelope.
+    fn site(data: Value) -> (u16, Value) {
+        (
+            200,
+            json!({"code": "000000", "message": null, "messageDetail": null, "data": data, "success": true}),
+        )
+    }
+
+    /// A withdrawal is taken only when the trader's own wallet signed both the
+    /// withdrawal and the request, and only back to that wallet.
+    fn withdraw(&mut self, query: &HashMap<String, String>, raw: &str) -> (u16, Value) {
+        use crate::exchange::funding::{Withdrawal, chain};
+        let refuse = |code: i64, msg: &str| (400, json!({"code": code, "msg": msg}));
+        if query.contains_key("signer") {
+            return refuse(-2015, "Invalid API-key, IP, or permissions for action.");
+        }
+        let user = query.get("user").cloned().unwrap_or_default();
+        let asked = raw
+            .split_once("&signature=")
+            .and_then(|(params, signature)| recover(self.chain, params, signature).ok());
+        if asked.map(|address| address.to_string()) != Some(user.clone()) {
+            return refuse(-1022, "Signature for this request is not valid.");
+        }
+        let field = |name: &str| query.get(name).cloned().unwrap_or_default();
+        let (Some(chain), Ok(receiver)) = (
+            field("chainId").parse().ok().and_then(|id| chain(self.network(), id)),
+            Address::parse(&field("receiver")),
+        ) else {
+            return refuse(-1102, "Mandatory parameter was not sent, was empty/null, or malformed.");
+        };
+        let withdrawal = Withdrawal {
+            chain,
+            receiver,
+            asset: field("asset"),
+            amount: field("amount"),
+            fee: field("fee"),
+            nonce: field("userNonce").parse().unwrap_or_default(),
+        };
+        let signed_by = withdrawal.signer(&field("userSignature")).map(|address| address.to_string()).ok();
+        if signed_by != Some(user.clone())
+            || receiver.to_string() != user
+            || self.owner.as_ref() != Some(&user)
+        {
+            return refuse(-1000, "withdraw signature mismatch");
+        }
+        let amount = dec(&withdrawal.amount);
+        if amount > self.wallet {
+            return refuse(-5012, "Insufficient balance.");
+        }
+        self.wallet -= amount;
+        self.changes.push(format!(
+            "POST aster/user-withdraw {} {} to {}",
+            withdrawal.amount, withdrawal.asset, chain.short
+        ));
+        (200, json!({"withdrawId": "9001", "hash": "0xfeed"}))
     }
 
     fn price(&self, symbol: &str) -> Option<Decimal> {
@@ -389,8 +457,33 @@ impl Exchange {
                     return (400, json!({"code": -1000, "msg": "signature mismatch"}));
                 }
                 self.approved.insert(field("agentAddress"));
+                self.owner = Some(field("user"));
                 return (200, json!({"code": 200, "msg": "success"}));
             }
+            ("GET", "/bapi/futures/v1/public/future/aster/deposit/assets") => {
+                return Self::site(json!([{
+                    "name": "USDT", "contractAddress": "0x7037bf0500e9f5e277c6562ff593f0f9ab432bf7", "decimals": 18,
+                    "network": "EVM", "chainId": self.funds_chain, "depositType": "normal", "isNative": false, "isStock": false,
+                }]));
+            }
+            ("GET", "/bapi/futures/v1/public/future/web3/ae/deposit-address") => {
+                let vault = query
+                    .get("chainId")
+                    .and_then(|id| id.parse().ok())
+                    .and_then(|id| crate::exchange::funding::chain(self.network(), id))
+                    .map(|chain| chain.vault().to_string());
+                return Self::site(json!(vault));
+            }
+            ("GET", "/bapi/futures/v1/public/future/aster/withdraw/assets") => {
+                return Self::site(json!([{
+                    "name": "USDT", "network": "EVM", "chainId": self.funds_chain, "withdrawType": "autoWithdraw", "isStock": false,
+                }]));
+            }
+            ("GET", "/bapi/futures/v1/public/future/aster/estimate-withdraw-fee") => {
+                return Self::site(json!({"gasLimit": 200000, "gasCost": 0.5, "gasUsdValue": 0.1}));
+            }
+            // The one account request the API wallet may not make: only the trader's own wallet withdraws.
+            ("POST", "/fapi/v3/aster/user-withdraw") if !self.unfunded => return self.withdraw(query, raw),
             _ => {}
         }
 
@@ -413,6 +506,18 @@ impl Exchange {
         match (verb, route) {
             ("GET", "/fapi/v3/balance") => {
                 (200, json!([{"asset": "USDT", "balance": self.wallet.to_string()}]))
+            }
+            ("POST", "/fapi/v3/aster/user-withdraw-info") => {
+                self.changes.pop();
+                let free = (self.wallet - self.margin_used()).max(Decimal::ZERO).round_dp(8).to_string();
+                let chain = self.funds_chain.to_string();
+                (
+                    200,
+                    json!({"userDailyLimit": "10000", "userRemainingDailyLimit": "9000", "balances": {"USDT": {
+                        "currency": "USDT", "perpTotalWithdrawAmount": free,
+                        "chainBalances": {chain: {"chainId": self.funds_chain, "perpMaxWithdrawAmount": free, "chainLimit": "100000", "withdrawFee": "0.5"}},
+                    }}}),
+                )
             }
             ("GET", "/fapi/v3/positionSide/dual") => (200, json!({"dualSidePosition": self.hedge})),
             ("GET", "/fapi/v3/multiAssetsMargin") => (200, json!({"multiAssetsMargin": self.multi_assets})),
@@ -1990,29 +2095,25 @@ async fn a_browser_wallet_approves_a_fresh_trading_key() {
 
     // Starting again withdraws the page that was waiting; cancelling leaves no trace.
     let first =
-        studio.connect_wallet_browser(request(30)).await.expect("started").pending_connect.expect("pending");
-    let second = studio
-        .connect_wallet_browser(request(30))
-        .await
-        .expect("restarted")
-        .pending_connect
-        .expect("pending");
+        studio.connect_wallet_browser(request(30)).await.expect("started").pending_wallet.expect("pending");
+    let second =
+        studio.connect_wallet_browser(request(30)).await.expect("restarted").pending_wallet.expect("pending");
     assert!(
         first.url != second.url
-            && second.network == Network::Testnet
+            && (second.network, second.task) == (Network::Testnet, WalletTask::Connect)
             && second.url.starts_with("http://127.0.0.1:")
     );
     tokio::time::sleep(Duration::from_millis(100)).await;
     assert!(http.get(&first.url).send().await.is_err(), "the replaced page is gone");
-    let cancelled = studio.cancel_wallet_connect();
-    assert!(cancelled.pending_connect.is_none() && cancelled.connect_error.is_empty());
+    let cancelled = studio.cancel_wallet_page();
+    assert!(cancelled.pending_wallet.is_none() && cancelled.wallet_notice.is_none());
     tokio::time::sleep(Duration::from_millis(100)).await;
     assert!(pushed.try_recv().is_err() && http.get(&second.url).send().await.is_err());
 
     // What the page does in the browser: connect, sign the typed message with the wallet, hand it back.
     let trader = AgentKey::generate().expect("a stand-in for the trader's own wallet");
     let pending =
-        studio.connect_wallet_browser(request(30)).await.expect("started").pending_connect.expect("pending");
+        studio.connect_wallet_browser(request(30)).await.expect("started").pending_wallet.expect("pending");
     let prepared =
         post(format!("{}/prepare", pending.url), json!({"account": trader.address().to_string()})).await;
     let message = prepared["typedData"]["message"]["msg"].as_str().expect("message");
@@ -2029,7 +2130,16 @@ async fn a_browser_wallet_approves_a_fresh_trading_key() {
         .expect("pushed in time")
         .expect("snapshot");
     let wallet = &snapshot.wallets[1];
-    assert!(wallet.connected && !wallet.needs_deposit && snapshot.pending_connect.is_none());
+    assert!(wallet.connected && !wallet.needs_deposit && snapshot.pending_wallet.is_none());
+    assert_eq!(
+        snapshot.wallet_notice,
+        Some(WalletNoticeView {
+            network: Network::Testnet,
+            task: WalletTask::Connect,
+            ok: true,
+            text: "Wallet connected on Testnet.".into()
+        })
+    );
     assert_eq!(wallet.user, Some(trader.address().to_string()));
     let hours = (chrono::DateTime::parse_from_rfc3339(wallet.expires.as_deref().expect("expiry"))
         .expect("time")
@@ -2058,7 +2168,7 @@ async fn a_browser_wallet_approves_a_fresh_trading_key() {
     // An approval that ends without a wallet says why, in place of the account.
     studio.disconnect_wallet(Network::Testnet).expect("disconnected");
     let pending =
-        studio.connect_wallet_browser(request(7)).await.expect("started").pending_connect.expect("pending");
+        studio.connect_wallet_browser(request(7)).await.expect("started").pending_wallet.expect("pending");
     let prepared =
         post(format!("{}/prepare", pending.url), json!({"account": trader.address().to_string()})).await;
     let message = prepared["typedData"]["message"]["msg"].as_str().expect("message");
@@ -2067,19 +2177,218 @@ async fn a_browser_wallet_approves_a_fresh_trading_key() {
         post(format!("{}/submit", pending.url), json!({"signature": other.sign(APPROVAL_CHAIN_ID, message)}))
             .await;
     assert!(wrong["error"].as_str().is_some_and(|e| e.contains("different account")), "{wrong}");
-    assert!(studio.snapshot().pending_connect.is_some(), "a wrong signature can be tried again");
+    assert!(studio.snapshot().pending_wallet.is_some(), "a wrong signature can be tried again");
     // The page ends on its own (as it does when it expires) while the desk is still waiting for it.
     studio.state().pending.as_ref().expect("pending").cancel.cancel();
     let ended = tokio::time::timeout(Duration::from_secs(5), pushed.recv())
         .await
         .expect("pushed in time")
         .expect("snapshot");
-    assert!(ended.pending_connect.is_none() && !ended.wallets[1].connected);
-    assert_eq!(ended.connect_error, "The wallet approval was cancelled.");
+    assert!(ended.pending_wallet.is_none() && !ended.wallets[1].connected);
+    let notice = ended.wallet_notice.as_ref().expect("why it ended");
+    assert_eq!((notice.ok, notice.text.as_str()), (false, "The wallet approval was cancelled."));
     assert!(ended.account_error.is_empty());
     // Trying again clears the note.
-    assert!(studio.connect_wallet_browser(request(7)).await.expect("started").connect_error.is_empty());
-    studio.cancel_wallet_connect();
+    assert!(studio.connect_wallet_browser(request(7)).await.expect("started").wallet_notice.is_none());
+    studio.cancel_wallet_page();
+}
+
+#[tokio::test]
+async fn funds_move_only_through_the_traders_own_wallet() {
+    use crate::exchange::funding::{Withdrawal, chain};
+
+    let folder = tempfile::tempdir().expect("tempdir");
+    let (server, exchange) = stand_in(Network::Testnet).await;
+    let desk = open(folder.path(), Arc::default(), |config| {
+        config.exchange_bases.insert(Network::Testnet, server.uri());
+    });
+    let studio = &desk.studio;
+    studio.set_network(Network::Testnet).await.expect("testnet");
+    let (sender, mut pushed) = tokio::sync::mpsc::unbounded_channel();
+    studio.set_notifier(move |snapshot| {
+        let _ = sender.send(snapshot);
+    });
+    let next = async |pushed: &mut tokio::sync::mpsc::UnboundedReceiver<Snapshot>| {
+        tokio::time::timeout(Duration::from_secs(5), pushed.recv())
+            .await
+            .expect("pushed in time")
+            .expect("snapshot")
+    };
+    let http = reqwest::Client::new();
+    let post = async |url: String, body: Value| {
+        http.post(url).json(&body).send().await.expect("request").json::<Value>().await.expect("json")
+    };
+    let fund = |task| FundingRequest { network: Network::Testnet, task };
+    let name = "BNB Smart Chain Testnet";
+
+    // No wallet, nothing to fund.
+    let refused = studio.fund_wallet(fund(WalletTask::Deposit)).await.expect_err("no wallet");
+    assert_eq!(refused.0, "Connect a wallet on Testnet first.");
+
+    // The trader's own wallet approves a trading key, as it does in the browser.
+    let trader = AgentKey::generate().expect("a stand-in for the trader's own wallet");
+    let account = trader.address().to_string();
+    let request = WalletBrowserRequest { network: Network::Testnet, days: 30 };
+    let page =
+        studio.connect_wallet_browser(request).await.expect("started").pending_wallet.expect("pending");
+    let prepared = post(format!("{}/prepare", page.url), json!({"account": account})).await;
+    let message = prepared["typedData"]["message"]["msg"].as_str().expect("message");
+    post(format!("{}/submit", page.url), json!({"signature": trader.sign(APPROVAL_CHAIN_ID, message)})).await;
+    assert!(next(&mut pushed).await.wallets[1].connected);
+    assert!(studio.fund_wallet(fund(WalletTask::Connect)).await.is_err(), "approving is not funding");
+
+    // A wallet that never deposited has nothing to take out, and the app says so before any page opens.
+    exchange.lock().expect("exchange").unfunded = true;
+    assert!(studio.refresh_account().await.expect("refreshed").wallets[1].needs_deposit);
+    let refused = studio.fund_wallet(fund(WalletTask::Withdraw)).await.expect_err("nothing yet");
+    assert!(refused.0.contains("nothing to withdraw yet"), "{refused}");
+
+    // The first deposit: the page builds the transactions, the wallet sends them, the page reports the hash.
+    let page = studio
+        .fund_wallet(fund(WalletTask::Deposit))
+        .await
+        .expect("started")
+        .pending_wallet
+        .expect("pending");
+    assert_eq!((page.network, page.task), (Network::Testnet, WalletTask::Deposit));
+    let options = post(format!("{}/deposit/options", page.url), json!({})).await;
+    assert_eq!(
+        (&options["assets"][0]["name"], &options["assets"][0]["chainId"]),
+        (&json!("USDT"), &json!(97))
+    );
+    let plan = post(
+        format!("{}/deposit/prepare", page.url),
+        json!({"account": account, "chainId": 97, "asset": "USDT", "amount": "250"}),
+    )
+    .await;
+    let vault = chain(Network::Testnet, 97).expect("chain").vault().to_string();
+    assert_eq!((&plan["deposit"]["to"], &plan["vault"]), (&json!(vault), &json!(vault)), "{plan}");
+    let hash = format!("0x{}", "1a".repeat(32));
+    post(format!("{}/deposit/sent", page.url), json!({"hash": hash})).await;
+    // The network confirms it and the exchange credits the account.
+    {
+        let mut exchange = exchange.lock().expect("exchange");
+        exchange.unfunded = false;
+        exchange.wallet += dec("250");
+    }
+    post(format!("{}/deposit/confirmed", page.url), json!({"hash": hash, "ok": true})).await;
+    let credited = next(&mut pushed).await;
+    assert_eq!(
+        credited.wallet_notice,
+        Some(WalletNoticeView {
+            network: Network::Testnet,
+            task: WalletTask::Deposit,
+            ok: true,
+            text: format!(
+                "Deposit of 250 USDT confirmed on {name}. The exchange credits it within a few minutes."
+            ),
+        })
+    );
+    assert!(credited.pending_wallet.is_none() && !credited.wallets[1].needs_deposit);
+    assert_eq!(credited.account.as_ref().map(|a| a.equity.as_str()), Some("1250"));
+    let run = &credited.activity[0];
+    assert_eq!(
+        (run.title.as_str(), run.agent.as_str(), run.status, run.steps[0].name.as_str()),
+        (
+            format!("Deposit 250 USDT from {name}").as_str(),
+            "Execution",
+            RunStatus::Complete,
+            "wallet.deposit"
+        )
+    );
+    // The record keeps the transaction, so it can be looked up later.
+    assert!(run.output.ends_with(&format!("Transaction {hash}.")), "{}", run.output);
+
+    // A deposit the wallet sent stays a fact when the trader closes the page before the network confirmed it.
+    let page = studio
+        .fund_wallet(fund(WalletTask::Deposit))
+        .await
+        .expect("started")
+        .pending_wallet
+        .expect("pending");
+    post(
+        format!("{}/deposit/prepare", page.url),
+        json!({"account": account, "chainId": 97, "asset": "USDT", "amount": "10"}),
+    )
+    .await;
+    post(format!("{}/deposit/sent", page.url), json!({"hash": format!("0x{}", "2b".repeat(32))})).await;
+    assert!(studio.cancel_wallet_page().pending_wallet.is_none());
+    let left = next(&mut pushed).await;
+    let notice = left.wallet_notice.as_ref().expect("still told");
+    assert!(
+        notice.ok && notice.text.starts_with(&format!("Deposit of 10 USDT sent on {name}.")),
+        "{notice:?}"
+    );
+    assert_eq!(left.activity[0].title, format!("Deposit 10 USDT from {name}"));
+    // A page closed with nothing sent leaves nothing behind.
+    studio.fund_wallet(fund(WalletTask::Deposit)).await.expect("started");
+    assert!(studio.cancel_wallet_page().wallet_notice.is_none());
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    assert!(pushed.try_recv().is_err());
+
+    // A withdrawal: the wallet signs the withdrawal, then the request that carries it.
+    let page = studio
+        .fund_wallet(fund(WalletTask::Withdraw))
+        .await
+        .expect("started")
+        .pending_wallet
+        .expect("pending");
+    assert_eq!(page.task, WalletTask::Withdraw);
+    let options = post(format!("{}/withdraw/options", page.url), json!({})).await;
+    assert_eq!(options["assets"], json!([{"chainId": 97, "name": "USDT", "max": "1250", "fee": "0.5"}]));
+    let prepared = post(
+        format!("{}/withdraw/prepare", page.url),
+        json!({"account": account, "chainId": 97, "asset": "USDT", "amount": "40"}),
+    )
+    .await;
+    let typed = &prepared["typedData"]["message"];
+    let text = |key: &str| typed[key].as_str().expect("field").to_string();
+    let withdrawal = Withdrawal {
+        chain: chain(Network::Testnet, 97).expect("chain"),
+        receiver: trader.address(),
+        asset: text("token"),
+        amount: text("amount"),
+        fee: text("fee"),
+        nonce: text("nonce").parse().expect("nonce"),
+    };
+    assert_eq!(text("destination"), account, "the only destination is the wallet itself");
+    let first = trader.sign_digest(&withdrawal.digest());
+    let signed = post(format!("{}/withdraw/signed", page.url), json!({"signature": first})).await;
+    let request = signed["typedData"]["message"]["msg"].as_str().expect("request");
+    let second = trader.sign(Network::Testnet.chain_id(), request);
+    let submitted = post(format!("{}/withdraw/submit", page.url), json!({"signature": second})).await;
+    assert_eq!((&submitted["ok"], &submitted["id"]), (&json!(true), &json!("9001")), "{submitted}");
+    let paid = next(&mut pushed).await;
+    assert_eq!(
+        paid.wallet_notice.as_ref().map(|notice| (notice.ok, notice.task, notice.text.as_str())),
+        Some((
+            true,
+            WalletTask::Withdraw,
+            format!(
+                "Withdrawal of 40 USDT to {name} requested, with a fee of 0.5 USDT. It reaches your wallet once the exchange has processed it. Request 9001."
+            )
+            .as_str()
+        ))
+    );
+    assert_eq!(paid.account.as_ref().map(|a| a.equity.as_str()), Some("1210"));
+    assert_eq!(
+        (paid.activity[0].title.as_str(), paid.activity[0].steps[0].name.as_str()),
+        (format!("Withdraw 40 USDT to {name}").as_str(), "wallet.withdraw")
+    );
+    assert_eq!(
+        exchange.lock().expect("exchange").changes.last().map(String::as_str),
+        Some("POST aster/user-withdraw 40 USDT to BSC testnet")
+    );
+    // The key this app holds signed nothing here: the request names the wallet, never the API wallet.
+    let requests = server.received_requests().await.expect("recorded");
+    let withdrawals: Vec<_> =
+        requests.iter().filter(|r| r.url.path() == "/fapi/v3/aster/user-withdraw").collect();
+    assert_eq!(withdrawals.len(), 1);
+    let query = withdrawals[0].url.query().unwrap_or_default();
+    assert!(query.contains(&format!("&user={account}")) && !query.contains("signer="), "{query}");
+    let stored = desk.secrets.get("agent-key-testnet").expect("secret").expect("stored");
+    let api_wallet = AgentKey::parse(&stored).expect("key").address().to_string();
+    assert!(!query.contains(&api_wallet));
 }
 
 #[tokio::test]

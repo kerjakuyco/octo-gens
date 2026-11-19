@@ -41,7 +41,7 @@ describe("mock backend: markets", () => {
     ]);
     expect(snapshot.account).toMatchObject({ equity: "10000.00", available: "10000.00", positions: [], orders: [] });
     expect(snapshot.assistant).toMatchObject({ provider: "openrouter", ready: true, label: "Lantern 2 Large" });
-    expect(snapshot).toMatchObject({ turns: [], threads: [], activity: [], draft: null, pendingConnect: null, busy: false });
+    expect(snapshot).toMatchObject({ turns: [], threads: [], activity: [], draft: null, pendingWallet: null, walletNotice: null, busy: false });
   });
 
   it("lists every market of the network, including symbols that are not ASCII", async () => {
@@ -449,12 +449,13 @@ describe("mock backend: wallets", () => {
     await expect(backend.connectWalletBrowser({ network: "testnet", days: 0 })).rejects.toThrow("1 to 365");
 
     const waiting = await backend.connectWalletBrowser({ network: "testnet", days: 30 });
-    expect(waiting.pendingConnect?.network).toBe("testnet");
-    expect(waiting.pendingConnect?.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/connect\/[0-9a-f]+$/);
+    expect(waiting.pendingWallet).toMatchObject({ network: "testnet", task: "connect" });
+    expect(waiting.pendingWallet?.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/[0-9a-f]{16}$/);
     expect(waiting.wallets[1]?.connected).toBe(false);
 
     const approved = await pushed;
-    expect(approved.pendingConnect).toBeNull();
+    expect(approved.pendingWallet).toBeNull();
+    expect(approved.walletNotice).toEqual({ network: "testnet", task: "connect", ok: true, text: "Wallet connected on Testnet." });
     const wallet = approved.wallets[1]!;
     expect(wallet).toMatchObject({ connected: true, needsDeposit: false });
     expect(wallet.user).toMatch(/^0x[0-9a-fA-F]{40}$/);
@@ -464,13 +465,70 @@ describe("mock backend: wallets", () => {
     expect(approved.account).not.toBeNull();
   });
 
-  it("keeps an approval waiting until it is cancelled", async () => {
+  it("keeps an approval waiting until it is cancelled or replaced", async () => {
     const backend = instant({ pending: true });
     const start = await backend.boot();
-    expect(start.pendingConnect?.network).toBe("testnet");
+    expect(start.pendingWallet).toMatchObject({ network: "testnet", task: "connect" });
     expect(start.wallets[1]?.connected).toBe(false);
-    await expect(backend.connectWalletBrowser({ network: "mainnet", days: 7 })).rejects.toThrow("already waiting");
-    expect((await backend.cancelWalletConnect()).pendingConnect).toBeNull();
+    // One wallet page at a time: starting another takes the place of the one that was waiting.
+    const replaced = await backend.connectWalletBrowser({ network: "mainnet", days: 7 });
+    expect(replaced.pendingWallet?.network).toBe("mainnet");
+    expect(replaced.pendingWallet?.url).not.toBe(start.pendingWallet?.url);
+    const cancelled = await backend.cancelWalletPage();
+    expect(cancelled.pendingWallet).toBeNull();
+    expect(cancelled.walletNotice).toBeNull();
+  });
+
+  it("moves funds through a wallet page and says how it ended", async () => {
+    const backend = instant();
+    const before = Number((await backend.boot()).account!.walletBalance);
+    const next = () =>
+      new Promise<Snapshot>((resolve) => {
+        const stop = backend.onSnapshot((snapshot) => {
+          stop();
+          resolve(snapshot);
+        });
+      });
+    await expect(backend.fundWallet({ network: "mainnet", task: "deposit" })).rejects.toThrow("Connect a wallet on Mainnet first.");
+    await expect(backend.fundWallet({ network: "testnet", task: "connect" })).rejects.toThrow("a deposit or a withdrawal");
+
+    let pushed = next();
+    const depositing = await backend.fundWallet({ network: "testnet", task: "deposit" });
+    expect(depositing.pendingWallet).toMatchObject({ network: "testnet", task: "deposit" });
+    const deposited = await pushed;
+    expect(deposited.pendingWallet).toBeNull();
+    expect(deposited.walletNotice).toMatchObject({ task: "deposit", ok: true });
+    expect(deposited.walletNotice?.text).toContain("Deposit of 250 USDT confirmed on BNB Smart Chain Testnet");
+    expect(Number(deposited.account!.walletBalance)).toBe(before + 250);
+    expect(deposited.activity[0]).toMatchObject({ agent: "Execution", title: "Deposit 250 USDT from BNB Smart Chain Testnet" });
+    expect(deposited.activity[0]?.steps[0]?.name).toBe("wallet.deposit");
+
+    pushed = next();
+    const withdrawing = await backend.fundWallet({ network: "testnet", task: "withdraw" });
+    expect(withdrawing.pendingWallet?.task).toBe("withdraw");
+    expect(withdrawing.walletNotice).toBeNull();
+    const withdrawn = await pushed;
+    expect(withdrawn.walletNotice?.text).toContain("Withdrawal of 40 USDT to BNB Smart Chain Testnet requested");
+    expect(Number(withdrawn.account!.walletBalance)).toBe(before + 210);
+    expect(withdrawn.activity[0]?.steps[0]?.name).toBe("wallet.withdraw");
+  });
+
+  it("has nothing to withdraw before the first deposit, and a deposit opens the account", async () => {
+    const backend = instant({ wallet: "deposit" });
+    const start = await backend.boot();
+    expect(start.wallets[1]).toMatchObject({ connected: true, needsDeposit: true });
+    expect(start.account).toBeNull();
+    await expect(backend.fundWallet({ network: "testnet", task: "withdraw" })).rejects.toThrow("nothing to withdraw yet");
+    const pushed = new Promise<Snapshot>((resolve) => {
+      const stop = backend.onSnapshot((snapshot) => {
+        stop();
+        resolve(snapshot);
+      });
+    });
+    await backend.fundWallet({ network: "testnet", task: "deposit" });
+    const opened = await pushed;
+    expect(opened.wallets[1]?.needsDeposit).toBe(false);
+    expect(opened.account).not.toBeNull();
   });
 });
 

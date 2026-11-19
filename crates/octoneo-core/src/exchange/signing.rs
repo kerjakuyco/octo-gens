@@ -56,6 +56,11 @@ impl Address {
         Self(bytes)
     }
 
+    /// The twenty bytes, as contracts and typed data take them.
+    pub fn bytes(&self) -> &[u8; 20] {
+        &self.0
+    }
+
     /// `0x1234…cdef`, for places too narrow for the whole address.
     pub fn short(&self) -> String {
         let full = self.to_string();
@@ -133,27 +138,32 @@ impl AgentKey {
     /// Signs `message` as EIP-712 typed data in the exchange's domain on `chain_id`.
     /// Returns `0x` + r + s + v, the form wallets and the exchange use.
     pub fn sign(&self, chain_id: u64, message: &str) -> String {
-        let digest = typed_digest(chain_id, message);
-        let (signature, recovery): (Signature, RecoveryId) = self.0.sign_prehash_recoverable(&digest);
+        self.sign_digest(&typed_digest(chain_id, message))
+    }
+
+    /// Signs a typed-data digest, in the same form.
+    pub fn sign_digest(&self, digest: &[u8; 32]) -> String {
+        let (signature, recovery): (Signature, RecoveryId) = self.0.sign_prehash_recoverable(digest);
         format!("0x{}{:02x}", hex::encode(signature.to_bytes()), 27 + recovery.to_byte())
     }
 }
 
-fn word(value: u64) -> [u8; 32] {
+/// A number as the 32-byte word contracts and typed data use.
+pub(crate) fn word(value: u128) -> [u8; 32] {
     let mut out = [0u8; 32];
-    out[24..].copy_from_slice(&value.to_be_bytes());
+    out[16..].copy_from_slice(&value.to_be_bytes());
     out
 }
 
-/// The EIP-712 domain separator for a domain with a zero verifying contract.
-fn domain_separator(name: &str, version: &str, chain_id: u64, contract: &[u8; 20]) -> [u8; 32] {
+/// The EIP-712 domain separator of a domain.
+pub(crate) fn domain_separator(name: &str, version: &str, chain_id: u64, contract: &[u8; 20]) -> [u8; 32] {
     let mut data = Vec::with_capacity(160);
     data.extend(keccak(
         b"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
     ));
     data.extend(keccak(name.as_bytes()));
     data.extend(keccak(version.as_bytes()));
-    data.extend(word(chain_id));
+    data.extend(word(u128::from(chain_id)));
     data.extend([0u8; 12]);
     data.extend(contract);
     keccak(&data)
@@ -197,6 +207,11 @@ pub fn typed_data(chain_id: u64, message: &str) -> Value {
 /// The address that produced `signature` over `message`. Used to check a wallet's
 /// approval before it is sent to the exchange.
 pub fn recover(chain_id: u64, message: &str, signature: &str) -> Result<Address> {
+    recover_digest(&typed_digest(chain_id, message), signature)
+}
+
+/// The address whose key signed `digest`.
+pub(crate) fn recover_digest(digest: &[u8; 32], signature: &str) -> Result<Address> {
     let invalid = || desk_err!("The wallet returned a signature this app cannot read.");
     let digits = signature.trim().strip_prefix("0x").unwrap_or(signature.trim());
     let bytes = hex::decode(digits).map_err(|_| invalid())?;
@@ -207,8 +222,7 @@ pub fn recover(chain_id: u64, message: &str, signature: &str) -> Result<Address>
     let recovery = RecoveryId::from_byte(if bytes[64] >= 27 { bytes[64] - 27 } else { bytes[64] })
         .ok_or_else(invalid)?;
     let parsed = Signature::from_slice(&bytes[..64]).map_err(|_| invalid())?;
-    let key = VerifyingKey::recover_from_prehash(&typed_digest(chain_id, message), &parsed, recovery)
-        .map_err(|_| invalid())?;
+    let key = VerifyingKey::recover_from_prehash(digest, &parsed, recovery).map_err(|_| invalid())?;
     Ok(Address::of(&key))
 }
 
@@ -322,6 +336,11 @@ mod tests {
         assert_eq!(recover(1666, message, &signature).expect("recovers"), key.address());
         // Signing is deterministic, so a retry sends the same bytes.
         assert_eq!(key.sign(1666, message), signature);
+        // The signature another implementation (ethers) produces for the same key, network and message.
+        assert_eq!(
+            key.sign(714, "chainId=97&asset=USDT&amount=31&fee=0.3"),
+            "0xd9f4871899b5ea1873b8f1a4cb75caedd09d32353525a974f617e4223c068a6300f8d8118ed07d28aa96a4dcacfa02b4dac338a6f7a183e5f098b72a0ebbc0e11b"
+        );
         // A signature for one network or message is worthless for another.
         assert_ne!(recover(714, message, &signature).expect("recovers something"), key.address());
         assert_ne!(

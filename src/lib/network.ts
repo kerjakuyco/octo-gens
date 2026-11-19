@@ -12,7 +12,7 @@ export function fundsNote(network: Network): string {
   return network === "mainnet" ? "Real funds" : "Test funds";
 }
 
-/** The exchange's own site for a network, where deposits are made. */
+/** The exchange's own site for a network. The app needs it only for the page that manages API wallets. */
 export function exchangeSite(network: Network): string {
   return network === "mainnet" ? "https://www.asterdex.com" : "https://www.asterdex-testnet.com";
 }

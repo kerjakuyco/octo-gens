@@ -22,6 +22,7 @@ import type {
   TicketRequest,
   TicketView,
   TurnEvent,
+  FundingRequest,
   WalletBrowserRequest,
   WalletKeyRequest,
 } from "../api/types";
@@ -145,7 +146,6 @@ let started = false;
 let noticeId = 0;
 /** Counts snapshots applied by commands, turns and pushes, so a slower background read never overwrites them. */
 let epoch = 0;
-let cancellingConnect = false;
 
 function core(): Backend {
   if (!backend) throw new Error("The app is still starting. Try again in a moment.");
@@ -171,19 +171,16 @@ export function dismissNotice(): void {
   app.set({ notice: null });
 }
 
-/** A snapshot pushed by background work in the core, such as a wallet approval finishing. */
+/** A snapshot pushed by background work in the core, such as a wallet page finishing in the browser. */
 function applyPushed(next: Snapshot): void {
-  const waited = app.get().snapshot?.pendingConnect;
+  const before = app.get().snapshot?.walletNotice;
   epoch += 1;
   app.set({ snapshot: next });
-  if (!waited || next.pendingConnect || cancellingConnect) return;
-  const wallet = next.wallets.find((item) => item.network === waited.network);
-  if (wallet?.connected) {
-    notify(`Wallet connected on ${networkName(waited.network)}`);
-    void refreshAccount();
-  } else {
-    notify(next.connectError || "The wallet approval ended without connecting.", "error");
-  }
+  // How a wallet page ended is said once, when the core first reports it.
+  const notice = next.walletNotice;
+  if (!notice || (before && before.text === notice.text && before.task === notice.task)) return;
+  notify(notice.text, notice.ok ? "info" : "error");
+  if (notice.ok) void refreshAccount();
 }
 
 /** Loads the backend and the first snapshot. Safe to call more than once. */
@@ -509,15 +506,10 @@ export const connectWalletBrowser = (wallet: WalletBrowserRequest) =>
 export const disconnectWallet = (network: Network) =>
   command("Forgetting the API wallet", (api) => api.disconnectWallet(network));
 
-export async function cancelWalletConnect(): Promise<boolean> {
-  // The core may also push a snapshot when the approval stops; that one is not a failure to report.
-  cancellingConnect = true;
-  try {
-    return await command("Cancelling the approval", (api) => api.cancelWalletConnect());
-  } finally {
-    cancellingConnect = false;
-  }
-}
+/** Opens the page where the trader's own wallet deposits or withdraws. The core opens the browser. */
+export const fundWallet = (request: FundingRequest) =>
+  command("Opening your browser", (api) => api.fundWallet(request));
+export const cancelWalletPage = () => command("Closing the wallet page", (api) => api.cancelWalletPage());
 
 /* ----------------------------------------------------------- tool servers */
 

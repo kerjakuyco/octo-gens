@@ -10,6 +10,7 @@ OctoNeo is a desktop AI trading assistant for perpetual futures on a decentralis
 - **The news, read for you.** Ask why a market is moving. The assistant reads the latest headlines from crypto newsrooms, Yahoo Finance and the Federal Reserve, says who reported what and how long ago, and lists the headlines with links. Ask about a share or a commodity the exchange lists and it reads the news filed under that ticker too. It works with every model, and needs no key.
 - **You stay in control.** The assistant can only draft a ticket. Nothing reaches the exchange until you confirm it, and the assistant may not draft mainnet tickets until you allow it.
 - **Your wallet, your funds.** Your wallet approves a separate trade-only key for the app. The app never sees your wallet's key, and the key it holds cannot withdraw.
+- **Deposit and withdraw without leaving.** Both start in the app and are confirmed by your own wallet. You never have to visit the exchange's site.
 - **Practice first.** Switch to the testnet for the same order flow with test funds.
 
 > [!WARNING]
@@ -56,7 +57,7 @@ OctoNeo trades through an **API wallet**: a separate key that your own wallet ap
 
 Things to know:
 
-- **Deposit first.** The exchange serves an account only after the wallet's first deposit, on testnet too. Until then the app shows the wallet as waiting for its deposit. You deposit and withdraw on the exchange's site, never in this app.
+- **Deposit first.** The exchange serves an account only after the wallet's first deposit, on testnet too. Until then the app shows the wallet as waiting for its deposit, with a **Deposit** button.
 - **One-way mode.** The app keeps one net position per market. An account in hedge mode is shown with an explanation and is not traded.
 - **Ending access.** *Disconnect* forgets the key on this computer. The approval itself ends on its expiry date, or sooner if you remove it on the exchange's API wallet page.
 
@@ -75,13 +76,31 @@ Things to know:
 
 The panel follows what the assistant looks at, and it reads straight from the exchange: none of it needs a wallet or a model.
 
+## Deposit and withdraw
+
+Funds move between your own wallet and your trading account. **Deposit** and **Withdraw** are in **Settings** under *Wallet*, and on the **Account** page. Each opens a page the app serves on your computer, in the browser where your wallet is, like the approval does.
+
+| | What your wallet does | What the app does |
+| --- | --- | --- |
+| Deposit | Sends the deposit to the exchange's vault, after allowing the vault exactly that amount of the token | Builds the transactions, checks the vault with the exchange first, and records the deposit under **Activity** |
+| Withdraw | Signs the withdrawal, then the request that carries it | Checks both signatures are yours, sends the request once, and records it |
+
+![Depositing from your own wallet, on the page the app serves on your computer](docs/images/deposit-light.png)
+
+- **Where funds move.** Mainnet: BNB Smart Chain, Ethereum and Arbitrum One. Testnet: BNB Smart Chain Testnet and Sepolia.
+- **Only your own wallet.** A deposit is credited to the connected wallet, and a withdrawal is paid out to it. There is no field for another address.
+- **The app's key cannot do this.** It is approved without withdrawal. Nothing moves without your wallet's own confirmation, every time.
+- **MetaMask and withdrawals.** The exchange asks for a signature that names its own network, and MetaMask signs only for the network it is on, so it refuses. Rabby and other wallets that sign across networks work. Deposits work with every wallet.
+
+[docs/exchange.md](docs/exchange.md#deposits-and-withdrawals) has the details, including the vault addresses.
+
 ## What the assistant can do
 
 | It can | It cannot |
 | --- | --- |
 | Read prices, mark prices, funding, candles and order books | Place, change or cancel an order |
 | Find the biggest movers across the whole exchange | See or handle any key |
-| Compute trend, momentum, volatility and support/resistance | Withdraw, transfer or deposit |
+| Compute trend, momentum, volatility and support/resistance | Withdraw, transfer or deposit: that is yours to do, with your own wallet |
 | Read your account: equity, positions, liquidation prices, open orders | Draft a mainnet ticket unless you allowed it in Settings |
 | Size a long or a short from a stop and a risk percentage, and check the stop against liquidation | Open or add to a position without a stop-loss |
 | Draft a ticket for you to confirm, with a stop-loss | Call tool-server tools that are not marked read-only |

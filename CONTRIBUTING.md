@@ -30,11 +30,13 @@ You do not need a wallet or a model key. Market data is public, and the tests ru
 | The interface | `pnpm dev` (browser, mock core) | Node only |
 | The whole app | `pnpm tauri dev` | Both |
 
-Two examples run the core without a window. Both only read, and sign nothing:
+Four examples run the core without a window. None of them signs or sends anything:
 
 ```sh
 cargo run -p octoneo-core --example probe   # live market data from both networks
 cargo run -p octoneo-core --example news    # the real news feeds, and which publishers let an app read a page
+cargo run -p octoneo-core --example funding # the deposit vaults, and each deposit simulated on its chain (nothing is sent)
+cargo run -p octoneo-core --example wallet_page -- connect   # the wallet page, served against a stand-in for the exchange
 ```
 
 ## Before you open a pull request
@@ -75,7 +77,7 @@ The smoke test does not touch the keychain. It sets `OCTONEO_NO_KEYCHAIN`, which
 - **Errors are for the trader.** A `DeskError` is shown as-is. Say what went wrong and what to do next. Never put a secret in one.
 - **The assistant cannot trade.** Do not add a tool that places, changes or cancels an order, and do not weaken the checks listed under *Safeguards* in [docs/assistant.md](docs/assistant.md). Pull requests that do will not be merged.
 - **A model answers, or nothing does.** There are no rule-based replies and no typed commands. Do not add a path that answers a message without the connected model.
-- **The app never asks for withdrawal.** The API wallet is approved for perpetual trading only. Do not add a request that moves funds, and never ask for a wallet's own key or seed phrase.
+- **The app's key never moves funds.** The API wallet is approved for perpetual trading only. A deposit is a transaction the trader's own wallet sends, and a withdrawal is signed by that wallet, in their browser, every time. Do not add a request the API wallet signs that moves funds, do not give the assistant a tool for it, and never ask for a wallet's own key or seed phrase.
 - **Secrets stay in the keychain.** Nothing secret goes in preferences, the journal, logs, snapshots or errors.
 - **The contract stays in step.** If you change a type in `src/api/types.ts` or `crates/octoneo-core/src/studio/view.rs`, change the other. `tests/contract.rs` will tell you if you missed one.
 - **Small dependencies.** This app holds a key that can trade, so every new dependency is a risk. Explain why you need one.

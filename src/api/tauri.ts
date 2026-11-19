@@ -54,7 +54,8 @@ export function createTauriBackend(): Backend {
 
     connectWalletKey: (request) => invoke<Snapshot>("connect_wallet_key", { request }),
     connectWalletBrowser: (request) => invoke<Snapshot>("connect_wallet_browser", { request }),
-    cancelWalletConnect: () => invoke<Snapshot>("cancel_wallet_connect"),
+    fundWallet: (request) => invoke<Snapshot>("fund_wallet", { request }),
+    cancelWalletPage: () => invoke<Snapshot>("cancel_wallet_page"),
     disconnectWallet: (network) => invoke<Snapshot>("disconnect_wallet", { network }),
     saveRisk: (request) => invoke<Snapshot>("save_risk", { request }),
 

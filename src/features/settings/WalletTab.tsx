@@ -1,16 +1,17 @@
 import { type FormEvent, useRef, useState } from "react";
-import type { Network, WalletView } from "../../api/types";
+import type { Network, PendingWalletView, WalletView } from "../../api/types";
 import { Icon } from "../../components/Icon";
 import { Segmented, type SegmentOption } from "../../components/Segmented";
 import { useNow } from "../../lib/clock";
 import { dayDate, plural, shortAddress } from "../../lib/format";
 import { useFlash } from "../../lib/hooks";
-import { apiWalletPage, exchangeSite, fundsNote, networkName } from "../../lib/network";
+import { apiWalletPage, fundsNote, networkName } from "../../lib/network";
 import {
-  cancelWalletConnect,
+  cancelWalletPage,
   connectWalletBrowser,
   connectWalletKey,
   disconnectWallet,
+  fundWallet,
   notify,
   openExternal,
   useBusy,
@@ -49,8 +50,16 @@ function Expiry({ at }: { at: string | null }) {
   return <span className="muted">Expires {dayDate(at)}</span>;
 }
 
-/** The browser approval in progress: the address to open, and a way out. */
-function Pending({ url }: { url: string }) {
+/** What the trader is doing in the browser, in the words of the button that started it. */
+const WAITING: Record<PendingWalletView["task"], string> = {
+  connect: "Waiting for your wallet to approve",
+  deposit: "Waiting for your wallet to deposit",
+  withdraw: "Waiting for your wallet to withdraw",
+};
+
+/** The wallet page that is open in the browser: what it waits for, its address, and a way out. */
+function Pending({ page }: { page: PendingWalletView }) {
+  const { url } = page;
   const busy = useBusy();
   const field = useRef<HTMLInputElement>(null);
   const [copied, flash] = useFlash(2400);
@@ -69,13 +78,13 @@ function Pending({ url }: { url: string }) {
     <div className="wallet-pending" role="status">
       <p className="status">
         <span className="spinner" />
-        Waiting for your wallet
+        {WAITING[page.task]}
       </p>
       <div className="copy-row">
         <input
           ref={field}
           className="input input-mono"
-          aria-label="Approval page"
+          aria-label="Wallet page"
           readOnly
           value={url}
           onFocus={(event) => event.currentTarget.select()}
@@ -84,11 +93,15 @@ function Pending({ url }: { url: string }) {
           <Icon name={copied ? "check" : "copy"} size={15} />
           {copied ? "Copied" : "Copy"}
         </button>
-        <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => void cancelWalletConnect()}>
+        <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => void cancelWalletPage()}>
           Cancel
         </button>
       </div>
-      <p className="field-help">Open this page in the browser that has your wallet.</p>
+      <p className="field-help">
+        {page.task === "connect"
+          ? "Open this page in the browser that has your wallet."
+          : "Open this page in the browser that has your wallet. Your wallet confirms every step there."}
+      </p>
     </div>
   );
 }
@@ -184,14 +197,14 @@ function Connect({ network, onClose }: { network: Network; onClose: () => void }
 interface WalletCardProps {
   wallet: WalletView;
   active: boolean;
-  /** Address of the approval page while this network waits for the browser wallet. */
-  pendingUrl: string | null;
-  /** Another approval is waiting, so a new one cannot start. */
+  /** The wallet page this network is waiting on in the browser, if any. */
+  pending: PendingWalletView | null;
+  /** Another wallet page is waiting, so a new one cannot start. */
   blocked: boolean;
   onConnect: () => void;
 }
 
-function WalletCard({ wallet, active, pendingUrl, blocked, onConnect }: WalletCardProps) {
+function WalletCard({ wallet, active, pending, blocked, onConnect }: WalletCardProps) {
   const busy = useBusy();
   const [leaving, setLeaving] = useState(false);
   const { network } = wallet;
@@ -206,7 +219,7 @@ function WalletCard({ wallet, active, pendingUrl, blocked, onConnect }: WalletCa
         {active ? <span className="chip">Active</span> : null}
       </header>
 
-      {pendingUrl ? <Pending url={pendingUrl} /> : null}
+      {pending ? <Pending page={pending} /> : null}
 
       {wallet.connected ? (
         <>
@@ -230,12 +243,7 @@ function WalletCard({ wallet, active, pendingUrl, blocked, onConnect }: WalletCa
           {wallet.needsDeposit ? (
             <p className="note" data-tone="warn">
               <Icon name="alert" size={16} />
-              <span>
-                Deposit to start.{" "}
-                <button type="button" className="link" onClick={() => openExternal(exchangeSite(network))}>
-                  Open deposit page
-                </button>
-              </span>
+              <span>Deposit to start trading. Your wallet sends it; this app never holds your funds.</span>
             </p>
           ) : null}
           <div className="wallet-actions">
@@ -256,14 +264,27 @@ function WalletCard({ wallet, active, pendingUrl, blocked, onConnect }: WalletCa
               </>
             ) : (
               <>
-                {/* The deposit notice above already leads there. */}
+                <button
+                  type="button"
+                  className={wallet.needsDeposit ? "btn btn-sm btn-primary" : "btn btn-sm btn-secondary"}
+                  disabled={busy || blocked}
+                  onClick={() => void fundWallet({ network, task: "deposit" })}
+                >
+                  Deposit
+                </button>
+                {/* Nothing can be taken out of an account that has had nothing put in. */}
                 {wallet.needsDeposit ? null : (
-                  <button type="button" className="link" onClick={() => openExternal(exchangeSite(network))}>
-                    Deposit or withdraw
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-secondary"
+                    disabled={busy || blocked}
+                    onClick={() => void fundWallet({ network, task: "withdraw" })}
+                  >
+                    Withdraw
                   </button>
                 )}
                 <span className="grow" />
-                <button type="button" className="btn btn-sm btn-secondary" disabled={busy || blocked} onClick={onConnect}>
+                <button type="button" className="btn btn-sm btn-ghost" disabled={busy || blocked} onClick={onConnect}>
                   Replace
                 </button>
                 <button type="button" className="btn btn-sm btn-ghost" disabled={busy} onClick={() => setLeaving(true)}>
@@ -273,7 +294,7 @@ function WalletCard({ wallet, active, pendingUrl, blocked, onConnect }: WalletCa
             )}
           </div>
         </>
-      ) : pendingUrl ? null : (
+      ) : pending ? null : (
         <div className="wallet-actions">
           <span className="grow muted">Not connected</span>
           {/* Only the network in use asks for attention. */}
@@ -291,11 +312,11 @@ function WalletCard({ wallet, active, pendingUrl, blocked, onConnect }: WalletCa
   );
 }
 
-/** One trading wallet per network. The app only ever holds a trade-only key. */
+/** One trading wallet per network. The app only ever holds a trade-only key; funds move by the wallet's own hand. */
 export function WalletTab() {
   const snapshot = useSnapshot();
   const [connecting, setConnecting] = useState<Network | null>(null);
-  const { pendingConnect } = snapshot;
+  const { pendingWallet } = snapshot;
 
   if (connecting) return <Connect network={connecting} onClose={() => setConnecting(null)} />;
 
@@ -309,8 +330,8 @@ export function WalletTab() {
             key={network}
             wallet={wallet}
             active={network === snapshot.network}
-            pendingUrl={pendingConnect?.network === network ? pendingConnect.url : null}
-            blocked={pendingConnect !== null}
+            pending={pendingWallet?.network === network ? pendingWallet : null}
+            blocked={pendingWallet !== null}
             onConnect={() => setConnecting(network)}
           />
         );

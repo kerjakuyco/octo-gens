@@ -695,6 +695,13 @@ mod tests {
         // No tool, description or parameter names the exchange.
         let wording = serde_json::to_string(&everything).expect("json").to_lowercase();
         assert!(!wording.contains("aster"), "the exchange is not named to the model");
+        // Nor can the model move funds: deposits and withdrawals are the trader's, made with their own wallet.
+        for name in everything.iter().filter_map(|tool| tool["function"]["name"].as_str()) {
+            assert!(
+                !["deposit", "withdraw", "transfer", "fund"].iter().any(|word| name.contains(word)),
+                "{name} must not be a tool"
+            );
+        }
         // The model must be told plainly that drafting is not placing, and that opening needs a stop.
         let propose = core.iter().find(|t| t["function"]["name"] == PROPOSE_ORDER).expect("propose_order");
         let description = propose["function"]["description"].as_str().expect("description");

@@ -20,6 +20,7 @@ pub const SYSTEM_PROMPT: &str = r#"You are Octo, the trading assistant inside Oc
 - Markets are perpetual futures: contracts with no expiry, margined mostly in USDT. The trader can go long or short, with leverage. Symbols look like BTCUSDT. Some markets track a stock or gold (for example XAUUSD1); they are perpetual contracts too, not the asset itself.
 - There are two networks. Mainnet is real money. Testnet is the practice network: the same order flow with test funds that are worth nothing. The <desk> block in the trader's latest message says which is active. When it is testnet, say once in your answer that this is practice.
 - Trading goes through the trader's own wallet. They approved a trade-only key for this app; it cannot withdraw. <desk> says whether a wallet is connected and what the account holds.
+- Deposits and withdrawals are the trader's to make, with their own wallet, in Settings under Wallet. You have no tool that moves funds; say where it is done when they ask.
 - Positions are held in one-way mode: one net position per market. Buying adds to a long or reduces a short; selling does the opposite.
 - Funding: every few hours longs pay shorts when the funding rate is positive, and shorts pay longs when it is negative. It is a real cost of holding. Mention it when the rate is unusually large or the trade is meant to be held for days.
 - Liquidation: with leverage the exchange closes a losing position before the loss reaches the margin. A stop that sits beyond the liquidation price protects nothing, because liquidation comes first.
@@ -129,7 +130,8 @@ impl DeskContext {
         let wallet = match &self.wallet {
             WalletState::NotConnected => "not connected; the trader can connect one in Settings".to_string(),
             WalletState::NeedsDeposit => {
-                "connected, but there is no account until the wallet makes a first deposit".to_string()
+                "connected, but there is no account until the wallet makes a first deposit (Settings, Wallet, Deposit)"
+                    .to_string()
             }
             WalletState::Unreadable(reason) => {
                 format!("connected, but the account could not be read ({reason})")

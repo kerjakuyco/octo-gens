@@ -14,13 +14,13 @@ import {
   units,
 } from "../../lib/format";
 import { activeWallet, instrumentFor } from "../../lib/market";
-import { exchangeSite, networkName } from "../../lib/network";
+import { networkName } from "../../lib/network";
 import {
   cancelAllOrders,
   cancelOrder,
   closePosition,
   focusMarket,
-  openExternal,
+  fundWallet,
   openSettings,
   openTrade,
   refreshAccount,
@@ -293,6 +293,8 @@ export function AccountPage() {
   const busy = useBusy();
   const wallet = activeWallet(snapshot);
   const { account, accountError, network } = snapshot;
+  // One wallet page at a time: while one waits in the browser, another cannot start.
+  const waiting = snapshot.pendingWallet !== null;
 
   // Read the account as the page opens and whenever the network changes; the shell keeps it fresh after that.
   useEffect(() => {
@@ -321,9 +323,13 @@ export function AccountPage() {
       <div className="empty">
         <p>Deposit to open this account</p>
         <div className="empty-actions">
-          <button type="button" className="btn btn-primary" onClick={() => openExternal(exchangeSite(network))}>
-            <Icon name="external" size={15} />
-            Open deposit page
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={busy || waiting}
+            onClick={() => void fundWallet({ network, task: "deposit" })}
+          >
+            Deposit
           </button>
           {refresh}
         </div>
@@ -347,7 +353,25 @@ export function AccountPage() {
       <>
         <div className="account-bar">
           <span className="muted num">Updated {clock(account.asOf)}</span>
-          {refresh}
+          <span className="account-actions">
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              disabled={busy || waiting}
+              onClick={() => void fundWallet({ network, task: "deposit" })}
+            >
+              Deposit
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              disabled={busy || waiting}
+              onClick={() => void fundWallet({ network, task: "withdraw" })}
+            >
+              Withdraw
+            </button>
+            {refresh}
+          </span>
         </div>
         {accountError ? (
           <p className="note" data-tone="error" role="alert">

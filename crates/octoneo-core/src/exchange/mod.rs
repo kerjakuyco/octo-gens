@@ -3,12 +3,14 @@
 //! One [`ExchangeClient`] talks to one network. Market data is public. Everything
 //! about an account is signed by an API wallet (see [`signing`]) that the
 //! trader's main wallet approved for trading; the app never holds the main
-//! wallet's key and never asks for withdrawal permission.
+//! wallet's key and never asks for withdrawal permission. Funds move only by
+//! what that main wallet signs itself (see [`funding`]).
 //!
 //! Requests that change something are sent exactly once. If the answer is lost,
 //! the caller is told to check the exchange before trying again; only public reads are
 //! retried.
 
+pub mod funding;
 pub mod signing;
 
 use std::collections::HashMap;
@@ -28,6 +30,7 @@ use crate::model::{
 };
 use crate::net::unreachable;
 use crate::{bail, desk_err};
+use funding::{Chain, DailyLimit, DepositAsset, Withdrawable};
 use signing::{APPROVAL_CHAIN_ID, Address, AgentKey, Nonces, encode_params};
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(12);
@@ -58,7 +61,8 @@ impl Network {
         }
     }
 
-    /// Where a trader deposits and manages API wallets.
+    /// The exchange's site. Its public API says what can be deposited and
+    /// withdrawn, and its pages are where a trader manages API wallets.
     pub fn site(self) -> &'static str {
         match self {
             Network::Mainnet => "https://www.asterdex.com",
@@ -466,6 +470,8 @@ pub fn approval_message(user: &Address, nonce: u64, agent: &Address, expires_ms:
 pub struct ExchangeClient {
     network: Network,
     base: String,
+    /// Origin of the site's public API.
+    site: String,
     http: Client,
     wallet: RwLock<Option<Arc<Wallet>>>,
     nonces: Nonces,
@@ -480,6 +486,7 @@ impl ExchangeClient {
         Self {
             network,
             base: network.api().to_string(),
+            site: network.site().to_string(),
             http,
             wallet: RwLock::new(None),
             nonces: Nonces::default(),
@@ -489,9 +496,11 @@ impl ExchangeClient {
         }
     }
 
-    /// Points the client at another origin. Used by tests and by `OCTONEO_*_URL`.
+    /// Points the client at another origin, for the futures API and the site's
+    /// public API alike. Used by tests and by `OCTONEO_*_URL`.
     pub fn with_base(mut self, base: &str) -> Self {
         self.base = base.trim_end_matches('/').to_string();
+        self.site = self.base.clone();
         self
     }
 
@@ -886,6 +895,117 @@ impl ExchangeClient {
         let reason = field(&data, "msg")
             .unwrap_or_else(|| status.canonical_reason().unwrap_or("request failed").to_string());
         bail!("The exchange did not accept the wallet's approval: {reason}")
+    }
+
+    /// A public read from the site's API, which wraps what it returns in an envelope.
+    async fn site_read(&self, path: &str, pairs: &[(&str, String)]) -> Result<Value> {
+        let url = format!("{}{path}?{}", self.site, encode_params(pairs));
+        let response = self
+            .http
+            .get(&url)
+            .timeout(REQUEST_TIMEOUT)
+            .header("Accept", "application/json")
+            .send()
+            .await
+            .map_err(unreached)?;
+        let status = response.status();
+        let bytes = response.bytes().await.map_err(unreached)?;
+        let parsed: Value = if bytes.len() > BODY_LIMIT {
+            Value::Null
+        } else {
+            serde_json::from_slice(&bytes).unwrap_or(Value::Null)
+        };
+        if status.is_success() && parsed.get("success").and_then(Value::as_bool) == Some(true) {
+            return Ok(parsed.get("data").cloned().unwrap_or(Value::Null));
+        }
+        if status.as_u16() == 403 {
+            bail!(
+                "The exchange refused the request (403). Your network or region may be blocked; try another network or a VPN."
+            );
+        }
+        let reason = field(&parsed, "message")
+            .unwrap_or_else(|| status.canonical_reason().unwrap_or("no usable answer").to_string());
+        bail!("The exchange could not say what can be deposited or withdrawn right now: {reason}")
+    }
+
+    fn funding_chains(&self) -> String {
+        let ids: Vec<String> =
+            funding::chains(self.network).iter().map(|chain| chain.id.to_string()).collect();
+        ids.join(",")
+    }
+
+    /// What the exchange accepts as a deposit, on each network funds move on.
+    pub async fn deposit_assets(&self) -> Result<Vec<DepositAsset>> {
+        let pairs = [
+            ("chainIds", self.funding_chains()),
+            ("networks", "EVM".to_string()),
+            ("accountType", "perp".to_string()),
+        ];
+        let rows = self.site_read("/bapi/futures/v1/public/future/aster/deposit/assets", &pairs).await?;
+        Ok(funding::deposit_assets(self.network, &rows))
+    }
+
+    /// Checks the vault this app knows on `chain` against the one the exchange
+    /// reports now. A deposit is only ever built for a vault both agree on: if the
+    /// exchange moved its vault, or an answer was tampered with, nothing is built.
+    pub async fn confirm_vault(&self, chain: &Chain) -> Result<Address> {
+        let pairs = [("chainId", chain.id.to_string())];
+        let data = self.site_read("/bapi/futures/v1/public/future/web3/ae/deposit-address", &pairs).await?;
+        match data.as_str().and_then(|raw| Address::parse(raw).ok()) {
+            Some(reported) if reported == chain.vault() => Ok(reported),
+            _ => bail!(
+                "The exchange reports a deposit contract on {} that this version of the app does not know. Nothing was prepared. Update the app before you deposit.",
+                chain.name
+            ),
+        }
+    }
+
+    /// What the connected wallet's account may withdraw now, and what is left of today's limit.
+    pub async fn withdrawables(&self) -> Result<(Vec<Withdrawable>, DailyLimit)> {
+        let pairs = [
+            ("chainIds", self.funding_chains()),
+            ("networks", "EVM".to_string()),
+            ("accountType", "perp".to_string()),
+        ];
+        let (listed, info) = tokio::try_join!(
+            self.site_read("/bapi/futures/v1/public/future/aster/withdraw/assets", &pairs),
+            self.signed_or_explain(Method::POST, "/fapi/v3/aster/user-withdraw-info", Vec::new()),
+        )?;
+        Ok(funding::withdrawables(self.network, &info, &funding::withdraw_assets(self.network, &listed)))
+    }
+
+    /// What the exchange charges now for a withdrawal of `asset` to `chain`, in the asset.
+    pub async fn withdraw_fee(&self, chain: &Chain, asset: &str) -> Result<Decimal> {
+        let pairs = [
+            ("chainId", chain.id.to_string()),
+            ("network", "EVM".to_string()),
+            ("currency", asset.to_string()),
+            ("accountType", "perp".to_string()),
+        ];
+        let data =
+            self.site_read("/bapi/futures/v1/public/future/aster/estimate-withdraw-fee", &pairs).await?;
+        let cost = data.get("gasCost").filter(|cost| cost.is_number() || cost.is_string());
+        let fee = cost
+            .map(|cost| cost.as_str().map_or_else(|| cost.to_string(), str::to_string))
+            .and_then(|text| text.parse::<Decimal>().ok())
+            .filter(|fee| !fee.is_sign_negative());
+        fee.ok_or_else(|| {
+            desk_err!("The exchange did not say what this withdrawal costs. Try again in a moment.")
+        })
+    }
+
+    /// Asks the exchange for a withdrawal. `request` is the request as the main
+    /// wallet signed it and `signature` that signature; the withdrawal inside it
+    /// carries the wallet's own signature too. Sent once. Returns the exchange's id for it.
+    pub async fn withdraw(&self, request: &str, signature: &str) -> Result<String> {
+        let query = format!("{request}&signature={signature}");
+        match self.send(Method::POST, "/fapi/v3/aster/user-withdraw", &query).await {
+            Ok(data) => Ok(field(&data, "withdrawId").unwrap_or_default()),
+            Err(failure) if failure.outcome_unknown() => bail!(
+                "No clear answer came back, so the withdrawal may or may not have been accepted. Check your balance before you ask again."
+            ),
+            Err(failure) => Err(self.explain(failure)),
+        }
     }
 
     /// Whether the account is in hedge mode, which this desk does not trade in.

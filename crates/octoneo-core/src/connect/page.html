@@ -3,106 +3,1973 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-__NONCE__'; style-src 'nonce-__NONCE__'; connect-src 'self'; base-uri 'none'; form-action 'none'">
-<title>Approve OctoNeo</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-__NONCE__'; style-src 'nonce-__NONCE__'; connect-src 'self'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>OctoNeo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7.5' fill='%232a63dd'/%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2.7' stroke-linecap='round' d='M20.6 16.6C23.6 18.6 27.2 17.6 27.2 14.2M20 19C22 22.6 25.6 23.4 27.4 21.4M18 20.2C18.2 23.8 20.4 26.4 23.6 26.2M11.4 16.6C8.4 18.6 4.8 17.6 4.8 14.2M12 19C10 22.6 6.4 23.4 4.6 21.4M14 20.2C13.8 23.8 11.6 26.4 8.4 26.2'/%3E%3Cellipse cx='16' cy='12.6' rx='7.4' ry='7.6' fill='%23fff'/%3E%3Crect x='11.4' y='12.6' width='3.4' height='1.5' rx='.75' fill='%232a63dd'/%3E%3Crect x='17.2' y='12.6' width='3.4' height='1.5' rx='.75' fill='%232a63dd'/%3E%3C/svg%3E">
 <style nonce="__NONCE__">
-  :root { color-scheme: light dark; --bg: #f4efe4; --surface: #fffdf8; --line: #d9cfba; --text: #14283a; --muted: #5c6f7e; --ring: #1f5fd6; --ok: #0f8a63; --bad: #c9402f; }
-  @media (prefers-color-scheme: dark) { :root { --bg: #0d1b26; --surface: #132633; --line: #27445a; --text: #f1ece0; --muted: #9fb3c2; --ring: #5aa9ff; --ok: #4fd1a5; --bad: #ff7a6b; } }
+  /* The colours of the app: paper and ink, one blue, and green and red only for can and cannot. */
+  :root {
+    color-scheme: light dark;
+    --paper: #ffffff;
+    --ink: #0d0d0d;
+    --quiet: #5d5d5d;
+    --faint: #767676;
+    --rule: #e5e5e5;
+    --rule-strong: #cdcdcd;
+    --wash: #f5f5f5;
+    --brand: #2a63dd;
+    --brand-strong: #1f51c2;
+    --brand-soft: rgba(42, 99, 221, 0.08);
+    --on-brand: #ffffff;
+    --can: #06733b;
+    --cannot: #c5221f;
+    --on-cannot: #ffffff;
+    --focus: #2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #212121;
+      --ink: #ececec;
+      --quiet: #b4b4b4;
+      --faint: #9a9a9a;
+      --rule: #383838;
+      --rule-strong: #575757;
+      --wash: #2b2b2b;
+      --brand: #78a4ff;
+      --brand-strong: #96b8ff;
+      --brand-soft: rgba(120, 164, 255, 0.12);
+      --on-brand: #0c1a38;
+      --can: #3ecf8e;
+      --cannot: #ff8a80;
+      --on-cannot: #2a0f0c;
+      --focus: #7aa7ff;
+    }
+  }
+
   * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, Roboto, "Noto Sans", sans-serif; }
-  main { width: min(560px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 28px; }
-  h1 { margin: 0 0 6px; font-size: 24px; line-height: 1.2; }
-  p { margin: 0 0 14px; }
-  .muted { color: var(--muted); font-size: 14px; }
-  dl { margin: 18px 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 14px; }
-  dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
-  button { font: inherit; font-weight: 600; padding: 11px 18px; border-radius: 9px; border: 0; background: var(--ring); color: #fff; cursor: pointer; }
-  button:disabled { opacity: .55; cursor: default; }
-  button:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
-  #status { margin: 16px 0 0; min-height: 24px; font-weight: 600; }
-  #status.ok { color: var(--ok); } #status.bad { color: var(--bad); }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 16px/1.5 system-ui, -apple-system, Roboto, "Noto Sans", sans-serif;
+  }
+  h1, h2, p, ul, ol, dl, dd, fieldset, legend { margin: 0; padding: 0; }
+  fieldset { min-width: 0; border: 0; }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .mono { font-family: ui-monospace, monospace; font-size: 0.92em; overflow-wrap: anywhere; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* ------------------------------------------------------------------ top */
+
+  .top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 20px;
+    min-height: 56px;
+    padding: 12px clamp(20px, 4vw, 40px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
+  .mark { flex: none; width: 28px; height: 26px; color: var(--brand); }
+  .mark-eye { fill: var(--paper); }
+  .net { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--quiet); }
+  .net-name { color: var(--ink); font-weight: 600; }
+  .real { padding: 2px 8px; border-radius: 4px; background: var(--ink); color: var(--paper); font-size: 13px; font-weight: 600; }
+
+  /* ----------------------------------------------------------------- page */
+
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 272px;
+    column-gap: clamp(40px, 7vw, 96px);
+    align-items: start;
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: clamp(32px, 6vw, 64px) clamp(20px, 4vw, 40px) 80px;
+  }
+  .intro, .statement, .steps, .result { grid-column: 1; }
+  .notes { grid-column: 2; grid-row: 1 / span 4; }
+
+  h1 { font-size: clamp(28px, 4.2vw, 38px); line-height: 1.1; font-weight: 650; letter-spacing: -0.025em; text-wrap: balance; }
+  .lead { max-width: 34em; margin-top: 14px; font-size: 17px; }
+
+  .notes { padding-left: 28px; border-left: 1px solid var(--rule); font-size: 14px; color: var(--quiet); }
+  .notes h2 { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .notes ul { display: grid; gap: 14px; margin-top: 12px; list-style: none; }
+
+  /* ----------------------------------------------- what is being approved */
+
+  .statement { margin-top: 32px; padding: 18px 0 22px; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule); }
+  .statement h2 { font-size: 15px; font-weight: 600; }
+  .key { display: grid; gap: 2px; margin-top: 12px; }
+  .key .mono { text-wrap: balance; }
+  .key-name { font-size: 14px; color: var(--quiet); }
+  .grants { display: grid; gap: 8px; margin-top: 18px; list-style: none; }
+  .grant { display: grid; grid-template-columns: 72px minmax(0, 1fr); column-gap: 12px; align-items: baseline; }
+  .grant-word { font-weight: 650; }
+  .grant[data-can="yes"] .grant-word { color: var(--can); }
+  .grant[data-can="no"] .grant-word { color: var(--cannot); }
+  .grant-strong { padding-top: 6px; font-size: 21px; line-height: 1.25; font-weight: 650; letter-spacing: -0.012em; }
+  .valid { margin-top: 18px; font-size: 14px; color: var(--quiet); }
+
+  /* ---------------------------------------------------------------- steps */
+
+  .steps { margin-top: 36px; list-style: none; }
+  .step, .result { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 16px; }
+  .step { padding-bottom: 26px; }
+  .step::before { content: ""; position: absolute; top: 32px; bottom: 4px; left: 13.5px; width: 1px; background: var(--rule-strong); }
+  .steps[data-ended="false"] .step:last-child { padding-bottom: 0; }
+  .steps[data-ended="false"] .step:last-child::before { display: none; }
+
+  .marker {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 50%;
+    background: var(--paper);
+    color: var(--quiet);
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .glyph { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .step[data-state="active"] > .marker { border-color: var(--brand); background: var(--brand); color: var(--on-brand); }
+  .step[data-state="wallet"] > .marker, .step[data-state="busy"] > .marker { border-color: var(--rule); color: var(--brand); }
+  .step[data-state="wallet"] > .marker::after, .step[data-state="busy"] > .marker::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border: 2px solid transparent;
+    border-top-color: var(--brand);
+    border-right-color: var(--brand);
+    border-radius: 50%;
+    animation: turn 0.9s linear infinite;
+  }
+  .step[data-state="done"] > .marker { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+  .step[data-state="failed"] > .marker { border-color: var(--cannot); background: var(--cannot); color: var(--on-cannot); }
+  .step[data-state="skipped"] > .marker { border-style: dashed; }
+  @keyframes turn { to { transform: rotate(360deg); } }
+
+  .step-main { min-width: 0; }
+  .step-title { font-size: 17px; line-height: 28px; font-weight: 600; }
+  .step[data-state="todo"] .step-title { color: var(--quiet); font-weight: 500; }
+  .step-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; font-size: 14px; color: var(--quiet); }
+  .step-body { display: grid; gap: 14px; justify-items: start; margin-top: 8px; }
+  .step-body:empty { display: none; }
+  .step-body > * { max-width: 100%; }
+
+  .hint { max-width: 34em; font-size: 15px; color: var(--quiet); }
+  .status { font-size: 15px; font-weight: 600; }
+  .problem { max-width: 34em; font-size: 15px; font-weight: 500; color: var(--cannot); }
+  .plain { max-width: 34em; font-size: 15px; font-weight: 600; }
+  .note { max-width: 36em; padding: 10px 14px; border-left: 2px solid var(--rule-strong); background: var(--wash); font-size: 14px; }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+  .facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 20px; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .facts dt { color: var(--quiet); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-primary { background: var(--brand); color: var(--on-brand); }
+  .btn-primary:hover:not(:disabled) { background: var(--brand-strong); }
+  .btn-quiet { border-color: var(--rule-strong); background: transparent; color: var(--ink); }
+  .btn-quiet:hover:not(:disabled) { background: var(--wash); }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  .link { padding: 0; border: 0; background: none; color: var(--brand); font: inherit; font-size: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .link:disabled { color: var(--faint); text-decoration: none; cursor: default; }
+
+  /* -------------------------------------------------------------- wallets */
+
+  .wallets { display: grid; gap: 8px; width: min(100%, 360px); }
+  .wallet { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 14px; border: 1px solid var(--rule-strong); border-radius: 8px; cursor: pointer; }
+  .wallet[data-on="true"] { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); background: var(--brand-soft); }
+  .wallet:has(:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .wallet input { flex: none; width: 16px; height: 16px; margin: 0 0 0 auto; accent-color: var(--brand); }
+  .wallet input:focus-visible { outline: none; }
+  .wallet-icon, .wallet-letter { flex: none; width: 28px; height: 28px; border-radius: 6px; }
+  .wallet-icon { object-fit: contain; }
+  .wallet-letter { display: grid; place-items: center; border: 1px solid var(--rule); background: var(--wash); color: var(--quiet); font-size: 14px; font-weight: 600; }
+  .wallet-name { font-size: 15px; font-weight: 600; }
+  .copy-field { width: min(100%, 420px); min-height: 40px; padding: 0 10px; border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--paper); color: var(--ink); }
+
+  /* ----------------------------------------------------------------- form */
+
+  .form { display: grid; gap: 22px; justify-self: stretch; width: min(100%, 480px); }
+  .form:disabled .choice, .form:disabled .link { cursor: default; }
+  .field { display: grid; gap: 8px; }
+  .label { font-size: 14px; font-weight: 600; }
+  .single { font-size: 15px; }
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+  .choice { position: relative; display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border: 1px solid var(--rule-strong); border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; }
+  .choice input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
+  .choice[data-on="true"] { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); background: var(--brand-soft); font-weight: 600; }
+  .choice:has(:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .select { width: min(100%, 240px); min-height: 44px; padding: 0 10px; border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--paper); color: var(--ink); font: inherit; font-size: 15px; font-weight: 500; }
+  .amount { display: flex; align-items: baseline; gap: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--ink); }
+  .amount:focus-within { border-bottom-color: var(--brand); outline: 2px solid var(--focus); outline-offset: 6px; border-radius: 1px; }
+  .amount[data-bad="true"] { border-bottom-color: var(--cannot); }
+  .amount-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 2px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: clamp(34px, 9vw, 46px);
+    line-height: 1.15;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .amount-input::placeholder { color: var(--faint); opacity: 1; }
+  .amount-input:focus-visible { outline: none; }
+  .amount-unit { flex: none; font-size: 18px; font-weight: 600; color: var(--quiet); }
+  .meta { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; font-size: 14px; color: var(--quiet); font-variant-numeric: tabular-nums; }
+  .field-error { font-size: 14px; font-weight: 500; color: var(--cannot); }
+  .field-error:empty { display: none; }
+
+  /* ------------------------------------------------------------ countdown */
+
+  .clock { display: grid; gap: 6px; width: min(100%, 320px); }
+  .clock-track { display: block; height: 4px; border-radius: 2px; background: var(--rule); overflow: hidden; }
+  .clock-fill { display: block; width: 100%; height: 100%; background: var(--brand); }
+  .clock[data-over="true"] .clock-fill { background: var(--cannot); }
+  .clock-text { font-size: 14px; color: var(--quiet); font-variant-numeric: tabular-nums; }
+
+  /* --------------------------------------------------------------- result */
+
+  .result > .marker { border-color: var(--can); background: var(--can); color: var(--paper); }
+  .result[data-tone="bad"] > .marker { border-color: var(--cannot); background: var(--cannot); color: var(--on-cannot); }
+  .result[data-tone="plain"] > .marker { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+  .result:focus { outline: none; }
+  .result h2 { font-size: 22px; line-height: 28px; font-weight: 650; letter-spacing: -0.015em; }
+  .result-body { display: grid; gap: 10px; justify-items: start; margin-top: 8px; font-size: 15px; }
+  .result-body p { max-width: 34em; }
+  .result-close { color: var(--quiet); }
+
+  .noscript { max-width: 1040px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 40px) 40px; font-weight: 600; }
+
+  @media (max-width: 860px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .notes { grid-column: 1; grid-row: auto; margin-top: 44px; padding: 20px 0 0; border-top: 1px solid var(--rule); border-left: 0; }
+  }
+  @media (max-width: 440px) {
+    .step, .result { column-gap: 12px; }
+    .actions > .btn-primary { flex: 1 1 100%; }
+    .grant { grid-template-columns: 64px minmax(0, 1fr); }
+    .grant-strong { font-size: 19px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
 </style>
 </head>
 <body>
+<header class="top">
+  <span class="brand">
+    <svg class="mark" viewBox="2 3 28 26" aria-hidden="true">
+      <path fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" d="M20.6 16.6C23.6 18.6 27.2 17.6 27.2 14.2M20 19C22 22.6 25.6 23.4 27.4 21.4M18 20.2C18.2 23.8 20.4 26.4 23.6 26.2M11.4 16.6C8.4 18.6 4.8 17.6 4.8 14.2M12 19C10 22.6 6.4 23.4 4.6 21.4M14 20.2C13.8 23.8 11.6 26.4 8.4 26.2"/>
+      <ellipse cx="16" cy="12.6" rx="7.4" ry="7.6" fill="currentColor"/>
+      <rect class="mark-eye" x="11.4" y="12.6" width="3.4" height="1.5" rx=".75"/>
+      <rect class="mark-eye" x="17.2" y="12.6" width="3.4" height="1.5" rx=".75"/>
+    </svg>
+    <span id="app">OctoNeo</span>
+  </span>
+  <span class="net" id="net"></span>
+</header>
 <main>
-  <h1>Approve OctoNeo</h1>
-  <p>Your wallet signs one message that lets OctoNeo trade perpetuals on <strong id="network"></strong> for you. Nothing is sent on-chain and no gas is spent.</p>
-  <dl>
-    <dt>Trading key</dt><dd id="agent"></dd>
-    <dt>Can trade perpetuals</dt><dd>Yes</dd>
-    <dt>Can trade spot</dt><dd>No</dd>
-    <dt>Can withdraw</dt><dd>No</dd>
-    <dt>Valid for</dt><dd id="days"></dd>
-  </dl>
-  <p class="muted">The trading key was created on your computer and stays in its keychain. Your wallet's own key never leaves your wallet. The approval is signed on BNB Smart Chain, so your wallet may ask to switch network first. Confirm the signature within about ten seconds of the prompt, or it has to be repeated.</p>
-  <button id="approve" type="button">Connect wallet and approve</button>
-  <p id="status" role="status" aria-live="polite"></p>
+  <div class="intro">
+    <h1 id="title">OctoNeo</h1>
+    <p class="lead" id="lead"></p>
+  </div>
+  <section class="statement" id="statement" aria-labelledby="statement-title" hidden></section>
+  <ol class="steps" id="steps" data-ended="false"></ol>
+  <section class="result" id="result" tabindex="-1" hidden></section>
+  <aside class="notes" id="notes"></aside>
 </main>
+<p class="sr" id="live" role="status" aria-live="polite"></p>
+<noscript><p class="noscript">This page needs JavaScript to talk to your wallet. Turn it on for this page, then reload.</p></noscript>
 <script nonce="__NONCE__">
 (() => {
   "use strict";
   const config = __CONFIG__;
   const base = location.pathname.replace(/\/$/, "");
-  const button = document.getElementById("approve");
-  const status = document.getElementById("status");
-  document.getElementById("network").textContent = config.network;
-  document.getElementById("agent").textContent = config.agent;
-  document.getElementById("days").textContent = config.days + (config.days === 1 ? " day" : " days");
+  const APP = typeof config.app === "string" && config.app ? config.app : "OctoNeo";
+  const NETWORK = typeof config.network === "string" && config.network ? config.network : "the exchange";
 
-  const say = (text, kind) => { status.textContent = text; status.className = kind || ""; };
-  const post = async (path, body) => {
-    const response = await fetch(base + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const data = await response.json();
-    if (!response.ok || data.error) throw new Error(data.error || "The app did not accept the request.");
-    return data;
-  };
+  const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
+  const HASH = /^0x[0-9a-fA-F]{64}$/;
+  const DATA = /^0x([0-9a-fA-F]{2})*$/;
+  const QUANTITY = /^0x[0-9a-fA-F]+$/;
+  const DECIMAL = /^\d*\.?\d*$/;
+  const GONE = `This page can no longer reach ${APP}. It may have expired, or the app was closed. Start again from ${APP}.`;
+  /** The exchange takes an approval for about this long after it is prepared. */
+  const APPROVAL_SECONDS = 10;
+  const POLL_MS = 2500;
 
-  // The exchange verifies the approval against BNB Smart Chain's id; wallets insist the active chain matches.
-  const useBnbChain = async (wallet) => {
-    try {
-      await wallet.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x38" }] });
-    } catch (error) {
-      if (error && error.code === 4902) {
-        await wallet.request({ method: "wallet_addEthereumChain", params: [{
-          chainId: "0x38", chainName: "BNB Smart Chain",
-          nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
-          rpcUrls: ["https://bsc-dataseed.bnbchain.org", "https://bsc-dataseed1.bnbchain.org"], blockExplorerUrls: ["https://bscscan.com"],
-        }] });
-      } else if (error && error.code === 4001) {
-        throw new Error("The network switch was declined in the wallet.");
-      }
-      // Other wallets sign typed data without switching; carry on and let the signature decide.
+  /* --------------------------------------------------------- small pieces */
+
+  const $ = (id) => document.getElementById(id);
+  const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+  const clip = (text, limit) => (text.length > limit ? `${text.slice(0, limit - 1)}…` : text);
+  const short = (address) => (typeof address === "string" && address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : String(address || ""));
+  const same = (a, b) => typeof a === "string" && typeof b === "string" && a.toLowerCase() === b.toLowerCase();
+
+  /** Builds an element. Text only ever enters the page as text, never as markup. */
+  function el(tag, props, ...kids) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(props || {})) {
+      if (value === null || value === undefined || value === false) continue;
+      if (key === "class") node.className = value;
+      else if (key === "text") node.textContent = value;
+      else if (key === "on") for (const [type, run] of Object.entries(value)) node.addEventListener(type, run);
+      else if (key === "data") for (const [name, held] of Object.entries(value)) node.dataset[name] = held;
+      else node.setAttribute(key, value === true ? "" : String(value));
     }
-  };
+    for (const kid of kids.flat(2)) {
+      if (kid !== null && kid !== undefined && kid !== false) node.append(kid);
+    }
+    return node;
+  }
 
-  button.addEventListener("click", async () => {
-    const wallet = window.ethereum;
-    if (!wallet) {
-      say("No wallet was found in this browser. Open this page in the browser where MetaMask, Rabby or another wallet extension is installed.", "bad");
+  const GLYPHS = { check: "M3.6 8.4l2.9 2.9 5.9-6.6", bang: "M8 3.6v5.2M8 11.8v.4", dash: "M4.6 8h6.8" };
+  function glyph(name) {
+    const space = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(space, "svg");
+    svg.setAttribute("class", "glyph");
+    svg.setAttribute("viewBox", "0 0 16 16");
+    svg.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS(space, "path");
+    path.setAttribute("d", GLYPHS[name]);
+    svg.append(path);
+    return svg;
+  }
+
+  const button = (label, run, kind = "primary") => el("button", { type: "button", class: `btn btn-${kind}`, on: { click: run } }, label);
+  const linkButton = (label, run) => el("button", { type: "button", class: "link", on: { click: run } }, label);
+  const mono = (text, title) => el("span", { class: "mono", title: title || null, text });
+  const fact = (name, ...value) => [el("dt", { text: name }), el("dd", null, value)];
+
+  function say(text) {
+    $("live").textContent = text;
+  }
+
+  /** A line that says what is happening now. It is also read out. */
+  function status(text) {
+    say(text);
+    return el("p", { class: "status", text });
+  }
+
+  /* -------------------------------------------------------------- amounts */
+
+  /** "1.5" with 6 decimals is 1500000n. `null` when the text is not a plain number or is finer than the asset. */
+  function toUnits(text, decimals) {
+    if (!DECIMAL.test(text) || !/\d/.test(text)) return null;
+    const [whole, fraction = ""] = text.split(".");
+    if (fraction.length > decimals) return null;
+    return BigInt((whole || "0") + fraction.padEnd(decimals, "0"));
+  }
+
+  function fromUnits(value, decimals) {
+    const digits = value.toString().padStart(decimals + 1, "0");
+    const whole = digits.slice(0, digits.length - decimals);
+    const fraction = digits.slice(digits.length - decimals).replace(/0+$/, "");
+    return fraction ? `${whole}.${fraction}` : whole;
+  }
+
+  /** A decimal string for reading: grouped thousands, at most `places` decimals. */
+  function pretty(text, places = 6) {
+    const [whole, fraction = ""] = String(text).split(".");
+    const kept = fraction.slice(0, places).replace(/0+$/, "");
+    const grouped = (whole || "0").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return kept ? `${grouped}.${kept}` : grouped;
+  }
+
+  const isDecimal = (text) => typeof text === "string" && DECIMAL.test(text) && /\d/.test(text);
+
+  /** A decimal string cut down, never rounded up, to `places` decimals. */
+  function cut(text, places) {
+    const [whole, fraction = ""] = String(text).split(".");
+    const kept = fraction.slice(0, places).replace(/0+$/, "");
+    return kept ? `${whole || "0"}.${kept}` : whole || "0";
+  }
+
+  /* ----------------------------------------------------------- the server */
+
+  /** Something this page says itself, as opposed to what a wallet reports. */
+  class Fault extends Error {
+    constructor(message, kind) {
+      super(message);
+      this.kind = kind || "page";
+    }
+  }
+
+  async function post(path, body) {
+    let response;
+    try {
+      response = await fetch(base + path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body || {}),
+      });
+    } catch {
+      throw new Fault(GONE, "gone");
+    }
+    let data = null;
+    try {
+      data = await response.json();
+    } catch {
+      // Not JSON: the page's server is gone or answered something else.
+    }
+    if (response.ok && data && !data.error) return data;
+    if (data && typeof data.error === "string" && data.error) throw new Fault(data.error, "server");
+    throw new Fault(response.status === 404 ? GONE : `${APP} did not accept the request. Try again.`, response.status === 404 ? "gone" : "server");
+  }
+
+  /* ----------------------------------------------------------- the wallet */
+
+  const wallets = [];
+  let looked = false; // the first look for wallets is over
+  let picked = null; // key of the wallet marked in the list
+  let pickedByHand = false; // the trader marked it; a lone wallet is marked for them
+  let chosen = null; // the wallet in use
+  let account = null; // its account
+  let walletChain = null; // the network it is on, as a number
+  let stage = "wallet"; // "wallet", then "work", then "final"
+  let flight = 0; // wallet requests under way
+  let run = 0; // changes when what was under way is abandoned
+  let committed = false; // a deposit was sent: nothing may start over
+  let lateAccounts; // an account change that arrived during a request
+  let walletProblem = ""; // why the last attempt to connect ended, while the list is shown
+
+  const needsAccount = config.task === "deposit" || config.task === "withdraw";
+  const ask = (method, params) => chosen.provider.request(params === undefined ? { method } : { method, params });
+
+  const codeOf = (error) =>
+    error && (error.code ?? (error.error && error.error.code) ?? (error.data && error.data.originalError && error.data.originalError.code));
+  const textOf = (error) => String((error && (error.message || (error.error && error.error.message))) || "");
+  const isDeclined = (error) =>
+    !(error instanceof Fault) &&
+    (codeOf(error) === 4001 || codeOf(error) === "ACTION_REJECTED" || /user (rejected|denied|cancell?ed)|rejected by (the )?user|request rejected/i.test(textOf(error)));
+  /** A wallet that signs only for the network it is on, asked to sign for another. */
+  const isChainRefusal = (error) =>
+    !(error instanceof Fault) && /chain ?id/i.test(textOf(error)) && /match|mismatch|active|current|same|differ/i.test(textOf(error));
+
+  /** A sentence for the trader. `declined` says what did not happen because they said no. */
+  function explain(error, declined) {
+    if (error instanceof Fault) return error.message;
+    if (isDeclined(error)) return `You declined the request in your wallet. ${declined || "Nothing was changed."}`;
+    const code = codeOf(error);
+    if (code === -32002) return "A request is already waiting in your wallet. Open the wallet and answer it, then try again.";
+    if (code === 4100) return "The wallet has not given this page access to that account. Connect the wallet again.";
+    if (code === 4900 || code === 4901) return "The wallet is not connected to its network. Check the wallet, then try again.";
+    const text = clip(textOf(error).trim(), 200);
+    return text ? `The wallet reported a problem: ${text}` : "The wallet did not complete the request. Try again.";
+  }
+
+  function addWallet(detail) {
+    const info = detail && detail.info;
+    const provider = detail && detail.provider;
+    if (!info || !provider || typeof provider.request !== "function") return;
+    const key = String(info.uuid || info.rdns || info.name || "");
+    if (!key || wallets.some((wallet) => wallet.provider === provider || wallet.key === key)) return;
+    // A wallet that announces itself replaces the unnamed one found on the page.
+    const unnamed = wallets.findIndex((wallet) => wallet.key === "legacy");
+    if (unnamed >= 0 && !chosen) wallets.splice(unnamed, 1);
+    wallets.push({
+      key,
+      name: clip(String(info.name || "Wallet").trim() || "Wallet", 40),
+      rdns: String(info.rdns || ""),
+      icon: typeof info.icon === "string" && /^data:image\//i.test(info.icon) ? info.icon : "",
+      provider,
+    });
+    if (stage === "wallet" && flight === 0) showWallets();
+  }
+
+  function legacyWallet() {
+    const provider = window.ethereum;
+    if (!provider || typeof provider.request !== "function" || wallets.length) return;
+    wallets.push({
+      key: "legacy",
+      name: provider.isRabby ? "Rabby" : provider.isMetaMask ? "MetaMask" : "Browser wallet",
+      rdns: "",
+      icon: "",
+      provider,
+    });
+  }
+
+  function lookForWallets() {
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+    legacyWallet();
+  }
+
+  function preferred(list) {
+    const found = (Array.isArray(list) ? list : []).filter((item) => typeof item === "string" && ADDRESS.test(item));
+    if (needsAccount) return found.find((item) => same(item, config.account)) || found[0] || null;
+    return found[0] || null;
+  }
+
+  function onAccounts(list) {
+    if (!chosen || stage === "final" || committed) return;
+    if (flight > 0) {
+      lateAccounts = list;
       return;
     }
-    button.disabled = true;
-    try {
-      say("Waiting for your wallet to connect…");
-      const accounts = await wallet.request({ method: "eth_requestAccounts" });
-      const account = accounts && accounts[0];
-      if (!account) throw new Error("The wallet did not share an account.");
-      await useBnbChain(wallet);
-      // The message carries a timestamp, so it is prepared at the last moment.
-      const prepared = await post("/prepare", { account });
-      say("Confirm the signature in your wallet now.");
-      const signature = await wallet.request({ method: "eth_signTypedData_v4", params: [account, JSON.stringify(prepared.typedData)] });
-      say("Sending the approval…");
-      await post("/submit", { signature });
-      say("Approved. You can close this tab and return to OctoNeo.", "ok");
-      button.hidden = true;
-    } catch (error) {
-      const declined = error && error.code === 4001;
-      say(declined ? "The request was declined in the wallet. Nothing was approved." : (error && error.message) || "Something went wrong. Try again.", "bad");
-      button.disabled = false;
-      button.textContent = "Try again";
+    const next = preferred(list);
+    if (same(next, account) || (!next && !account)) return;
+    run += 1;
+    account = next;
+    if (!next) {
+      stage = "wallet";
+      resetWork();
+      showWallets("The wallet disconnected from this page. Connect it again.");
+      return;
     }
-  });
+    say(`The wallet is now on ${short(next)}`);
+    entered();
+  }
+
+  function onChain(value) {
+    const id = typeof value === "string" ? parseInt(value, 16) : Number(value);
+    if (!Number.isFinite(id)) return;
+    walletChain = id;
+    if (stage === "work" && flight === 0 && TASK.chain) TASK.chain();
+  }
+
+  function use(wallet) {
+    if (chosen && typeof chosen.provider.removeListener === "function") {
+      chosen.provider.removeListener("accountsChanged", onAccounts);
+      chosen.provider.removeListener("chainChanged", onChain);
+    }
+    chosen = wallet;
+    if (wallet && typeof wallet.provider.on === "function") {
+      wallet.provider.on("accountsChanged", onAccounts);
+      wallet.provider.on("chainChanged", onChain);
+    }
+  }
+
+  const takeoff = () => {
+    flight += 1;
+  };
+  function land() {
+    flight = Math.max(0, flight - 1);
+    if (flight === 0 && lateAccounts !== undefined) {
+      const list = lateAccounts;
+      lateAccounts = undefined;
+      setTimeout(() => onAccounts(list), 0);
+    }
+  }
+
+  async function chainNow() {
+    try {
+      const id = parseInt(await ask("eth_chainId"), 16);
+      return Number.isFinite(id) ? id : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Puts the wallet on a network, adding it to the wallet first when the wallet does not know it. */
+  async function ensureChain(chain) {
+    if (walletChain === chain.id) return;
+    try {
+      await ask("wallet_switchEthereumChain", [{ chainId: chain.hex }]);
+    } catch (error) {
+      const unknown = codeOf(error) === 4902 || /unrecognized chain|unknown chain|not been added|add(ed)? (it|the chain|this chain)/i.test(textOf(error));
+      if (!unknown) throw error;
+      const explorer = typeof chain.explorer === "string" && chain.explorer.startsWith("https://") ? [chain.explorer] : null;
+      const added = { chainId: chain.hex, chainName: chain.name, nativeCurrency: chain.currency, rpcUrls: chain.rpcUrls };
+      if (explorer) added.blockExplorerUrls = explorer;
+      await ask("wallet_addEthereumChain", [added]);
+    }
+    walletChain = await chainNow();
+    if (walletChain !== chain.id) {
+      throw new Fault(`Your wallet is still on another network. Switch it to ${chain.name}, then try again.`, "chain");
+    }
+  }
+
+  const validChain = (chain) =>
+    Boolean(chain) &&
+    Number.isInteger(chain.id) &&
+    typeof chain.hex === "string" &&
+    QUANTITY.test(chain.hex) &&
+    parseInt(chain.hex, 16) === chain.id &&
+    typeof chain.name === "string" &&
+    chain.name.length > 0 &&
+    Boolean(chain.currency) &&
+    Array.isArray(chain.rpcUrls);
+
+  /* ------------------------------------------------------------ the steps */
+
+  const STATE_WORDS = {
+    todo: "not started",
+    active: "current step",
+    wallet: "waiting for your wallet",
+    busy: "in progress",
+    done: "done",
+    failed: "needs attention",
+    skipped: "not needed",
+  };
+  const steps = new Map();
+
+  function buildSteps(list) {
+    const root = $("steps");
+    root.replaceChildren();
+    steps.clear();
+    list.forEach(([id, title], index) => {
+      const marker = el("span", { class: "marker", "aria-hidden": "true" }, String(index + 1));
+      const spoken = el("span", { class: "sr", text: `, ${STATE_WORDS.todo}` });
+      const summary = el("p", { class: "step-summary", hidden: true });
+      const body = el("div", { class: "step-body" });
+      const node = el(
+        "li",
+        { class: "step", data: { state: "todo", step: id } },
+        marker,
+        el("div", { class: "step-main" }, el("h2", { class: "step-title" }, title, spoken), summary, body),
+      );
+      steps.set(id, { node, marker, spoken, summary, body, number: index + 1 });
+      root.append(node);
+    });
+  }
+
+  function setSummary(id, content) {
+    const step = steps.get(id);
+    const kids = content === null || content === undefined ? [] : [content].flat().filter(Boolean);
+    step.summary.replaceChildren(...kids);
+    step.summary.hidden = kids.length === 0;
+  }
+
+  /** Sets a step's state. A summary is the one line a finished step keeps. */
+  function setState(id, state, summary) {
+    const step = steps.get(id);
+    step.node.dataset.state = state;
+    step.marker.replaceChildren(
+      state === "done" ? glyph("check") : state === "failed" ? glyph("bang") : state === "skipped" ? glyph("dash") : String(step.number),
+    );
+    step.spoken.textContent = `, ${STATE_WORDS[state]}`;
+    if (state === "active" || state === "wallet" || state === "busy" || state === "failed") step.node.setAttribute("aria-current", "step");
+    else step.node.removeAttribute("aria-current");
+    if (summary !== undefined) setSummary(id, summary);
+    if (state === "todo") {
+      setSummary(id, null);
+      step.body.replaceChildren();
+    }
+    if (state === "done" || state === "skipped") step.body.replaceChildren();
+  }
+
+  function fill(id, ...kids) {
+    const body = steps.get(id).body;
+    body.replaceChildren(...kids.flat().filter(Boolean));
+    return body;
+  }
+
+  /** Moves the keyboard to the step's first control, unless the trader is busy somewhere else. */
+  function focusIn(id) {
+    const held = document.activeElement;
+    if (held && held !== document.body && held.isConnected) return;
+    const body = steps.get(id).body;
+    const target = body.querySelector(".btn-primary:not(:disabled)") || body.querySelector("input:checked, input, select, button");
+    if (target) target.focus({ preventScroll: true });
+  }
+
+  /** Marks a step as failed. `message` is what went wrong, or that and a second, calmer paragraph. */
+  function fail(id, message, ...actions) {
+    const [problem, more] = [message].flat();
+    setState(id, "failed");
+    fill(
+      id,
+      el("p", { class: "problem", role: "alert", text: problem }),
+      more ? el("p", { class: "hint", text: more }) : null,
+      actions.flat().filter(Boolean).length ? el("div", { class: "actions" }, actions) : null,
+    );
+    focusIn(id);
+  }
+
+  function resetWork() {
+    for (const id of steps.keys()) if (id !== "wallet") setState(id, "todo");
+  }
+
+  /** A bar that runs out, for a signature the exchange only takes for a short while. */
+  function countdown(seconds, onOver) {
+    const bar = el("span", { class: "clock-fill" });
+    const text = el("span", { class: "clock-text" });
+    const node = el("div", { class: "clock", role: "timer" }, el("span", { class: "clock-track" }, bar), text);
+    const total = Math.max(1, seconds) * 1000;
+    const started = performance.now();
+    let over = false;
+    let timer = 0;
+    const tick = () => {
+      const left = Math.max(0, total - (performance.now() - started));
+      const whole = Math.ceil(left / 1000);
+      bar.style.width = `${(left / total) * 100}%`;
+      text.textContent = left > 0 ? `${whole} ${whole === 1 ? "second" : "seconds"} left` : "Time is up";
+      if (left <= 0 && !over) {
+        over = true;
+        node.dataset.over = "true";
+        clearInterval(timer);
+        if (onOver) onOver();
+      }
+    };
+    timer = setInterval(tick, 200);
+    tick();
+    return { node, stop: () => clearInterval(timer) };
+  }
+
+  function txLink(chain, hash) {
+    const label = `${hash.slice(0, 10)}…${hash.slice(-6)}`;
+    const explorer = chain && typeof chain.explorer === "string" && /^https:\/\/[^\s/]+/.test(chain.explorer) ? chain.explorer.replace(/\/+$/, "") : "";
+    if (!explorer || !HASH.test(hash)) return mono(label, hash);
+    return el("a", { class: "link mono", href: `${explorer}/tx/${hash}`, target: "_blank", rel: "noopener noreferrer", title: "Open in the network's explorer" }, label);
+  }
+
+  /** How the page ends: what happened, below the last step. */
+  function finish(tone, title, ...kids) {
+    stage = "final";
+    setSummary("wallet", walletSummary(false));
+    $("steps").dataset.ended = "true";
+    const box = $("result");
+    box.dataset.tone = tone;
+    box.setAttribute("aria-label", title);
+    box.replaceChildren(
+      el("span", { class: "marker", "aria-hidden": "true" }, glyph(tone === "bad" ? "bang" : "check")),
+      el("div", { class: "step-main" }, el("h2", { text: title }), el("div", { class: "result-body" }, kids.flat().filter(Boolean))),
+    );
+    box.hidden = false;
+    document.title = `${title} | ${APP}`;
+    say(title);
+    box.focus({ preventScroll: true });
+    box.scrollIntoView({ block: "nearest" });
+  }
+
+  const closing = () => el("p", { class: "result-close", text: `You can close this tab and return to ${APP}.` });
+
+  /* ------------------------------------------------- step: connect wallet */
+
+  const METAMASK_NOTE =
+    "MetaMask is likely to refuse a withdrawal's second signature: it is made for the exchange's own network, and MetaMask signs only for the network it is on. A wallet that signs across networks, such as Rabby, works. You can still try; nothing is withdrawn unless both signatures are given.";
+
+  function walletRow(wallet, onPick) {
+    const input = el("input", { type: "radio", name: "wallet", value: wallet.key });
+    input.checked = wallet.key === picked;
+    input.addEventListener("change", onPick);
+    let icon;
+    if (wallet.icon) {
+      icon = el("img", { class: "wallet-icon", alt: "" });
+      icon.src = wallet.icon;
+    } else {
+      icon = el("span", { class: "wallet-letter", "aria-hidden": "true", text: wallet.name.slice(0, 1).toUpperCase() });
+    }
+    return el("label", { class: "wallet", data: { on: String(input.checked), key: wallet.key } }, icon, el("span", { class: "wallet-name", text: wallet.name }), input);
+  }
+
+  function showWallets(problem = walletProblem) {
+    walletProblem = problem;
+    setState("wallet", problem ? "failed" : "active");
+    if (!wallets.length) {
+      if (looked) noWallet();
+      else fill("wallet", el("p", { class: "hint", text: "Looking for a wallet in this browser." }));
+      return;
+    }
+    // A lone wallet is marked already. Wallets announce themselves one by one, so that is decided afresh each time.
+    if (!pickedByHand || !wallets.some((wallet) => wallet.key === picked)) {
+      pickedByHand = false;
+      picked = wallets.length === 1 ? wallets[0].key : null;
+    }
+    const go = button("Connect wallet", connect);
+    const note = el("p", { class: "note", text: METAMASK_NOTE });
+    const group = el("div", { class: "wallets", role: "radiogroup", "aria-label": "Wallet in this browser" });
+    const refresh = () => {
+      const on = group.querySelector("input:checked");
+      picked = on ? on.value : null;
+      for (const row of group.children) row.dataset.on = String(row.dataset.key === picked);
+      const wallet = wallets.find((item) => item.key === picked);
+      go.disabled = !wallet;
+      note.hidden = !(config.task === "withdraw" && wallet && wallet.rdns === "io.metamask");
+    };
+    group.append(
+      ...wallets.map((wallet) =>
+        walletRow(wallet, () => {
+          pickedByHand = true;
+          refresh();
+        }),
+      ),
+    );
+    fill(
+      "wallet",
+      problem ? el("p", { class: "problem", role: "alert", text: problem }) : null,
+      needsAccount && ADDRESS.test(config.account || "")
+        ? el("p", { class: "hint" }, "Connect the wallet that trades, on account ", mono(short(config.account), config.account), ".")
+        : null,
+      group,
+      note,
+      el("div", { class: "actions" }, go),
+    );
+    refresh();
+    focusIn("wallet");
+  }
+
+  function noWallet() {
+    const field = el("input", { class: "copy-field mono", type: "text", readonly: true, hidden: true, "aria-label": "Address of this page", value: location.href });
+    const copy = button("Copy link", async () => {
+      try {
+        await navigator.clipboard.writeText(location.href);
+        copy.textContent = "Copied";
+        say("Link copied");
+        setTimeout(() => {
+          copy.textContent = "Copy link";
+        }, 2400);
+      } catch {
+        field.hidden = false;
+        field.focus();
+        field.select();
+        say("Select the address and copy it with your keyboard.");
+      }
+    });
+    const again = button(
+      "Look again",
+      () => {
+        lookForWallets();
+        showWallets();
+        if (!wallets.length) say("Still no wallet in this browser.");
+      },
+      "quiet",
+    );
+    fill(
+      "wallet",
+      el("p", { class: "plain", text: "No wallet was found in this browser." }),
+      el("p", {
+        class: "hint",
+        text: "Open this page in the browser where your wallet extension is installed, for example MetaMask or Rabby. Copy the link and paste it there. It works for a few minutes.",
+      }),
+      el("div", { class: "actions" }, copy, again),
+      field,
+    );
+  }
+
+  function walletSummary(changeable) {
+    const hush = el("span", { role: "status" });
+    const change = linkButton("Use another wallet", () => {
+      if (flight > 0 || committed) {
+        hush.textContent = "Answer the request in your wallet first.";
+        return;
+      }
+      startOver();
+    });
+    return [el("span", { text: chosen ? chosen.name : "" }), mono(short(account), account), changeable ? change : null, changeable ? hush : null];
+  }
+
+  function startOver() {
+    run += 1;
+    use(null);
+    account = null;
+    walletChain = null;
+    stage = "wallet";
+    resetWork();
+    setSummary("wallet", null);
+    showWallets("");
+  }
+
+  async function connect() {
+    const wallet = wallets.find((item) => item.key === picked);
+    if (!wallet) return;
+    use(wallet);
+    walletProblem = "";
+    const mine = ++run;
+    takeoff();
+    setState("wallet", "wallet");
+    fill(
+      "wallet",
+      status("Waiting for your wallet"),
+      el("p", { class: "hint", text: `Approve the connection in ${wallet.name}. If no prompt appears, open the wallet from the browser's toolbar.` }),
+    );
+    try {
+      const first = preferred(await ask("eth_requestAccounts"));
+      if (mine !== run) return;
+      if (!first) throw new Fault("The wallet did not share an account. Unlock it, then connect again.");
+      account = first;
+      walletChain = await chainNow();
+      if (mine !== run) return;
+    } catch (error) {
+      if (mine !== run) return;
+      showWallets(explain(error, "Nothing was connected."));
+      return;
+    } finally {
+      land();
+    }
+    entered();
+  }
+
+  /** The wallet is on an account that does not trade: say which one is needed, and follow the wallet. */
+  function wrongAccount(note) {
+    stage = "wallet";
+    setState("wallet", "failed");
+    setSummary("wallet", null);
+    fill(
+      "wallet",
+      el("p", { class: "problem", role: "alert", text: note || "Your wallet is on another account." }),
+      el("dl", { class: "facts" }, fact("Wallet is on", mono(account)), fact("Trading account", mono(config.account))),
+      el("p", {
+        class: "hint",
+        text: `A ${config.task === "deposit" ? "deposit" : "withdrawal"} is made by the account that trades. Switch to it in ${chosen.name}; this page follows.`,
+      }),
+      el("div", { class: "actions" }, button("Choose account in wallet", chooseAccount), linkButton("Use another wallet", startOver)),
+    );
+    focusIn("wallet");
+  }
+
+  /** The wallet has shared an account: go on, or say which account is needed. */
+  function entered() {
+    resetWork();
+    if (needsAccount && !same(account, config.account)) {
+      wrongAccount();
+      return;
+    }
+    stage = "work";
+    setState("wallet", "done", walletSummary(true));
+    TASK.begin();
+  }
+
+  async function chooseAccount() {
+    const mine = ++run;
+    takeoff();
+    setState("wallet", "wallet");
+    fill(
+      "wallet",
+      status("Waiting for your wallet"),
+      el("p", { class: "hint" }, "Pick the trading account, ", mono(short(config.account), config.account), `, in ${chosen.name}'s prompt.`),
+    );
+    try {
+      try {
+        await ask("wallet_requestPermissions", [{ eth_accounts: {} }]);
+      } catch (error) {
+        if (isDeclined(error)) throw error;
+        // An older wallet without this request: asking for accounts again is all there is.
+      }
+      const next = preferred(await ask("eth_requestAccounts"));
+      if (mine !== run) return;
+      if (next) account = next;
+    } catch (error) {
+      if (mine !== run) return;
+      wrongAccount(explain(error, "The wallet is still on another account."));
+      return;
+    } finally {
+      land();
+    }
+    entered();
+  }
+
+  /* ------------------------------------------------------- task: connect */
+
+  const signing = validChain(config.signingChain) ? config.signingChain : null;
+
+  async function switchForApproval() {
+    if (!signing || walletChain === signing.id) {
+      setState("network", "done", signing ? `Your wallet is on ${signing.name}` : "Nothing to switch");
+      readyToSign();
+      return;
+    }
+    const mine = run;
+    takeoff();
+    setState("network", "wallet");
+    fill(
+      "network",
+      status("Waiting for your wallet"),
+      el("p", { class: "hint", text: `The approval is signed on ${signing.name}. Your wallet asks to switch to it; nothing is sent there.` }),
+    );
+    try {
+      await ensureChain(signing);
+      if (mine !== run) return;
+      setState("network", "done", `Your wallet is on ${signing.name}`);
+    } catch (error) {
+      if (mine !== run) return;
+      if (isDeclined(error) || error instanceof Fault) {
+        fail(
+          "network",
+          isDeclined(error) ? `You declined the network switch. The approval has to be signed on ${signing.name}.` : error.message,
+          button("Switch network", switchForApproval),
+        );
+        return;
+      }
+      // Some wallets sign for a network without switching to it: go on and let the signature decide.
+      setState("network", "skipped", "Your wallet does not switch on request. It may still sign.");
+    } finally {
+      land();
+    }
+    readyToSign();
+  }
+
+  function readyToSign(problem) {
+    const go = button("Sign approval", signApproval);
+    if (problem) fail("sign", problem, go);
+    else {
+      setState("sign", "active");
+      fill(
+        "sign",
+        el("p", {
+          class: "hint",
+          text: `Your wallet shows the approval for the trading key. Confirm it within ${APPROVAL_SECONDS} seconds of the prompt: after that the exchange no longer takes it, and you sign again.`,
+        }),
+        el("div", { class: "actions" }, go),
+      );
+      focusIn("sign");
+    }
+  }
+
+  async function signApproval() {
+    const mine = ++run;
+    takeoff();
+    let clock = null;
+    try {
+      setState("sign", "busy");
+      fill("sign", status("Preparing the approval"));
+      if (signing && walletChain !== signing.id) {
+        try {
+          await ensureChain(signing);
+        } catch (error) {
+          if (isDeclined(error)) throw new Fault(`You declined the network switch. The approval has to be signed on ${signing.name}.`);
+        }
+        if (mine !== run) return;
+      }
+      // The message carries the time, so it is made at the last moment.
+      const prepared = await post("/prepare", { account });
+      if (mine !== run) return;
+      const late = el("p", { class: "problem", hidden: true, text: "The time is up. The exchange will probably refuse this signature: decline it in your wallet, then sign again." });
+      const again = el("div", { class: "actions", hidden: true }, button("Sign again", signApproval, "quiet"));
+      clock = countdown(Number(prepared.seconds) > 0 ? Number(prepared.seconds) : APPROVAL_SECONDS, () => {
+        late.hidden = false;
+        again.hidden = false;
+        say("The time is up. Decline the request in your wallet, then sign again.");
+      });
+      setState("sign", "wallet");
+      fill("sign", status("Confirm the approval in your wallet"), clock.node, late, again);
+      const signature = await ask("eth_signTypedData_v4", [account, JSON.stringify(prepared.typedData)]);
+      if (mine !== run) return;
+      clock.stop();
+      setState("sign", "busy");
+      fill("sign", status("Sending the approval to the exchange"));
+      await post("/submit", { signature });
+      if (mine !== run) return;
+      setState("sign", "done", ["Signed by", mono(short(account), account)]);
+      finish(
+        "ok",
+        "Approved",
+        el("p", null, `${APP} can now trade perpetual futures on ${NETWORK} for `, mono(short(account), account), `, for ${days()}. It cannot withdraw.`),
+        closing(),
+      );
+    } catch (error) {
+      if (mine !== run) return;
+      if (clock) clock.stop();
+      readyToSign(
+        isChainRefusal(error) && signing
+          ? `Your wallet has to be on ${signing.name} to sign the approval, and it is on another network. Switch it there, then sign again. Nothing was approved.`
+          : explain(error, "Nothing was approved."),
+      );
+    } finally {
+      land();
+    }
+  }
+
+  const days = () => {
+    const count = Number(config.days);
+    return Number.isFinite(count) && count > 0 ? `${count} ${count === 1 ? "day" : "days"}` : "the time you chose";
+  };
+
+  function showStatement() {
+    const grant = (can, text, strong) =>
+      el("li", { class: strong ? "grant grant-strong" : "grant", data: { can: can ? "yes" : "no" } }, el("span", { class: "grant-word", text: can ? "Can" : "Cannot" }), el("span", { text }));
+    const box = $("statement");
+    box.replaceChildren(
+      el("h2", { id: "statement-title", text: "What your wallet approves" }),
+      el("p", { class: "key" }, el("span", { class: "key-name", text: `Trading key, made by ${APP} on this computer` }), mono(String(config.agent || ""))),
+      el(
+        "ul",
+        { class: "grants" },
+        grant(true, `place and cancel perpetual futures orders on ${NETWORK}`),
+        grant(false, "trade spot"),
+        grant(false, "withdraw or move your funds", true),
+      ),
+      el("p", { class: "valid", text: `Valid for ${days()}, then it stops working by itself.` }),
+    );
+    box.hidden = false;
+  }
+
+  /* -------------------------------------------- deposit and withdraw: form */
+
+  function choiceGroup(legend, name, options, selected, onChange) {
+    if (options.length === 1) {
+      return el("div", { class: "field" }, el("span", { class: "label", text: legend }), el("span", { class: "single", text: options[0].label }));
+    }
+    const rows = options.map((option) => {
+      const input = el("input", { type: "radio", name, value: String(option.value) });
+      input.checked = option.value === selected;
+      return { input, row: el("label", { class: "choice", data: { on: String(input.checked) } }, input, el("span", { text: option.label })) };
+    });
+    const group = el("fieldset", { class: "field" }, el("legend", { class: "label", text: legend }), el("div", { class: "choices" }, rows.map((item) => item.row)));
+    group.addEventListener("change", () => {
+      for (const item of rows) item.row.dataset.on = String(item.input.checked);
+      const on = rows.find((item) => item.input.checked);
+      if (on) onChange(on.input.value);
+    });
+    return group;
+  }
+
+  function assetField(names, selected, onChange) {
+    if (names.length === 1) {
+      return el("div", { class: "field" }, el("span", { class: "label", text: "Asset" }), el("span", { class: "single", text: names[0] }));
+    }
+    const select = el("select", { class: "select", id: "asset" });
+    for (const name of names) {
+      const option = el("option", { value: name, text: name });
+      option.selected = name === selected;
+      select.append(option);
+    }
+    select.addEventListener("change", () => onChange(select.value));
+    return el("div", { class: "field" }, el("label", { class: "label", for: "asset", text: "Asset" }), select);
+  }
+
+  /**
+   * The form both money tasks share: network, asset, one large amount, and the button.
+   * `spec` supplies the lists and judges the amount; this draws them and keeps them in step.
+   */
+  function amountForm(spec) {
+    const input = el("input", {
+      class: "amount-input",
+      id: "amount",
+      type: "text",
+      inputmode: "decimal",
+      autocomplete: "off",
+      spellcheck: "false",
+      placeholder: "0",
+      "aria-describedby": "amount-help amount-error",
+      value: spec.text(),
+    });
+    const unit = el("span", { class: "amount-unit", text: spec.asset().name });
+    const wrap = el("div", { class: "amount", data: { bad: "false" } }, input, unit);
+    const help = el("span", { id: "amount-help" });
+    const side = el("span");
+    const error = el("p", { class: "field-error", id: "amount-error", role: "alert" });
+    const more = el("div", { class: "field" });
+    const go = button(spec.verb, () => submit());
+    const working = el("p", { class: "status", hidden: true });
+    const set = el(
+      "fieldset",
+      { class: "form" },
+      choiceGroup("Network", "network", spec.chains().map((chain) => ({ value: chain.id, label: chain.name })), spec.chain().id, (value) => spec.pickChain(Number(value))),
+      assetField(spec.assets().map((asset) => asset.name), spec.asset().name, (value) => spec.pickAsset(value)),
+      el("div", { class: "field" }, el("label", { class: "label", for: "amount", text: "Amount" }), wrap, el("div", { class: "meta" }, help, side), error),
+      more,
+      el("div", { class: "actions" }, go, working),
+    );
+    let formError = "";
+
+    const refresh = () => {
+      const text = input.value.trim();
+      spec.keep(text);
+      const judged = spec.judge(text);
+      // What went wrong with the last attempt stays in view until the amount is edited.
+      const shown = formError || judged.error;
+      error.textContent = shown;
+      wrap.dataset.bad = String(Boolean(judged.error));
+      input.setAttribute("aria-invalid", String(Boolean(judged.error)));
+      go.textContent = judged.amount ? `${spec.verb} ${judged.amount} ${spec.asset().name}` : spec.verb;
+      go.disabled = !judged.amount;
+      help.replaceChildren(...[spec.help()].flat().filter(Boolean));
+      side.replaceChildren(...[spec.side((value) => {
+        input.value = value;
+        formError = "";
+        refresh();
+        input.focus();
+      })].flat().filter(Boolean));
+      more.replaceChildren(...[spec.more()].flat().filter(Boolean));
+      more.hidden = more.childElementCount === 0;
+      return judged;
+    };
+
+    const submit = () => {
+      const judged = refresh();
+      if (!judged.amount || set.disabled) return;
+      formError = "";
+      error.textContent = "";
+      spec.submit(judged.amount);
+    };
+
+    input.addEventListener("input", () => {
+      formError = "";
+      refresh();
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        submit();
+      }
+    });
+    refresh();
+    return {
+      node: set,
+      refresh,
+      /** While the page works on what was entered: nothing can be changed, and it says what it is doing. */
+      busy(text) {
+        set.disabled = true;
+        go.hidden = true;
+        working.hidden = false;
+        working.textContent = text;
+        say(text);
+      },
+      /** Back to editing, with what went wrong if something did. */
+      idle(problem) {
+        set.disabled = false;
+        go.hidden = false;
+        working.hidden = true;
+        formError = problem || "";
+        refresh();
+        if (problem) input.focus();
+      },
+      focus(what) {
+        const target = what === "network" ? set.querySelector('input[name="network"]:checked') : what === "asset" ? set.querySelector("#asset") : input;
+        (target || input).focus({ preventScroll: true });
+      },
+    };
+  }
+
+  /** Reads what was typed as an amount of an asset with `decimals` places. */
+  function judgeAmount(text, name, decimals) {
+    if (text === "") return { error: "", amount: "", units: null };
+    if (!DECIMAL.test(text) || !/\d/.test(text)) return { error: "Enter a number, for example 25 or 25.5.", amount: "", units: null };
+    const places = (text.split(".")[1] || "").length;
+    if (places > decimals) {
+      return { error: `${name} has at most ${decimals} decimal ${decimals === 1 ? "place" : "places"}.`, amount: "", units: null };
+    }
+    const units = toUnits(text, decimals);
+    if (units === 0n) return { error: "Enter an amount above zero.", amount: "", units };
+    return { error: "", amount: fromUnits(units, decimals), units };
+  }
+
+  /* ------------------------------------------------------- task: deposit */
+
+  const deposit = { options: null, chainId: null, asset: "", text: "", balance: null, reading: "idle", reserve: 0n, form: null, look: 0, prepared: null, amount: "" };
+
+  const depositChain = () => deposit.options.chains.find((chain) => chain.id === deposit.chainId);
+  const depositAssets = () => deposit.options.assets.filter((asset) => asset.chainId === deposit.chainId);
+  const depositAsset = () => depositAssets().find((asset) => asset.name === deposit.asset) || depositAssets()[0];
+  const validDepositAsset = (asset) =>
+    Boolean(asset) &&
+    Number.isInteger(asset.chainId) &&
+    typeof asset.name === "string" &&
+    asset.name.length > 0 &&
+    Number.isInteger(asset.decimals) &&
+    asset.decimals >= 0 &&
+    asset.decimals <= 36 &&
+    (asset.native === true || ADDRESS.test(asset.token || ""));
+
+  async function loadDeposit() {
+    const mine = run;
+    setState("amount", "busy");
+    fill("amount", status("Reading what can be deposited"));
+    let options;
+    try {
+      options = await post("/deposit/options", {});
+    } catch (error) {
+      if (mine !== run) return;
+      fail("amount", explain(error), button("Load again", loadDeposit, "quiet"));
+      return;
+    }
+    if (mine !== run) return;
+    const assets = (Array.isArray(options.assets) ? options.assets : []).filter(validDepositAsset);
+    const chains = (Array.isArray(options.chains) ? options.chains : []).filter((chain) => validChain(chain) && assets.some((asset) => asset.chainId === chain.id));
+    if (!chains.length) {
+      fail("amount", `Nothing can be deposited on ${NETWORK} right now. Try again in a while.`, button("Load again", loadDeposit, "quiet"));
+      return;
+    }
+    deposit.options = { chains, assets };
+    if (!chains.some((chain) => chain.id === deposit.chainId)) deposit.chainId = (chains.find((chain) => chain.id === walletChain) || chains[0]).id;
+    showDepositForm("amount");
+  }
+
+  function showDepositForm(focus) {
+    deposit.asset = depositAsset().name;
+    deposit.form = amountForm({
+      verb: "Deposit",
+      chains: () => deposit.options.chains,
+      chain: depositChain,
+      assets: depositAssets,
+      asset: depositAsset,
+      text: () => deposit.text,
+      keep: (text) => {
+        deposit.text = text;
+      },
+      pickChain: (id) => {
+        deposit.chainId = id;
+        deposit.asset = "";
+        showDepositForm("network");
+        if (walletChain !== id) switchForBalance();
+      },
+      pickAsset: (name) => {
+        deposit.asset = name;
+        showDepositForm("asset");
+      },
+      judge: (text) => {
+        const asset = depositAsset();
+        const judged = judgeAmount(text, asset.name, asset.decimals);
+        if (!judged.error && judged.units !== null && deposit.balance !== null && judged.units > deposit.balance) {
+          return { error: `That is more than the ${pretty(fromUnits(deposit.balance, asset.decimals))} ${asset.name} in your wallet.`, amount: "", units: judged.units };
+        }
+        return judged;
+      },
+      help: () => {
+        const asset = depositAsset();
+        if (deposit.reading === "elsewhere") return "Your wallet is on another network.";
+        if (deposit.reading === "switching") return `Waiting for your wallet to switch to ${depositChain().name}`;
+        if (deposit.reading === "reading") return "Reading your balance";
+        if (deposit.reading === "unknown" || deposit.balance === null) return "Your balance could not be read. You can still enter an amount.";
+        return `In your wallet: ${pretty(fromUnits(deposit.balance, asset.decimals))} ${asset.name}`;
+      },
+      side: (put) => {
+        const asset = depositAsset();
+        if (deposit.reading === "elsewhere") return linkButton(`Switch to ${depositChain().name}`, switchForBalance);
+        if (deposit.reading !== "known" || deposit.balance === null) return null;
+        const most = asset.native ? deposit.balance - deposit.reserve : deposit.balance;
+        if (most <= 0n) return null;
+        return linkButton(asset.native ? "Max, less gas" : "Max", () => put(fromUnits(most, asset.decimals)));
+      },
+      more: () => null,
+      submit: prepareDeposit,
+    });
+    setState("amount", "active");
+    fill("amount", deposit.form.node);
+    if (focus) deposit.form.focus(focus);
+    readBalance();
+  }
+
+  /** The wallet's balance of the chosen asset, read through the wallet itself. */
+  async function readBalance() {
+    const look = ++deposit.look;
+    const asset = depositAsset();
+    deposit.balance = null;
+    if (walletChain !== deposit.chainId) {
+      deposit.reading = "elsewhere";
+      deposit.form.refresh();
+      return;
+    }
+    deposit.reading = "reading";
+    deposit.form.refresh();
+    try {
+      let raw;
+      if (asset.native) {
+        raw = await ask("eth_getBalance", [account, "latest"]);
+        // Sending every last coin leaves nothing to pay for the transaction itself.
+        let price = 0n;
+        try {
+          price = BigInt(await ask("eth_gasPrice"));
+        } catch {
+          price = 0n;
+        }
+        deposit.reserve = price > 0n ? price * 300000n : 10n ** BigInt(Math.max(0, asset.decimals - 3));
+      } else {
+        raw = await ask("eth_call", [{ to: asset.token, data: `0x70a08231${account.slice(2).toLowerCase().padStart(64, "0")}` }, "latest"]);
+      }
+      if (look !== deposit.look) return;
+      deposit.balance = typeof raw === "string" && QUANTITY.test(raw) ? BigInt(raw) : 0n;
+      deposit.reading = "known";
+    } catch {
+      if (look !== deposit.look) return;
+      deposit.reading = "unknown";
+    }
+    deposit.form.refresh();
+  }
+
+  async function switchForBalance() {
+    const mine = run;
+    const chain = depositChain();
+    takeoff();
+    deposit.look += 1;
+    deposit.reading = "switching";
+    deposit.form.refresh();
+    try {
+      await ensureChain(chain);
+    } catch (error) {
+      if (mine === run) say(isDeclined(error) ? "Your wallet stayed on its network." : explain(error));
+    } finally {
+      land();
+    }
+    if (mine === run && stage === "work" && steps.get("amount").node.dataset.state === "active") readBalance();
+  }
+
+  const callOf = (value) => (value && ADDRESS.test(value.to || "") && DATA.test(value.data || "") ? { to: value.to, data: value.data } : null);
+
+  /** Checks what the app prepared before any of it reaches the wallet. */
+  function readPrepared(raw, asset) {
+    const unreadable = new Fault(`${APP} prepared a deposit this page cannot read. Nothing was sent. Start again from ${APP}.`);
+    const send = raw && callOf(raw.deposit);
+    if (!raw || !QUANTITY.test(raw.needed || "") || !ADDRESS.test(raw.vault || "") || !send || !same(send.to, raw.vault)) throw unreadable;
+    if (raw.deposit.value !== undefined && raw.deposit.value !== null && !QUANTITY.test(raw.deposit.value)) throw unreadable;
+    const prepared = { needed: BigInt(raw.needed), vault: raw.vault, send: { ...send, value: raw.deposit.value || "0x0" } };
+    // The network's own coin travels with the transaction; a token never does.
+    if (BigInt(prepared.send.value) !== (asset.native ? prepared.needed : 0n)) throw unreadable;
+    for (const name of ["balance", "allowance", "approve", "reset"]) {
+      prepared[name] = null;
+      if (raw[name] === null || raw[name] === undefined) continue;
+      const call = callOf(raw[name]);
+      // Every token call goes to the token that was chosen, and nowhere else.
+      if (!call || asset.native || !same(call.to, asset.token)) throw unreadable;
+      prepared[name] = call;
+    }
+    return prepared;
+  }
+
+  const depositLine = () => `${deposit.amount} ${deposit.asset} from ${depositChain().name}`;
+  const changeAmount = () =>
+    linkButton("Change the amount", () => {
+      if (flight > 0 || committed) return;
+      run += 1;
+      for (const id of ["allow", "send", "confirm"]) setState(id, "todo");
+      setSummary("amount", null);
+      showDepositForm("amount");
+    });
+
+  async function prepareDeposit(amount) {
+    const mine = run;
+    const asset = depositAsset();
+    const chain = depositChain();
+    takeoff();
+    deposit.form.busy("Preparing the deposit");
+    try {
+      await ensureChain(chain);
+      if (mine !== run) return;
+      const raw = await post("/deposit/prepare", { account, chainId: chain.id, asset: asset.name, amount });
+      if (mine !== run) return;
+      const prepared = readPrepared(raw, asset);
+      const held = prepared.balance ? await ask("eth_call", [prepared.balance, "latest"]) : await ask("eth_getBalance", [account, "latest"]);
+      if (mine !== run) return;
+      const balance = typeof held === "string" && QUANTITY.test(held) ? BigInt(held) : 0n;
+      if (balance < prepared.needed) {
+        deposit.balance = balance;
+        deposit.reading = "known";
+        deposit.form.idle(`Your wallet holds ${pretty(fromUnits(balance, asset.decimals))} ${asset.name} on ${chain.name}, less than the ${amount} you entered.`);
+        return;
+      }
+      deposit.prepared = prepared;
+      deposit.amount = typeof raw.amount === "string" && isDecimal(raw.amount) ? raw.amount : amount;
+    } catch (error) {
+      if (mine !== run) return;
+      deposit.form.idle(explain(error, "Nothing was sent."));
+      return;
+    } finally {
+      land();
+    }
+    setState("amount", "done", depositLine());
+    allowDeposit();
+  }
+
+  /** Waits until the network has taken a transaction in. `true` when it succeeded. */
+  async function confirmed(hash, mine, onSlow) {
+    const started = Date.now();
+    let misses = 0;
+    let told = false;
+    await sleep(1200);
+    for (;;) {
+      if (mine !== run) throw new Fault("", "abandoned");
+      try {
+        const receipt = await ask("eth_getTransactionReceipt", [hash]);
+        misses = 0;
+        if (receipt && receipt.status !== undefined && receipt.status !== null) {
+          return receipt.status === "0x1" || receipt.status === 1 || receipt.status === true;
+        }
+        if (receipt && receipt.blockNumber) return true;
+      } catch {
+        misses += 1;
+        if (misses >= 6) throw new Fault("Your wallet does not say whether the transaction was confirmed. Follow it in the network's explorer.", "blind");
+      }
+      if (!told && onSlow && Date.now() - started > 90000) {
+        told = true;
+        onSlow();
+      }
+      await sleep(POLL_MS);
+    }
+  }
+
+  /** One transaction of a step: the wallet's prompt, then the wait for the network. */
+  async function transact(id, call, prompt, mine) {
+    const chain = depositChain();
+    setState(id, "wallet");
+    fill(id, status("Waiting for your wallet"), el("p", { class: "hint", text: prompt }));
+    const hash = await ask("eth_sendTransaction", [{ from: account, to: call.to, data: call.data, value: call.value || "0x0" }]);
+    if (typeof hash !== "string" || !HASH.test(hash)) throw new Fault("The wallet did not say which transaction it sent. Check the wallet's activity before trying again.");
+    if (mine !== run) throw new Fault("", "abandoned");
+    setState(id, "busy");
+    const slow = el("p", { class: "hint", hidden: true, text: "The network is taking longer than usual. The transaction is still on its way." });
+    fill(id, status("Waiting for the network to confirm"), el("p", { class: "hint" }, "Transaction ", txLink(chain, hash)), slow);
+    const ok = await confirmed(hash, mine, () => {
+      slow.hidden = false;
+    });
+    return { hash, ok };
+  }
+
+  async function allowDeposit() {
+    const mine = run;
+    const prepared = deposit.prepared;
+    const asset = depositAsset();
+    const chain = depositChain();
+    if (!prepared.allowance || !prepared.approve) {
+      setState("allow", "skipped", asset.native ? `Not needed for ${asset.name}` : "Not needed");
+      sendDeposit();
+      return;
+    }
+    takeoff();
+    try {
+      setState("allow", "busy");
+      fill("allow", status("Checking what the deposit contract may already take"));
+      const raw = await ask("eth_call", [prepared.allowance, "latest"]);
+      if (mine !== run) return;
+      const allowed = typeof raw === "string" && QUANTITY.test(raw) ? BigInt(raw) : 0n;
+      if (allowed >= prepared.needed) {
+        setState("allow", "skipped", "Already allowed");
+      } else {
+        if (allowed > 0n && prepared.reset) {
+          const cleared = await transact(
+            "allow",
+            prepared.reset,
+            `First your wallet clears the old allowance for ${asset.name}. This token has to be set to zero before the amount can change. It is one more transaction.`,
+            mine,
+          );
+          if (!cleared.ok) throw new Fault("Clearing the old allowance failed on the network. Nothing was allowed; the network kept the gas.");
+        }
+        const done = await transact(
+          "allow",
+          prepared.approve,
+          `Confirm the allowance in your wallet. It lets the exchange's deposit contract (${short(prepared.vault)}) take ${deposit.amount} ${asset.name}, and no more.`,
+          mine,
+        );
+        if (!done.ok) throw new Fault("The allowance failed on the network. Nothing was allowed; the network kept the gas.");
+        setState("allow", "done", ["Transaction", txLink(chain, done.hash)]);
+      }
+    } catch (error) {
+      if (mine !== run || error.kind === "abandoned") return;
+      fail("allow", explain(error, "Nothing was allowed."), button(`Allow ${deposit.amount} ${asset.name}`, allowDeposit), changeAmount());
+      return;
+    } finally {
+      land();
+    }
+    sendDeposit();
+  }
+
+  async function sendDeposit() {
+    const mine = run;
+    const prepared = deposit.prepared;
+    const asset = depositAsset();
+    const chain = depositChain();
+    let hash;
+    takeoff();
+    try {
+      setState("send", "wallet");
+      fill(
+        "send",
+        status("Waiting for your wallet"),
+        el("p", { class: "hint", text: `Confirm the deposit in your wallet: ${deposit.amount} ${asset.name} to the exchange's deposit contract (${short(prepared.vault)}).` }),
+      );
+      hash = await ask("eth_sendTransaction", [{ from: account, to: prepared.send.to, data: prepared.send.data, value: prepared.send.value }]);
+      if (typeof hash !== "string" || !HASH.test(hash)) throw new Fault("The wallet did not say which transaction it sent. Check the wallet's activity before trying again.");
+    } catch (error) {
+      land();
+      if (mine !== run) return;
+      fail("send", explain(error, "Nothing was deposited."), button(`Deposit ${deposit.amount} ${asset.name}`, sendDeposit), changeAmount());
+      return;
+    }
+    // From here the deposit is on its way: nothing on this page may start it again.
+    committed = true;
+    setSummary("wallet", walletSummary(false));
+    setState("send", "done", ["Transaction", txLink(chain, hash)]);
+    let told = true;
+    try {
+      await post("/deposit/sent", { hash });
+    } catch {
+      told = false;
+    }
+    setState("confirm", "busy");
+    const slow = el("p", { class: "hint", hidden: true, text: "The network is taking longer than usual. The deposit is still on its way." });
+    fill("confirm", status("Waiting for the network to confirm the deposit"), slow);
+    let ok = null;
+    try {
+      ok = await confirmed(hash, mine, () => {
+        slow.hidden = false;
+      });
+    } catch {
+      ok = null;
+    }
+    if (ok !== null) {
+      try {
+        await post("/deposit/confirmed", { hash, ok });
+      } catch {
+        told = false;
+      }
+    }
+    land();
+    const unheard = told ? null : el("p", { class: "hint", text: `${APP} could not be told, because this page had expired. The transaction is what counts: the app shows the funds once the exchange credits them.` });
+    const receipt = el("dl", { class: "facts" }, fact("Amount", `${deposit.amount} ${asset.name}`), fact("Network", chain.name), fact("Transaction", txLink(chain, hash)));
+    if (ok === true) {
+      setState("confirm", "done", "Confirmed by the network");
+      finish("ok", "Deposit confirmed", receipt, el("p", { text: `The exchange credits your trading account next, usually within a few minutes. ${APP} shows the funds once it has.` }), unheard, closing());
+    } else if (ok === false) {
+      setState("confirm", "failed", "Failed on the network");
+      fill("confirm");
+      finish("bad", "The deposit failed on the network", receipt, el("p", { text: `Nothing was deposited, and the network kept the gas. The transaction's page says why. To try again, start a new deposit from ${APP}.` }), unheard);
+    } else {
+      setState("confirm", "skipped", "Not reported by the wallet");
+      finish("plain", "Deposit sent", receipt, el("p", { text: "Your wallet does not say whether it was confirmed. Follow the transaction in the network's explorer; the exchange credits it once the network confirms it." }), unheard, closing());
+    }
+  }
+
+  /* ------------------------------------------------------ task: withdraw */
+
+  const withdraw = { options: null, chainId: null, asset: "", text: "", form: null, amount: "" };
+
+  const withdrawChain = () => withdraw.options.chains.find((chain) => chain.id === withdraw.chainId);
+  const withdrawAssets = () => withdraw.options.assets.filter((asset) => asset.chainId === withdraw.chainId);
+  const withdrawAsset = () => withdrawAssets().find((asset) => asset.name === withdraw.asset) || withdrawAssets()[0];
+  /** The exchange keeps eight decimal places unless it says otherwise. */
+  const placesOf = (asset) => (Number.isInteger(asset.decimals) && asset.decimals >= 0 && asset.decimals <= 18 ? asset.decimals : 8);
+
+  async function loadWithdraw() {
+    const mine = run;
+    setState("amount", "busy");
+    fill("amount", status("Reading what can be withdrawn"));
+    let options;
+    try {
+      options = await post("/withdraw/options", {});
+    } catch (error) {
+      if (mine !== run) return;
+      fail("amount", explain(error), button("Load again", loadWithdraw, "quiet"));
+      return;
+    }
+    if (mine !== run) return;
+    const assets = (Array.isArray(options.assets) ? options.assets : []).filter(
+      (asset) => asset && Number.isInteger(asset.chainId) && typeof asset.name === "string" && asset.name && isDecimal(asset.max) && isDecimal(asset.fee) && toUnits(asset.max, 18) !== 0n,
+    );
+    const chains = (Array.isArray(options.chains) ? options.chains : []).filter((chain) => validChain(chain) && assets.some((asset) => asset.chainId === chain.id));
+    if (!chains.length) {
+      setState("amount", "active");
+      fill(
+        "amount",
+        el("p", { class: "plain", text: "There is nothing to withdraw yet." }),
+        el("p", { class: "hint", text: "Funds that back open positions and orders stay on the exchange until those are closed. A deposit also needs a few minutes before it can leave again." }),
+        el("div", { class: "actions" }, button("Check again", loadWithdraw, "quiet")),
+      );
+      focusIn("amount");
+      return;
+    }
+    const daily = options.daily && isDecimal(options.daily.limit) && isDecimal(options.daily.left) ? options.daily : null;
+    withdraw.options = { chains, assets, daily };
+    if (!chains.some((chain) => chain.id === withdraw.chainId)) withdraw.chainId = (chains.find((chain) => chain.id === walletChain) || chains[0]).id;
+    showWithdrawForm("amount");
+  }
+
+  function showWithdrawForm(focus) {
+    withdraw.asset = withdrawAsset().name;
+    withdraw.form = amountForm({
+      verb: "Withdraw",
+      chains: () => withdraw.options.chains,
+      chain: withdrawChain,
+      assets: withdrawAssets,
+      asset: withdrawAsset,
+      text: () => withdraw.text,
+      keep: (text) => {
+        withdraw.text = text;
+      },
+      pickChain: (id) => {
+        withdraw.chainId = id;
+        withdraw.asset = "";
+        showWithdrawForm("network");
+      },
+      pickAsset: (name) => {
+        withdraw.asset = name;
+        showWithdrawForm("asset");
+      },
+      judge: (text) => {
+        const asset = withdrawAsset();
+        const judged = judgeAmount(text, asset.name, placesOf(asset));
+        const most = toUnits(asset.max, 18);
+        const asked = judged.error || judged.units === null ? null : toUnits(text, 18);
+        if (asked !== null && most !== null && asked > most) {
+          return { error: `That is more than the ${pretty(asset.max, 8)} ${asset.name} you can withdraw to ${withdrawChain().name} now.`, amount: "", units: judged.units };
+        }
+        return judged;
+      },
+      help: () => `You can withdraw ${pretty(withdrawAsset().max, 8)} ${withdrawAsset().name}`,
+      side: (put) => linkButton("Max", () => put(cut(withdrawAsset().max, placesOf(withdrawAsset())))),
+      more: () => {
+        const asset = withdrawAsset();
+        const daily = withdraw.options.daily;
+        return el(
+          "dl",
+          { class: "facts" },
+          fact("Exchange fee", `${pretty(asset.fee, 8)} ${asset.name}`),
+          fact("Goes to", mono(short(account), account), " on ", withdrawChain().name),
+          daily ? fact("Daily limit", `${pretty(daily.left, 2)} of ${pretty(daily.limit, 2)} USD left`) : null,
+        );
+      },
+      submit: (amount) => prepareWithdrawal(amount, true),
+    });
+    setState("amount", "active");
+    fill("amount", chosen && chosen.rdns === "io.metamask" ? el("p", { class: "note", text: METAMASK_NOTE }) : null, withdraw.form.node);
+    if (focus) withdraw.form.focus(focus);
+  }
+
+  const withdrawAgain = () =>
+    linkButton("Change the amount", () => {
+      if (flight > 0) return;
+      run += 1;
+      for (const id of ["sign", "prove"]) setState(id, "todo");
+      setSummary("amount", null);
+      showWithdrawForm("amount");
+    });
+
+  /** Both signatures, from the start: the exchange ties the second to a fresh first. */
+  async function prepareWithdrawal(amount, fromForm) {
+    const mine = fromForm ? run : ++run;
+    const asset = withdrawAsset();
+    const chain = withdrawChain();
+    let stepNow = "sign";
+    let clock = null;
+    takeoff();
+    try {
+      if (fromForm) withdraw.form.busy("Preparing the withdrawal");
+      else {
+        setState("prove", "todo");
+        setState("sign", "busy");
+        fill("sign", status("Preparing the withdrawal"));
+      }
+      try {
+        await ensureChain(chain);
+      } catch (error) {
+        // A wallet that cannot switch may still sign for that network. One that was told no has to be asked again.
+        if (isDeclined(error)) throw new Fault(`You declined the network switch. The withdrawal is signed on ${chain.name}. Nothing was withdrawn.`);
+      }
+      if (mine !== run) return;
+      const first = await post("/withdraw/prepare", { account, chainId: chain.id, asset: asset.name, amount });
+      if (mine !== run) return;
+      const message = first && first.typedData && first.typedData.message;
+      if (!first || !first.typedData || !same(first.receiver, account) || (message && typeof message.destination === "string" && !same(message.destination, account))) {
+        throw new Fault(`${APP} prepared a withdrawal that does not go to your wallet. Nothing was signed. Start again from ${APP}.`);
+      }
+      withdraw.amount = isDecimal(first.amount) ? first.amount : amount;
+      const fee = isDecimal(first.fee) ? first.fee : asset.fee;
+      setState("amount", "done", `${withdraw.amount} ${asset.name} to ${chain.name}`);
+
+      setState("sign", "wallet");
+      fill(
+        "sign",
+        status("Confirm the withdrawal in your wallet"),
+        el(
+          "dl",
+          { class: "facts" },
+          fact("Amount", `${withdraw.amount} ${asset.name}`),
+          fact("Exchange fee", `${fee} ${asset.name}`),
+          fact("Goes to", mono(short(account), account), ", your wallet"),
+          fact("Network", chain.name),
+        ),
+        el("p", { class: "hint", text: "Signature 1 of 2. Your wallet shows the same figures: check them there before you sign." }),
+      );
+      const one = await ask("eth_signTypedData_v4", [account, JSON.stringify(first.typedData)]);
+      if (mine !== run) return;
+      setState("sign", "busy");
+      fill("sign", status("Checking the signature"));
+      const second = await post("/withdraw/signed", { signature: one });
+      if (mine !== run) return;
+      setState("sign", "done", ["Signed by", mono(short(account), account)]);
+
+      stepNow = "prove";
+      const late = el("p", { class: "problem", hidden: true, text: "The time is up. The exchange will probably refuse this signature: decline it in your wallet, then sign the withdrawal again." });
+      const restart = el("div", { class: "actions", hidden: true }, button("Sign withdrawal again", () => prepareWithdrawal(amount, false), "quiet"));
+      clock = countdown(Number(second.seconds) > 0 ? Number(second.seconds) : 45, () => {
+        late.hidden = false;
+        restart.hidden = false;
+        say("The time is up. Decline the request in your wallet, then sign the withdrawal again.");
+      });
+      setState("prove", "wallet");
+      fill(
+        "prove",
+        status("Confirm the second signature in your wallet"),
+        el("p", { class: "hint", text: "Signature 2 of 2. It proves to the exchange that this request comes from you. On its own it moves nothing." }),
+        clock.node,
+        late,
+        restart,
+      );
+      const two = await ask("eth_signTypedData_v4", [account, JSON.stringify(second.typedData)]);
+      if (mine !== run) return;
+      clock.stop();
+      setState("prove", "busy");
+      fill("prove", status("Sending the withdrawal to the exchange"));
+      const sent = await post("/withdraw/submit", { signature: two });
+      if (mine !== run) return;
+      setState("prove", "done", ["Signed by", mono(short(account), account)]);
+      const id = sent && (typeof sent.id === "string" || typeof sent.id === "number") ? String(sent.id) : "";
+      finish(
+        "ok",
+        "Withdrawal requested",
+        el(
+          "dl",
+          { class: "facts" },
+          fact("Amount", `${withdraw.amount} ${asset.name}`),
+          fact("Exchange fee", `${fee} ${asset.name}`),
+          fact("Goes to", mono(short(account), account), " on ", chain.name),
+          id ? fact("Request", mono(clip(id, 80))) : null,
+        ),
+        el("p", { text: "It arrives in your wallet after the exchange has processed it. Nothing more is needed from you." }),
+        closing(),
+      );
+    } catch (error) {
+      if (mine !== run) return;
+      if (clock) clock.stop();
+      const refused = stepNow === "prove" && isChainRefusal(error);
+      const again = button("Sign withdrawal", () => prepareWithdrawal(amount, false), refused ? "quiet" : "primary");
+      if (refused) {
+        fail(
+          "prove",
+          [
+            "Your wallet refused the second signature. Nothing was withdrawn.",
+            "That signature is made for the exchange's own network, and this wallet signs only for the network it is on. Use a wallet that signs across networks, such as Rabby, with the same account.",
+          ],
+          button("Use another wallet", startOver),
+          again,
+        );
+      } else if (isChainRefusal(error)) {
+        fail("sign", `Your wallet has to be on ${chain.name} to sign this withdrawal, and it is on another network. Switch it there, then sign again. Nothing was withdrawn.`, again, withdrawAgain());
+      } else if (stepNow === "prove") {
+        fail("prove", `${explain(error, "Nothing was withdrawn.")} Both signatures are made again.`, again, withdrawAgain());
+      } else if (fromForm && steps.get("amount").node.dataset.state !== "done") {
+        withdraw.form.idle(explain(error, "Nothing was withdrawn."));
+      } else {
+        fail("sign", explain(error, "Nothing was withdrawn."), again, withdrawAgain());
+      }
+    } finally {
+      land();
+    }
+  }
+
+  /* ------------------------------------------------------------ the tasks */
+
+  const SERVED = `This page is served by ${APP} from your own computer. It loads nothing from the internet.`;
+  const TASKS = {
+    connect: {
+      title: "Approve a trading key",
+      lead: `Your wallet signs one message. It lets ${APP} place and cancel perpetual futures orders on ${NETWORK} for you, and nothing else.`,
+      steps: [
+        ["wallet", "Connect your wallet"],
+        ["network", signing ? `Switch to ${signing.name}` : "Switch network"],
+        ["sign", "Sign the approval"],
+      ],
+      notesTitle: "Before you sign",
+      notes: [
+        "The trading key was made on this computer and stays in its keychain. Your wallet's own key never leaves your wallet.",
+        "The approval is a signature, not a transaction. Nothing is sent on-chain and no gas is spent.",
+        `The exchange takes the signature for about ${APPROVAL_SECONDS} seconds, so the wallet's prompt is timed.`,
+        SERVED,
+      ],
+      begin: switchForApproval,
+      chain: () => {
+        const state = steps.get("network").node.dataset.state;
+        if (signing && walletChain === signing.id && (state === "failed" || state === "skipped")) setState("network", "done", `Your wallet is on ${signing.name}`);
+        if (signing && walletChain === signing.id && state === "failed") readyToSign();
+      },
+    },
+    deposit: {
+      title: "Deposit to your trading account",
+      lead: "Move funds from your wallet to your trading account on the exchange. You confirm every transaction in your wallet.",
+      steps: [
+        ["wallet", "Connect your wallet"],
+        ["amount", "Choose what to deposit"],
+        ["allow", "Allow the amount"],
+        ["send", "Send the deposit"],
+        ["confirm", "Wait for the network"],
+      ],
+      notesTitle: "How a deposit works",
+      notes: [
+        "Funds go from your wallet, on the network you choose, to your trading account on the exchange.",
+        "Your wallet may ask twice: once to allow the amount, once to send it. Both are transactions and cost that network's gas.",
+        "The exchange credits a deposit after the network confirms it, usually within a few minutes.",
+        SERVED,
+      ],
+      begin: loadDeposit,
+      chain: () => {
+        if (deposit.options && steps.get("amount").node.dataset.state === "active") readBalance();
+      },
+    },
+    withdraw: {
+      title: "Withdraw to your wallet",
+      lead: "Move funds from your trading account on the exchange back to your own wallet. Your wallet signs twice.",
+      steps: [
+        ["wallet", "Connect your wallet"],
+        ["amount", "Choose what to withdraw"],
+        ["sign", "Sign the withdrawal"],
+        ["prove", "Confirm it is you"],
+      ],
+      notesTitle: "How a withdrawal works",
+      notes: [
+        "Funds go from your trading account on the exchange to your own wallet, the one that trades. This page offers no other destination.",
+        "The first signature is the withdrawal itself: amount, fee and destination. The second proves to the exchange that the request is yours.",
+        `${APP}'s trading key cannot withdraw. Only your wallet's signatures can.`,
+        "Both are signatures, not transactions: you pay the exchange's fee, not gas.",
+        SERVED,
+      ],
+      begin: loadWithdraw,
+    },
+  };
+
+  const TASK = TASKS[config.task];
+
+  $("app").textContent = APP;
+  $("net").replaceChildren(
+    el("span", { class: "net-name", text: NETWORK }),
+    config.real ? el("span", { class: "real", text: "Real funds" }) : el("span", { text: "test funds" }),
+  );
+
+  const complete = config.task === "connect" ? ADDRESS.test(config.agent || "") : ADDRESS.test(config.account || "");
+  if (!TASK || !complete) {
+    $("title").textContent = "Nothing to do here";
+    $("lead").textContent = `This page was opened without ${TASK ? "what its task needs" : "a task"}. Start again from ${APP}.`;
+    $("notes").hidden = true;
+    return;
+  }
+
+  document.title = `${TASK.title} | ${APP}`;
+  $("title").textContent = TASK.title;
+  $("lead").textContent = TASK.lead;
+  $("notes").replaceChildren(el("h2", { text: TASK.notesTitle }), el("ul", null, TASK.notes.map((text) => el("li", { text }))));
+  if (config.task === "connect") showStatement();
+  buildSteps(TASK.steps);
+  showWallets();
+
+  window.addEventListener("eip6963:announceProvider", (event) => addWallet(event.detail));
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  // Wallets announce themselves at once; one that only sets `window.ethereum` is found a moment later.
+  setTimeout(() => {
+    looked = true;
+    const known = wallets.length;
+    legacyWallet();
+    if (known === 0 && stage === "wallet" && flight === 0 && !account) showWallets();
+  }, 350);
 })();
 </script>
 </body>

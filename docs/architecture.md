@@ -32,8 +32,8 @@ OctoNeo has three layers. Each one knows only about the layer below it.
 | Module | Responsibility |
 | --- | --- |
 | `model`, `instruments` | Domain types for perpetual futures, and the default watchlist. Money is `rust_decimal::Decimal`, never a float. |
-| `exchange` | The exchange's futures client: market data (prices, candles, order book, trades, funding, open interest), the account, orders. `exchange::signing` holds the API wallet key and makes the EIP-712 signatures. |
-| `connect` | The page served on this computer through which a browser wallet approves the API wallet. |
+| `exchange` | The exchange's futures client: market data (prices, candles, order book, trades, funding, open interest), the account, orders. `exchange::signing` holds the API wallet key and makes the EIP-712 signatures. `exchange::funding` knows the networks funds move on and builds a deposit's transactions and a withdrawal's messages for the trader's own wallet. |
+| `connect` | The page served on this computer through which a browser wallet approves the API wallet, deposits and withdraws. |
 | `indicators` | Deterministic technical readings, so the model never does arithmetic. |
 | `llm` | The model providers. `chat` streams Chat Completions with tool calls for OpenRouter, Cloudflare AI Gateway and LM Studio; `ollama` speaks Ollama's own API. A `Connection` hides which one it is from the agent loop. |
 | `assistant` | The system prompt, the tool definitions, and the agent loop. |
@@ -82,7 +82,7 @@ Everything the market panel and the screener show is public data read on demand:
 
 ## The shell
 
-`src-tauri` is deliberately thin: `lib.rs` maps each command to a `Studio` method, and `keychain.rs` implements `SecretStore` with the system keychain. Turn events travel over a Tauri channel; snapshots from background work (a wallet approval finishing in the browser) are emitted as the `snapshot` event. The shell also opens the approval page in your browser, because the page's address is on this computer and the web view may only open `https` links.
+`src-tauri` is deliberately thin: `lib.rs` maps each command to a `Studio` method, and `keychain.rs` implements `SecretStore` with the system keychain. Turn events travel over a Tauri channel; snapshots from background work (a wallet page finishing in the browser) are emitted as the `snapshot` event. The shell also opens the wallet page in your browser, because the page's address is on this computer and the web view may only open `https` links.
 
 The web view runs under a content security policy that allows no network connections except IPC. Its only capability beyond the app's own commands is opening `https` links in your browser.
 
@@ -106,9 +106,9 @@ The contract is enforced. `crates/octoneo-core/tests/contract.rs` serialises rea
 
 | Layer | How it is tested |
 | --- | --- |
-| Core | Unit tests beside the code. The exchange, all four model providers, the news feeds and MCP are exercised against local mock HTTP servers. The stand-in for the exchange keeps positions and orders, and rejects account requests the API wallet did not sign for the right network. |
+| Core | Unit tests beside the code. The exchange, all four model providers, the news feeds and MCP are exercised against local mock HTTP servers. The stand-in for the exchange keeps positions and orders, rejects account requests the API wallet did not sign for the right network, and takes a withdrawal only with both of the main wallet's signatures. |
 | Contract | `tests/contract.rs`, as above. |
 | Interface | Unit tests for the Markdown renderer, formatters, ticket states and the mock backend. |
 | Whole app | `pnpm smoke` starts a debug build against a stand-in for the exchange and a stand-in model on this computer. It connects a throwaway wallet and the model, types a message into the real window, lets the model draft a ticket, confirms it, and checks that the signed order and its stop arrived and were journaled. |
 
-Tests never reach the internet. `cargo run -p octoneo-core --example probe` reads live public data from both networks when you want to check the client against the real service, and `cargo run -p octoneo-core --example news` reads the real news feeds and shows which publishers let an app read their pages.
+Tests never reach the internet. `cargo run -p octoneo-core --example probe` reads live public data from both networks when you want to check the client against the real service, and `cargo run -p octoneo-core --example news` reads the real news feeds and shows which publishers let an app read their pages. `--example funding` checks the deposit vaults against the exchange and simulates each deposit on its chain without sending it, and `--example wallet_page` serves the wallet page against a stand-in for the exchange.

@@ -750,11 +750,34 @@ pub struct ThreadView {
     pub turns: usize,
 }
 
+/// What a wallet page in the trader's browser is for.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WalletTask {
+    /// Approve the app's API wallet.
+    Connect,
+    Deposit,
+    Withdraw,
+}
+
+/// A wallet page that is waiting for the trader's wallet.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PendingConnectView {
+pub struct PendingWalletView {
     pub network: Network,
+    pub task: WalletTask,
     pub url: String,
+}
+
+/// How the last wallet page ended.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WalletNoticeView {
+    pub network: Network,
+    pub task: WalletTask,
+    /// Whether it ended the way the trader meant it to.
+    pub ok: bool,
+    pub text: String,
 }
 
 /// Everything the user interface renders.
@@ -770,8 +793,8 @@ pub struct Snapshot {
     pub wallets: Vec<WalletView>,
     pub account: Option<AccountView>,
     pub account_error: String,
-    /// Why the last wallet approval ended without a wallet, or empty.
-    pub connect_error: String,
+    /// How the last wallet page ended, until the next one opens.
+    pub wallet_notice: Option<WalletNoticeView>,
     pub assistant: AssistantView,
     pub risk: RiskView,
     pub theme: Theme,
@@ -788,7 +811,7 @@ pub struct Snapshot {
     /// Why a confirmed ticket was not carried out, by ticket id.
     pub failures: HashMap<String, String>,
     pub servers: Vec<McpView>,
-    pub pending_connect: Option<PendingConnectView>,
+    pub pending_wallet: Option<PendingWalletView>,
     pub busy: bool,
 }
 
@@ -861,6 +884,14 @@ pub struct WalletKeyRequest {
 pub struct WalletBrowserRequest {
     pub network: Network,
     pub days: u32,
+}
+
+/// A deposit or a withdrawal to start in the trader's browser.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FundingRequest {
+    pub network: Network,
+    pub task: WalletTask,
 }
 
 #[derive(Clone, Debug, Deserialize)]

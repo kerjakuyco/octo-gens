@@ -145,6 +145,13 @@
   font-size: var(--text-sm);
 }
 
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 /* Two even rows while the page is narrow, one row once there is room for all five. */
 .figures {
   display: grid;
