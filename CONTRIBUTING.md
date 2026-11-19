@@ -16,8 +16,8 @@ Security problems go through [SECURITY.md](SECURITY.md), not a public issue.
 You need [Rust](https://rustup.rs) (stable), [Node.js](https://nodejs.org) 20 or newer, [pnpm](https://pnpm.io) 10, and the [Tauri system dependencies](https://tauri.app/start/prerequisites/).
 
 ```sh
-git clone https://github.com/kerjakuyco/octo-gens.git
-cd octo-gens
+git clone https://github.com/kerjakuyco/octo-neo.git
+cd octo-neo
 pnpm install
 pnpm tauri dev
 ```

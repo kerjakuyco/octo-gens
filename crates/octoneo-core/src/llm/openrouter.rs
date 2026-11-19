@@ -19,7 +19,7 @@ pub const DEFAULT_BASE: &str = "https://openrouter.ai/api/v1";
 pub const NAME: &str = "OpenRouter";
 const HOST: &str = "openrouter.ai";
 /// Sent as attribution headers, as OpenRouter asks of apps.
-const APP_URL: &str = "https://github.com/kerjakuyco/octo-gens";
+const APP_URL: &str = "https://github.com/kerjakuyco/octo-neo";
 const APP_TITLE: &str = "OctoNeo";
 const CATALOG_LIMIT: usize = 16_000_000;
 

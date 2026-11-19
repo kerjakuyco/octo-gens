@@ -6,7 +6,7 @@ members = ["crates/octoneo-core", "src-tauri"]
 version = "0.5.0"
 edition = "2024"
 license = "GPL-3.0-only"
-repository = "https://github.com/kerjakuyco/octo-gens"
+repository = "https://github.com/kerjakuyco/octo-neo"
 authors = ["OctoNeo contributors"]
 rust-version = "1.90"
 

@@ -34,7 +34,7 @@ The app is now called **OctoNeo**. A new interface built around the conversation
 - A model must be able to call tools to be connected. One that cannot is refused, with the reason.
 - The assistant answers more briefly and in plainer words, and explains a term such as funding or liquidation the first time it matters.
 - Settings, the wallet and tool servers are in one Settings window. Trading limits apply as you change them, each list of models says what its figures mean, and a local model server that is not running says what to start.
-- **The name.** Octo Gens is now OctoNeo, in the app, the installers, the documentation and the code. The data folder, the keychain entry and the app's identifier keep their names, so an existing install keeps its wallet, settings and conversations. `OCTOGENS_*` environment variables are now `OCTONEO_*`.
+- **The name.** Octo Gens is now OctoNeo, in the app, the installers, the documentation and the code. The repository is now [kerjakuyco/octo-neo](https://github.com/kerjakuyco/octo-neo); the old address redirects there. The data folder, the keychain entry and the app's identifier keep their names, so an existing install keeps its wallet, settings and conversations. `OCTOGENS_*` environment variables are now `OCTONEO_*`.
 - **The wallet page** your browser opens was redesigned: it finds the wallets in your browser and lets you pick one, shows each step and where you are in it, and counts down the seconds the exchange gives a signature.
 - The app, its documentation and the assistant's instructions say "the exchange" instead of naming it.
 - **Markets** lists the most traded markets first.

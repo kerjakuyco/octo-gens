@@ -18,7 +18,7 @@ OctoNeo is a desktop AI trading assistant for perpetual futures on a decentralis
 
 ## Install
 
-Installers for Windows, macOS and Linux are attached to each release on the [Releases page](https://github.com/kerjakuyco/octo-gens/releases). If there is no release for your system yet, [build it yourself](#build-from-source).
+Installers for Windows, macOS and Linux are attached to each release on the [Releases page](https://github.com/kerjakuyco/octo-neo/releases). If there is no release for your system yet, [build it yourself](#build-from-source).
 
 The app opens on **mainnet** prices. Market data needs no wallet, no account and no model.
 

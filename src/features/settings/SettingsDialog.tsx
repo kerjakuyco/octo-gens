@@ -49,7 +49,7 @@ function AppearanceTab() {
 function AboutTab() {
   const { version } = useSnapshot();
   const links: [label: string, url: string][] = [
-    ["Source code", "https://github.com/kerjakuyco/octo-gens"],
+    ["Source code", "https://github.com/kerjakuyco/octo-neo"],
     ["Charts by TradingView", "https://www.tradingview.com/"],
   ];
   return (

@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security problem
-    url: https://github.com/kerjakuyco/octo-gens/security/advisories/new
+    url: https://github.com/kerjakuyco/octo-neo/security/advisories/new
     about: Please report vulnerabilities privately, not in a public issue.

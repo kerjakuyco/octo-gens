@@ -4,7 +4,7 @@ OctoNeo holds a key that can trade on your exchange account, so security reports
 
 ## Reporting a vulnerability
 
-Please do not open a public issue. Use **Report a vulnerability** under the repository's [Security tab](https://github.com/kerjakuyco/octo-gens/security/advisories/new), which opens a private advisory visible only to the maintainers.
+Please do not open a public issue. Use **Report a vulnerability** under the repository's [Security tab](https://github.com/kerjakuyco/octo-neo/security/advisories/new), which opens a private advisory visible only to the maintainers.
 
 Include what you found, how to reproduce it, and what an attacker could do with it. Never include a real key or seed phrase; revoke any key that was exposed while testing.
 
