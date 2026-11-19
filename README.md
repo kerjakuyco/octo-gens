@@ -61,21 +61,6 @@ Things to know:
 - **One-way mode.** The app keeps one net position per market. An account in hedge mode is shown with an explanation and is not traded.
 - **Ending access.** *Disconnect* forgets the key on this computer. The approval itself ends on its expiry date, or sooner if you remove it on the exchange's API wallet page.
 
-## Market data
-
-![The screener of every market the exchange lists](docs/images/markets-dark.png)
-
-| Where | What it shows |
-| --- | --- |
-| **Markets** | Every market the exchange lists, most traded first: price, 24h change, volume and funding. Sort by any column, search, and add a market to your watchlist. |
-| The market panel, beside the conversation | A chart on 15m, 1h, 4h and 1d for the market in focus, with its mark price, funding and the time to the next payment. |
-| *Book* | The best bids and asks with their running size, the spread, the share of resting size on each side, and the latest trades. |
-| *Funding* | The rate now and what it comes to over a year, two weeks of settled rates, and open interest. |
-| *Technicals* | Trend, RSI, MACD, ATR, moving averages, support and resistance on four timeframes side by side. |
-| *Watchlist* | Your markets with a 90-day sparkline each. |
-
-The panel follows what the assistant looks at, and it reads straight from the exchange: none of it needs a wallet or a model.
-
 ## Deposit and withdraw
 
 Funds move between your own wallet and your trading account. **Deposit** and **Withdraw** are in **Settings** under *Wallet*, and on the **Account** page. Each opens a page the app serves on your computer, in the browser where your wallet is, like the approval does.
@@ -93,6 +78,21 @@ Funds move between your own wallet and your trading account. **Deposit** and **W
 - **MetaMask and withdrawals.** The exchange asks for a signature that names its own network, and MetaMask signs only for the network it is on, so it refuses. Rabby and other wallets that sign across networks work. Deposits work with every wallet.
 
 [docs/exchange.md](docs/exchange.md#deposits-and-withdrawals) has the details, including the vault addresses.
+
+## Market data
+
+![The screener of every market the exchange lists](docs/images/markets-dark.png)
+
+| Where | What it shows |
+| --- | --- |
+| **Markets** | Every market the exchange lists, most traded first: price, 24h change, volume and funding. Sort by any column, search, and add a market to your watchlist. |
+| The market panel, beside the conversation | A chart on 15m, 1h, 4h and 1d for the market in focus, with its mark price, funding and the time to the next payment. |
+| *Book* | The best bids and asks with their running size, the spread, the share of resting size on each side, and the latest trades. |
+| *Funding* | The rate now and what it comes to over a year, two weeks of settled rates, and open interest. |
+| *Technicals* | Trend, RSI, MACD, ATR, moving averages, support and resistance on four timeframes side by side. |
+| *Watchlist* | Your markets with a 90-day sparkline each. |
+
+The panel follows what the assistant looks at, and it reads straight from the exchange: none of it needs a wallet or a model.
 
 ## What the assistant can do
 
@@ -169,7 +169,7 @@ To work on the interface alone, `pnpm dev` runs it in a browser against a built-
 ## Project layout
 
 ```
-crates/octoneo-core/   Trading core in Rust: exchange client, wallet signing, indicators, news, model providers, assistant. No UI.
+crates/octoneo-core/    Trading core in Rust: exchange client, wallet signing, indicators, news, model providers, assistant. No UI.
 src-tauri/              Desktop shell: window, keychain, one command per core action.
 src/                    Interface in React and TypeScript.
 docs/                   Architecture, the assistant, the exchange.
