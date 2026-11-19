@@ -37,10 +37,9 @@ jobs:
         include:
           - name: windows-x64
             os: windows-latest
+          # Apple silicon only: there is no installer for Intel Macs.
           - name: macos-arm64
             os: macos-latest
-          - name: macos-x64
-            os: macos-15-intel
           - name: linux-x64
             os: ubuntu-22.04
     runs-on: ${{ matrix.os }}
