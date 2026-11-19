@@ -15,7 +15,7 @@ pub const JSON_LIMIT: usize = 2_000_000;
 /// must not be replayed to a host the venue points at.
 pub fn http_client() -> Result<Client> {
     Client::builder()
-        .user_agent(concat!("OctoGens/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("OctoNeo/", env!("CARGO_PKG_VERSION")))
         .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(Duration::from_secs(10))
         .build()

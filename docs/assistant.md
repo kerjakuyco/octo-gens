@@ -1,6 +1,6 @@
 # The assistant
 
-This page describes who answers your messages, how the model is instructed, which tools it has, and the rules that keep it from doing anything you did not approve. The source of truth is the code in `crates/octogens-core/src/assistant` and `crates/octogens-core/src/llm`.
+This page describes who answers your messages, how the model is instructed, which tools it has, and the rules that keep it from doing anything you did not approve. The source of truth is the code in `crates/octoneo-core/src/assistant` and `crates/octoneo-core/src/llm`.
 
 ## Who answers
 
@@ -28,7 +28,7 @@ A model that cannot call tools is refused whichever provider it comes from, beca
 
 ## What the model is told
 
-The standing instructions are `SYSTEM_PROMPT` in [`prompt.rs`](../crates/octogens-core/src/assistant/prompt.rs). They never change between requests, so providers can cache them. In summary:
+The standing instructions are `SYSTEM_PROMPT` in [`prompt.rs`](../crates/octoneo-core/src/assistant/prompt.rs). They never change between requests, so providers can cache them. In summary:
 
 - **Role.** It works beside one trader, who makes every decision.
 - **The market.** Perpetual futures on a decentralised exchange, which the prompt does not name: no expiry, long or short, leverage, one net position per market. Funding is a real cost of holding. A stop beyond the liquidation price protects nothing.
@@ -111,7 +111,7 @@ Every model gets the same two tools, whichever provider it comes from, and neith
 | Federal Reserve press releases | `https://www.federalreserve.gov/feeds/press_all.xml` |
 | Yahoo Finance | `https://feeds.finance.yahoo.com/rss/2.0/headline`, by ticker |
 
-The list is `PUBLISHERS` in [`web/mod.rs`](../crates/octogens-core/src/web/mod.rs). Together the feeds hold the last day or two of news, about 300 articles.
+The list is `PUBLISHERS` in [`web/mod.rs`](../crates/octoneo-core/src/web/mod.rs). Together the feeds hold the last day or two of news, about 300 articles.
 
 **Shares, funds and commodities.** Yahoo Finance files its news by ticker and has no feed of everything, so it is read in two ways. The news filed under the S&P 500 is read with the other feeds, as the news of the stock market. And when a search names a market that is not a coin, the headlines filed under that ticker are fetched as well. The exchange says which markets track a share, a fund or a commodity, and for most shares the company's name: `NVDA`, `NVDAUSDT` and "nvidia" all bring the news filed under `NVDA`, and `XAU` brings the news filed under the gold future. Up to three tickers are looked up for one search. Yahoo Finance gathers articles from other publishers, so its headlines can lead to their sites. This is not a search of the whole web: a general search engine needs an account and a key, and the news feeds of the large search engines forbid this kind of use.
 
@@ -178,6 +178,6 @@ Cloudflare lists only its own Workers AI models. A model from another provider i
 ## Changing the prompt or a tool
 
 1. Edit `prompt.rs` or `assistant/tools.rs`. Keep each rule's reason.
-2. Run `cargo test -p octogens-core assistant`. One test checks that the safety rules are still present; others check the tool schemas.
+2. Run `cargo test -p octoneo-core assistant`. One test checks that the safety rules are still present; others check the tool schemas.
 3. If a tool should show a card, emit it in `studio/tools.rs` and add the variant to `CardView` in both `studio/view.rs` and `src/api/types.ts`. `tests/contract.rs` fails if the two differ.
 4. Try it in the app with a model on testnet before mainnet.

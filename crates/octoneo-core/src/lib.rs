@@ -1,4 +1,4 @@
-//! The trading core of Octo Gens.
+//! The trading core of OctoNeo.
 //!
 //! This crate has no user interface. It talks to the exchange, signs with an API
 //! wallet, computes indicators and runs the assistant. The desktop shell in

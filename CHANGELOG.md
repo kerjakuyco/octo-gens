@@ -1,6 +1,6 @@
 # Changelog
 
-Notable changes to Octo Gens. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
+Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
@@ -32,6 +32,7 @@ A new interface built around the conversation, four ways to connect a model, muc
 - A model must be able to call tools to be connected. One that cannot is refused, with the reason.
 - The assistant answers more briefly and in plainer words, and explains a term such as funding or liquidation the first time it matters.
 - Settings, the wallet and tool servers are in one Settings window. Trading limits apply as you change them, each list of models says what its figures mean, a wallet's card links to deposits and withdrawals, and a local model server that is not running says what to start.
+- **The name.** Octo Gens is now OctoNeo, in the app, the installers, the documentation and the code. The data folder, the keychain entry and the app's identifier keep their names, so an existing install keeps its wallet, settings and conversations. `OCTOGENS_*` environment variables are now `OCTONEO_*`.
 - The app, its documentation and the assistant's instructions say "the exchange" instead of naming it.
 - **Markets** lists the most traded markets first.
 - The app opens on a new conversation instead of the last one.
@@ -50,13 +51,14 @@ A new interface built around the conversation, four ways to connect a model, muc
 
 ### Upgrading from 0.4
 
+- The app installs as OctoNeo, beside any Octo Gens you have. Quit and remove the old app; the new one picks up its wallet, settings and conversations as they are.
 - Your OpenRouter key and model carry over. If you had chosen *Built-in agents*, connect a model at the first launch.
 - An Ollama model chosen in 0.4 stays selected. If it cannot use tools, the first answer says so; pick one that can in Settings.
 - Earlier conversations appear in the sidebar.
 
 ## 0.4.0
 
-Octo Gens now trades perpetual futures on a decentralised exchange with your own web3 wallet. Binance, Bybit and OKX, the sample tape and the simulated paper account are gone; the testnet is the place to practise.
+OctoNeo now trades perpetual futures on a decentralised exchange with your own web3 wallet. Binance, Bybit and OKX, the sample tape and the simulated paper account are gone; the testnet is the place to practise.
 
 ### Added
 
@@ -88,7 +90,7 @@ Octo Gens now trades perpetual futures on a decentralised exchange with your own
 
 ## 0.3.0
 
-Octo Gens was rewritten as a Tauri app: a Rust core with a React interface. Earlier releases were a Python app; paper accounts in your data folder carry over.
+OctoNeo was rewritten as a Tauri app: a Rust core with a React interface. Earlier releases were a Python app; paper accounts in your data folder carry over.
 
 ### Added
 

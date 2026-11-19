@@ -156,7 +156,7 @@ fn client(guard: Guard) -> Result<Client> {
     });
     let builder = Client::builder()
         // Says plainly what is asking. A site that does not want to be read by an app can tell.
-        .user_agent(concat!("Mozilla/5.0 (compatible; OctoGens/", env!("CARGO_PKG_VERSION"), ")"))
+        .user_agent(concat!("Mozilla/5.0 (compatible; OctoNeo/", env!("CARGO_PKG_VERSION"), ")"))
         .redirect(redirects)
         .referer(false)
         // Some sites answer with tens of kilobytes of headers, more than is allowed for by default.

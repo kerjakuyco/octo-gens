@@ -709,7 +709,7 @@ async fn a_wallet_approval_is_sent_as_the_exact_message_that_was_signed() {
     assert_eq!(
         message,
         format!(
-            "user={user}&nonce={nonce}&agentName=OctoGens&agentAddress={AGENT}&expired=1800000000000&signatureChainId=56&canSpotTrade=false&canPerpTrade=true&canWithdraw=false&ipWhitelist="
+            "user={user}&nonce={nonce}&agentName=OctoNeo&agentAddress={AGENT}&expired=1800000000000&signatureChainId=56&canSpotTrade=false&canPerpTrade=true&canWithdraw=false&ipWhitelist="
         )
     );
     let signature = user_key.sign(APPROVAL_CHAIN_ID, &message);

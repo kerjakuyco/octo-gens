@@ -1,6 +1,6 @@
-# Octo Gens
+# OctoNeo
 
-Octo Gens is a desktop AI trading assistant for perpetual futures on a decentralised exchange. You chat with it the way you chat with any AI assistant. It reads live market data, sizes positions from the risk you accept, and drafts order tickets. You trade from your own web3 wallet and confirm every order. It runs on Windows, macOS and Linux.
+OctoNeo is a desktop AI trading assistant for perpetual futures on a decentralised exchange. You chat with it the way you chat with any AI assistant. It reads live market data, sizes positions from the risk you accept, and drafts order tickets. You trade from your own web3 wallet and confirm every order. It runs on Windows, macOS and Linux.
 
 ![A conversation with the assistant beside the live market panel](docs/images/assistant-dark.png)
 
@@ -13,7 +13,7 @@ Octo Gens is a desktop AI trading assistant for perpetual futures on a decentral
 - **Practice first.** Switch to the testnet for the same order flow with test funds.
 
 > [!WARNING]
-> Octo Gens is early software and not financial advice. Perpetual futures are leveraged: a position can be liquidated and lose its whole margin quickly. Practise on testnet first, and trade on mainnet only with money you can afford to lose.
+> OctoNeo is early software and not financial advice. Perpetual futures are leveraged: a position can be liquidated and lose its whole margin quickly. Practise on testnet first, and trade on mainnet only with money you can afford to lose.
 
 ## Install
 
@@ -45,7 +45,7 @@ The app checks a model before it keeps it: the key or token must be accepted, an
 
 ## Connect a wallet
 
-Octo Gens trades through an **API wallet**: a separate key that your own wallet approves for trading perpetuals. It is approved without spot trading and without withdrawal. Open **Settings**, then **Wallet**, and choose one of two ways. Each network has its own wallet.
+OctoNeo trades through an **API wallet**: a separate key that your own wallet approves for trading perpetuals. It is approved without spot trading and without withdrawal. Open **Settings**, then **Wallet**, and choose one of two ways. Each network has its own wallet.
 
 | Way | What happens | Good for |
 | --- | --- | --- |
@@ -119,7 +119,9 @@ Everything stays on your computer.
 | What | Where |
 | --- | --- |
 | Conversations, activity, preferences | Windows `%LOCALAPPDATA%\Octo Gens\`, macOS `~/Library/Application Support/Octo Gens/`, Linux `~/.local/share/octo-gens/` |
-| API wallet keys, OpenRouter key, Cloudflare API token | Your system keychain |
+| API wallet keys, OpenRouter key, Cloudflare API token | Your system keychain, under `org.octogens.desktop` |
+
+The folder and the keychain entry keep the name the app had before it was called OctoNeo, so an existing install keeps its wallet, settings and conversations.
 
 The interface has no network access of its own. Requests go from the app's core directly to the exchange, to the model provider you chose and, while web search is on, to news publishers. Nowhere else. There is no telemetry.
 
@@ -129,9 +131,9 @@ The interface has no network access of its own. Requests go from the app's core 
 
 | Environment variable | Effect |
 | --- | --- |
-| `OCTOGENS_DATA_DIR` | Use another data folder |
-| `OCTOGENS_NO_KEYCHAIN` | Keep keys in memory for the session instead of the system keychain. Meant for tests |
-| `OCTOGENS_MAINNET_URL`, `OCTOGENS_TESTNET_URL` | Send a network's API requests to another origin. Meant for tests; see [docs/exchange.md](docs/exchange.md) |
+| `OCTONEO_DATA_DIR` | Use another data folder |
+| `OCTONEO_NO_KEYCHAIN` | Keep keys in memory for the session instead of the system keychain. Meant for tests |
+| `OCTONEO_MAINNET_URL`, `OCTONEO_TESTNET_URL` | Send a network's API requests to another origin. Meant for tests; see [docs/exchange.md](docs/exchange.md) |
 
 ## Build from source
 
@@ -148,7 +150,7 @@ To work on the interface alone, `pnpm dev` runs it in a browser against a built-
 ## Project layout
 
 ```
-crates/octogens-core/   Trading core in Rust: exchange client, wallet signing, indicators, news, model providers, assistant. No UI.
+crates/octoneo-core/   Trading core in Rust: exchange client, wallet signing, indicators, news, model providers, assistant. No UI.
 src-tauri/              Desktop shell: window, keychain, one command per core action.
 src/                    Interface in React and TypeScript.
 docs/                   Architecture, the assistant, the exchange.

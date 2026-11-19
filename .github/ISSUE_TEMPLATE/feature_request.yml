@@ -1,5 +1,5 @@
 name: Idea
-description: Suggest something Octo Gens should do.
+description: Suggest something OctoNeo should do.
 labels: [enhancement]
 body:
   - type: textarea

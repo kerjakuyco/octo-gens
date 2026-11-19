@@ -1,6 +1,6 @@
 [package]
-name = "octogens-core"
-description = "Trading core of Octo Gens: the exchange client for perpetual futures, wallet signing, indicators, news and the assistant loop"
+name = "octoneo-core"
+description = "Trading core of OctoNeo: the exchange client for perpetual futures, wallet signing, indicators, news and the assistant loop"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -9,22 +9,22 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use chrono::Utc;
-use octogens_core::assistant::tools::{PlanRequest, plan_position};
-use octogens_core::exchange::{Premium, Tick, Trade};
-use octogens_core::indicators::analyze;
-use octogens_core::llm::{ModelInfo, Usage};
-use octogens_core::mcp::{ToolInfo, Transport};
-use octogens_core::model::{
+use octoneo_core::assistant::tools::{PlanRequest, plan_position};
+use octoneo_core::exchange::{Premium, Tick, Trade};
+use octoneo_core::indicators::analyze;
+use octoneo_core::llm::{ModelInfo, Usage};
+use octoneo_core::mcp::{ToolInfo, Transport};
+use octoneo_core::model::{
     Account, AssetBalance, Candle, DayStats, Market, Network, OpenOrder, OrderBook, Position, Quote, Side,
     Timeframe,
 };
-use octogens_core::store::MemorySecrets;
-use octogens_core::studio::view::{
+use octoneo_core::store::MemorySecrets;
+use octoneo_core::studio::view::{
     AccountView, CandleSeries, CardView, FundingView, InstrumentView, MarketRow, McpView, NewsView,
     OrderBookView, PendingConnectView, PlanView, QuoteView, RunStatus, RunView, StepStatus, StepView,
     TechnicalFrame, TechnicalsView, ThreadView, TicketView, TradeView, Trend, TurnEvent, WalletView,
 };
-use octogens_core::studio::{Studio, StudioConfig};
+use octoneo_core::studio::{Studio, StudioConfig};
 use rust_decimal::Decimal;
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -193,7 +193,7 @@ fn every_view_sends_exactly_the_fields_the_interface_declares() {
     same("ProviderView", &snapshot.assistant.providers[0], &contract);
     assert_eq!(
         snapshot.assistant.providers.iter().map(|p| p.id).collect::<Vec<_>>(),
-        octogens_core::store::Provider::CONNECTABLE,
+        octoneo_core::store::Provider::CONNECTABLE,
         "one entry per provider a model can be connected through, in display order"
     );
     same("RiskView", &snapshot.risk, &contract);
@@ -441,9 +441,9 @@ fn every_view_sends_exactly_the_fields_the_interface_declares() {
 
 #[test]
 fn requests_from_the_interface_are_understood_field_for_field() {
-    use octogens_core::mcp::McpConnectRequest;
-    use octogens_core::store::{Effort, Provider, Theme};
-    use octogens_core::studio::view::{
+    use octoneo_core::mcp::McpConnectRequest;
+    use octoneo_core::store::{Effort, Provider, Theme};
+    use octoneo_core::studio::view::{
         AssistantRequest, ModelsRequest, RiskRequest, TicketRequest, WalletBrowserRequest, WalletKeyRequest,
     };
 
@@ -528,10 +528,10 @@ fn requests_from_the_interface_are_understood_field_for_field() {
     assert_eq!(
         union("Trend"),
         wire(&[
-            octogens_core::studio::view::Trend::Uptrend,
-            octogens_core::studio::view::Trend::Downtrend,
-            octogens_core::studio::view::Trend::Mixed,
-            octogens_core::studio::view::Trend::Unknown
+            octoneo_core::studio::view::Trend::Uptrend,
+            octoneo_core::studio::view::Trend::Downtrend,
+            octoneo_core::studio::view::Trend::Mixed,
+            octoneo_core::studio::view::Trend::Unknown
         ])
     );
     assert_eq!(union("Effort"), wire(&[Effort::Auto, Effort::Low, Effort::Medium, Effort::High]));

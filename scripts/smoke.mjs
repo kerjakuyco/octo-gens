@@ -22,7 +22,7 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const executable = process.platform === "win32" ? "octo-gens.exe" : "octo-gens";
+const executable = process.platform === "win32" ? "octoneo.exe" : "octoneo";
 const e2e = process.argv.includes("--e2e");
 const given = process.argv.slice(2).find((arg) => !arg.startsWith("--"));
 const binary = given ?? (e2e ? ["debug"] : ["release", "debug"]).map((profile) => join("target", profile, executable)).find(existsSync);
@@ -261,15 +261,15 @@ await new Promise((resolve) => model.listen(0, "127.0.0.1", resolve));
 
 /* ------------------------------------------------------------------ the app */
 
-const dataDir = mkdtempSync(join(tmpdir(), "octogens-smoke-"));
+const dataDir = mkdtempSync(join(tmpdir(), "octoneo-smoke-"));
 const env = {
   ...process.env,
-  OCTOGENS_DATA_DIR: dataDir,
+  OCTONEO_DATA_DIR: dataDir,
   // Secrets stay in memory: the test must not read a real key, or wait on the system asking whether it may.
-  OCTOGENS_NO_KEYCHAIN: "1",
-  OCTOGENS_MAINNET_URL: origin,
-  OCTOGENS_TESTNET_URL: origin,
-  ...(e2e ? { OCTOGENS_SELFTEST: "1", OCTOGENS_SELFTEST_MODEL_URL: `http://127.0.0.1:${model.address().port}` } : {}),
+  OCTONEO_NO_KEYCHAIN: "1",
+  OCTONEO_MAINNET_URL: origin,
+  OCTONEO_TESTNET_URL: origin,
+  ...(e2e ? { OCTONEO_SELFTEST: "1", OCTONEO_SELFTEST_MODEL_URL: `http://127.0.0.1:${model.address().port}` } : {}),
 };
 const app = spawn(binary, [], { env, stdio: "inherit" });
 let exited = null;

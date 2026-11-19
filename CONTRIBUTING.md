@@ -1,4 +1,4 @@
-# Contributing to Octo Gens
+# Contributing to OctoNeo
 
 Thanks for helping. This guide gets you from a clone to a pull request.
 
@@ -26,15 +26,15 @@ You do not need a wallet or a model key. Market data is public, and the tests ru
 
 | To work on | Run | Needs |
 | --- | --- | --- |
-| The core | `cargo test -p octogens-core` | Rust only |
+| The core | `cargo test -p octoneo-core` | Rust only |
 | The interface | `pnpm dev` (browser, mock core) | Node only |
 | The whole app | `pnpm tauri dev` | Both |
 
 Two examples run the core without a window. Both only read, and sign nothing:
 
 ```sh
-cargo run -p octogens-core --example probe   # live market data from both networks
-cargo run -p octogens-core --example news    # the real news feeds, and which publishers let an app read a page
+cargo run -p octoneo-core --example probe   # live market data from both networks
+cargo run -p octoneo-core --example news    # the real news feeds, and which publishers let an app read a page
 ```
 
 ## Before you open a pull request
@@ -66,7 +66,7 @@ APPLE_SIGNING_IDENTITY="Apple Development: you@example.com (TEAMID)" pnpm tauri 
 
 The first launch of a build signed this way still asks once for each key an earlier build stored; choose *Always Allow* and later builds are not asked again. Never commit an identity: `tauri.conf.json` stays on the ad-hoc signature (`"-"`).
 
-The smoke test does not touch the keychain. It sets `OCTOGENS_NO_KEYCHAIN`, which keeps keys in memory for the session.
+The smoke test does not touch the keychain. It sets `OCTONEO_NO_KEYCHAIN`, which keeps keys in memory for the session.
 
 ## What we look for
 
@@ -77,7 +77,7 @@ The smoke test does not touch the keychain. It sets `OCTOGENS_NO_KEYCHAIN`, whic
 - **A model answers, or nothing does.** There are no rule-based replies and no typed commands. Do not add a path that answers a message without the connected model.
 - **The app never asks for withdrawal.** The API wallet is approved for perpetual trading only. Do not add a request that moves funds, and never ask for a wallet's own key or seed phrase.
 - **Secrets stay in the keychain.** Nothing secret goes in preferences, the journal, logs, snapshots or errors.
-- **The contract stays in step.** If you change a type in `src/api/types.ts` or `crates/octogens-core/src/studio/view.rs`, change the other. `tests/contract.rs` will tell you if you missed one.
+- **The contract stays in step.** If you change a type in `src/api/types.ts` or `crates/octoneo-core/src/studio/view.rs`, change the other. `tests/contract.rs` will tell you if you missed one.
 - **Small dependencies.** This app holds a key that can trade, so every new dependency is a risk. Explain why you need one.
 - **Interface copy** is short, plain and in sentence case: a label, not an explanation. If a screen needs a paragraph to be understood, change the screen. The font stack is the system UI stack; do not add font files.
 

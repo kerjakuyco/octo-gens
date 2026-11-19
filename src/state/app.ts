@@ -86,6 +86,7 @@ export interface AppState {
 
 const PANEL_TABS: readonly PanelTab[] = ["book", "funding", "technicals", "watchlist"];
 
+// The prefix keeps the name the app had before it was called OctoNeo, so what was remembered is still found.
 function remembered(key: string): string | null {
   try {
     return globalThis.localStorage?.getItem(`octogens.${key}`) ?? null;

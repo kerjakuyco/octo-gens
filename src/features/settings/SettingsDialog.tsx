@@ -55,7 +55,7 @@ function AboutTab() {
   return (
     <div className="about">
       <div>
-        <p className="about-name">Octo Gens</p>
+        <p className="about-name">OctoNeo</p>
         <p className="muted num">Version {version}</p>
       </div>
       <ul className="about-links">

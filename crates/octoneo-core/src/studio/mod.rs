@@ -109,7 +109,7 @@ const SOURCES_KEPT: usize = 400;
 pub struct StudioConfig {
     pub dir: PathBuf,
     pub secrets: Arc<dyn SecretStore>,
-    /// Alternative exchange origins per network. Used by tests and by `OCTOGENS_*_URL`.
+    /// Alternative exchange origins per network. Used by tests and by `OCTONEO_*_URL`.
     pub exchange_bases: HashMap<Network, String>,
     /// Alternative origins for the cloud model providers. Used by tests.
     pub openrouter_base: Option<String>,

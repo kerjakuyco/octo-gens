@@ -1,6 +1,6 @@
 [package]
-name = "octogens-desktop"
-description = "Octo Gens desktop app: a thin Tauri shell over octogens-core"
+name = "octoneo-desktop"
+description = "OctoNeo desktop app: a thin Tauri shell over octoneo-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -14,11 +14,11 @@ workspace = true
 [lib]
 # The `_lib` suffix keeps the library name distinct from the binary's, which
 # Windows needs (https://github.com/rust-lang/cargo/issues/8519).
-name = "octogens_desktop_lib"
+name = "octoneo_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "octo-gens"
+name = "octoneo"
 path = "src/main.rs"
 
 [build-dependencies]
@@ -26,7 +26,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 keyring = "4"
-octogens-core = { path = "../crates/octogens-core" }
+octoneo-core = { path = "../crates/octoneo-core" }
 serde.workspace = true
 serde_json.workspace = true
 tauri = { version = "2", features = [] }

@@ -2,13 +2,13 @@
  * The contract between the React UI and the Rust core.
  *
  * Every type here mirrors a `serde` struct in
- * `crates/octogens-core/src/studio/view.rs` (camelCase on the wire), and
- * `crates/octogens-core/tests/contract.rs` fails if the two drift apart.
+ * `crates/octoneo-core/src/studio/view.rs` (camelCase on the wire), and
+ * `crates/octoneo-core/tests/contract.rs` fails if the two drift apart.
  * Decimal amounts cross the bridge as strings so no precision is lost; format
  * them for display, never do money math on them. Indicator readings (RSI,
  * moving averages, levels, percentages) are plain numbers.
  *
- * Octo Gens trades perpetual futures on one exchange. `mainnet` is real money;
+ * OctoNeo trades perpetual futures on one exchange. `mainnet` is real money;
  * `testnet` is the exchange's practice network with test funds. Every chat message is
  * answered by a language model; there are no rule-based agents.
  */

@@ -2,17 +2,17 @@
 //! the watchlist, the screener, and everything the market panel shows. It is
 //! read-only: no wallet and no model are connected, and nothing is signed or sent.
 //!
-//!     cargo run -p octogens-core --example probe
+//!     cargo run -p octoneo-core --example probe
 //!
 //! Useful to check that exchange is reachable from your network and that its
 //! answers still parse after a change to the client.
 
 use std::sync::Arc;
 
-use octogens_core::model::Network;
-use octogens_core::store::MemorySecrets;
-use octogens_core::studio::view::Snapshot;
-use octogens_core::studio::{Studio, StudioConfig};
+use octoneo_core::model::Network;
+use octoneo_core::store::MemorySecrets;
+use octoneo_core::studio::view::Snapshot;
+use octoneo_core::studio::{Studio, StudioConfig};
 
 fn report(title: &str, snapshot: &Snapshot) {
     println!("\n== {title} ==");
@@ -109,8 +109,8 @@ async fn panel(studio: &Studio, symbol: &str) {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), octogens_core::DeskError> {
-    let folder = std::env::temp_dir().join(format!("octogens-probe-{}", std::process::id()));
+async fn main() -> Result<(), octoneo_core::DeskError> {
+    let folder = std::env::temp_dir().join(format!("octoneo-probe-{}", std::process::id()));
     let studio = Studio::open(StudioConfig::new(folder.clone(), Arc::new(MemorySecrets::default())))?;
 
     let snapshot = studio.boot().await?;

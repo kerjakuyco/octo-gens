@@ -124,7 +124,7 @@ async fn the_catalog_keeps_text_chat_models_and_reads_their_capabilities() {
     );
     assert_eq!(
         requests[0].headers.get("x-openrouter-title").and_then(|v| v.to_str().ok()),
-        Some("Octo Gens")
+        Some("OctoNeo")
     );
 }
 

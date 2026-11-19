@@ -26,7 +26,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Octo Gens version
+      label: OctoNeo version
       description: Shown in Settings under About.
     validations:
       required: true

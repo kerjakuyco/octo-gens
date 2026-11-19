@@ -1,6 +1,6 @@
 //! The desktop shell: a window, a keychain, and one command per studio action.
 //!
-//! All behaviour lives in `octogens-core`. This crate only translates between
+//! All behaviour lives in `octoneo-core`. This crate only translates between
 //! the web view and the [`Studio`]: commands take the arguments named in
 //! `src/api/types.ts`, return a fresh [`Snapshot`], and fail with a plain
 //! message the interface shows as-is. The web view has no network access of
@@ -11,17 +11,17 @@ mod keychain;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use octogens_core::DeskError;
-use octogens_core::llm::ModelInfo;
-use octogens_core::mcp::{McpConnectRequest, ToolInfo};
-use octogens_core::model::Network;
-use octogens_core::store::{Provider, SecretStore, Theme};
-use octogens_core::studio::view::{
+use octoneo_core::DeskError;
+use octoneo_core::llm::ModelInfo;
+use octoneo_core::mcp::{McpConnectRequest, ToolInfo};
+use octoneo_core::model::Network;
+use octoneo_core::store::{Provider, SecretStore, Theme};
+use octoneo_core::studio::view::{
     AssistantRequest, CandleSeries, FundingView, MarketRow, ModelsRequest, OrderBookView, RiskRequest,
     Snapshot, TechnicalsView, TicketRequest, TradeView, TurnEvent, TurnSink, WalletBrowserRequest,
     WalletKeyRequest,
 };
-use octogens_core::studio::{Studio, StudioConfig};
+use octoneo_core::studio::{Studio, StudioConfig};
 use tauri::ipc::Channel;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 use tauri_plugin_opener::OpenerExt;
@@ -46,24 +46,26 @@ impl TurnSink for ChannelSink {
     }
 }
 
-/// Where the desk keeps its files. `OCTOGENS_DATA_DIR` overrides the default,
+/// Where the desk keeps its files. `OCTONEO_DATA_DIR` overrides the default,
 /// which is the same per-user folder earlier releases used.
 fn data_directory(app: &AppHandle) -> Result<PathBuf, tauri::Error> {
-    if let Some(custom) = std::env::var_os("OCTOGENS_DATA_DIR").filter(|value| !value.is_empty()) {
+    if let Some(custom) = std::env::var_os("OCTONEO_DATA_DIR").filter(|value| !value.is_empty()) {
         return Ok(PathBuf::from(custom));
     }
+    // The folder keeps the name the app had before it was called OctoNeo, so an
+    // existing install finds its conversations and settings.
     let folder =
         if cfg!(any(target_os = "windows", target_os = "macos")) { "Octo Gens" } else { "octo-gens" };
     Ok(app.path().local_data_dir()?.join(folder))
 }
 
-/// Another origin for a network's API, from `OCTOGENS_MAINNET_URL` or
-/// `OCTOGENS_TESTNET_URL`. Used by the smoke test, which serves a
+/// Another origin for a network's API, from `OCTONEO_MAINNET_URL` or
+/// `OCTONEO_TESTNET_URL`. Used by the smoke test, which serves a
 /// stand-in for the exchange on this computer.
 fn exchange_origin(network: Network) -> Option<String> {
     let name = match network {
-        Network::Mainnet => "OCTOGENS_MAINNET_URL",
-        Network::Testnet => "OCTOGENS_TESTNET_URL",
+        Network::Mainnet => "OCTONEO_MAINNET_URL",
+        Network::Testnet => "OCTONEO_TESTNET_URL",
     };
     let value = std::env::var(name).ok()?;
     let value = value.trim();
@@ -276,7 +278,7 @@ async fn set_web_search(studio: Desk<'_>, on: bool) -> Reply<Snapshot> {
     studio.set_web_search(on).map_err(message)
 }
 
-/// The self-test, for debug builds started with `OCTOGENS_SELFTEST=1`.
+/// The self-test, for debug builds started with `OCTONEO_SELFTEST=1`.
 ///
 /// `scripts/smoke.mjs --e2e` serves a stand-in for the exchange's testnet and a
 /// stand-in for a model server on this computer, and points the app at both.
@@ -319,7 +321,7 @@ mod selftest {
     const MODEL: &str = "selftest/model";
 
     pub fn wanted() -> bool {
-        std::env::var_os("OCTOGENS_SELFTEST").is_some()
+        std::env::var_os("OCTONEO_SELFTEST").is_some()
     }
 
     /// Puts the desk on testnet with the throwaway wallet and the stand-in model
@@ -337,8 +339,8 @@ mod selftest {
             key: None,
             account: None,
             gateway: None,
-            url: std::env::var("OCTOGENS_SELFTEST_MODEL_URL").ok(),
-            effort: octogens_core::store::Effort::Auto,
+            url: std::env::var("OCTONEO_SELFTEST_MODEL_URL").ok(),
+            effort: octoneo_core::store::Effort::Auto,
             live_tickets: false,
         };
         let prepared = tauri::async_runtime::block_on(async {
@@ -365,16 +367,16 @@ mod selftest {
     }
 }
 
-/// Where secrets are kept: the system keychain. With `OCTOGENS_NO_KEYCHAIN` set
+/// Where secrets are kept: the system keychain. With `OCTONEO_NO_KEYCHAIN` set
 /// they are kept in memory for the session instead. Test runs use that, so they
 /// never read a real key, never leave a test key behind, and never wait on the
 /// system's question whether this build may open the keychain.
 fn secret_store() -> Arc<dyn SecretStore> {
-    let in_memory = std::env::var_os("OCTOGENS_NO_KEYCHAIN").is_some_and(|value| !value.is_empty());
+    let in_memory = std::env::var_os("OCTONEO_NO_KEYCHAIN").is_some_and(|value| !value.is_empty());
     #[cfg(debug_assertions)]
     let in_memory = in_memory || selftest::wanted();
     if in_memory {
-        return Arc::new(octogens_core::store::MemorySecrets::default());
+        return Arc::new(octoneo_core::store::MemorySecrets::default());
     }
     Arc::new(keychain::Keychain::default())
 }
@@ -457,7 +459,7 @@ pub fn run() {
             }
         }),
         Err(error) => {
-            eprintln!("Octo Gens could not start: {error}");
+            eprintln!("OctoNeo could not start: {error}");
             std::process::exit(1);
         }
     }

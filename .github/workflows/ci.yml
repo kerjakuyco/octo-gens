@@ -35,9 +35,9 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: cargo fmt --all --check
       - name: Lint
-        run: cargo clippy -p octogens-core --all-targets -- -D warnings
+        run: cargo clippy -p octoneo-core --all-targets -- -D warnings
       - name: Test
-        run: cargo test -p octogens-core
+        run: cargo test -p octoneo-core
 
   interface:
     name: Interface
@@ -78,7 +78,7 @@ jobs:
       # A debug build with the interface bundled in, as the smoke test needs.
       - run: pnpm tauri build --debug --no-bundle
       - name: Lint the shell
-        run: cargo clippy -p octogens-desktop --all-targets -- -D warnings
+        run: cargo clippy -p octoneo-desktop --all-targets -- -D warnings
       # Runs the real window against stand-ins for the exchange and for a model: types a message, lets the
       # model draft a ticket, confirms it, and checks that the signed order and its stop arrived.
       - name: Smoke test

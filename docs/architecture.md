@@ -1,6 +1,6 @@
 # Architecture
 
-Octo Gens has three layers. Each one knows only about the layer below it.
+OctoNeo has three layers. Each one knows only about the layer below it.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -12,7 +12,7 @@ Octo Gens has three layers. Each one knows only about the layer below it.
 │                 Window, system keychain, one command per      │
 │                 studio action. No trading logic.              │
 ├──────────────────────────────────────────────────────────────┤
-│ crates/octogens-core/   Trading core (Rust)                   │
+│ crates/octoneo-core/   Trading core (Rust)                   │
 │                 Exchange client, wallet signing, indicators,  │
 │                 news, the assistant loop, MCP client.         │
 │                 No UI code.                                   │
@@ -27,7 +27,7 @@ Octo Gens has three layers. Each one knows only about the layer below it.
 
 ## The core
 
-`crates/octogens-core` is an ordinary Rust library. It can be built, tested and run without Tauri, a web view or Node (`cargo test -p octogens-core`, or the examples `probe` and `news`).
+`crates/octoneo-core` is an ordinary Rust library. It can be built, tested and run without Tauri, a web view or Node (`cargo test -p octoneo-core`, or the examples `probe` and `news`).
 
 | Module | Responsibility |
 | --- | --- |
@@ -90,7 +90,7 @@ The web view runs under a content security policy that allows no network connect
 
 `src` is a React app with no UI kit and no state library. `src/api/types.ts` is the contract with the core; `src/api/tauri.ts` implements it over IPC and `src/api/mock.ts` implements it in the browser, so the interface can be developed with `pnpm dev` alone.
 
-The contract is enforced. `crates/octogens-core/tests/contract.rs` serialises real values from the core and fails if their fields differ from the TypeScript declarations, and it fails if the commands the interface calls are not exactly the commands the shell registers.
+The contract is enforced. `crates/octoneo-core/tests/contract.rs` serialises real values from the core and fails if their fields differ from the TypeScript declarations, and it fails if the commands the interface calls are not exactly the commands the shell registers.
 
 ## Where data lives
 
@@ -111,4 +111,4 @@ The contract is enforced. `crates/octogens-core/tests/contract.rs` serialises re
 | Interface | Unit tests for the Markdown renderer, formatters, ticket states and the mock backend. |
 | Whole app | `pnpm smoke` starts a debug build against a stand-in for the exchange and a stand-in model on this computer. It connects a throwaway wallet and the model, types a message into the real window, lets the model draft a ticket, confirms it, and checks that the signed order and its stop arrived and were journaled. |
 
-Tests never reach the internet. `cargo run -p octogens-core --example probe` reads live public data from both networks when you want to check the client against the real service, and `cargo run -p octogens-core --example news` reads the real news feeds and shows which publishers let an app read their pages.
+Tests never reach the internet. `cargo run -p octoneo-core --example probe` reads live public data from both networks when you want to check the client against the real service, and `cargo run -p octoneo-core --example news` reads the real news feeds and shows which publishers let an app read their pages.

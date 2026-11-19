@@ -1,6 +1,6 @@
 # Third-party notices
 
-Octo Gens is licensed under [GPL-3.0-only](LICENSE). It includes or depends on third-party software under its own licenses. The complete dependency lists are `Cargo.lock` and `pnpm-lock.yaml`; each package's license is in its own distribution.
+OctoNeo is licensed under [GPL-3.0-only](LICENSE). It includes or depends on third-party software under its own licenses. The complete dependency lists are `Cargo.lock` and `pnpm-lock.yaml`; each package's license is in its own distribution.
 
 ## Lightweight Charts
 
@@ -24,10 +24,10 @@ The price chart is drawn with [Lightweight Charts](https://github.com/tradingvie
 
 ## News
 
-Headlines come from the public RSS feeds of CoinDesk, Cointelegraph, The Block, Decrypt, The Defiant, crypto.news and Yahoo Finance, and from the press releases of the Federal Reserve. They are shown with the publisher's name and a link to the article, and remain the work of their publishers. Octo Gens stores none of their articles.
+Headlines come from the public RSS feeds of CoinDesk, Cointelegraph, The Block, Decrypt, The Defiant, crypto.news and Yahoo Finance, and from the press releases of the Federal Reserve. They are shown with the publisher's name and a link to the article, and remain the work of their publishers. OctoNeo stores none of their articles.
 
 ## Coin icons
 
 The icons of well-known coins in `src/assets/coins/` are from [Web3 Icons](https://github.com/0xa3k5/web3icons) (`@web3icons/core` 4.0.60), under the MIT license. Each coin's logo is a trademark of its project and is shown only to identify that coin.
 
-OpenRouter, Cloudflare, Ollama, LM Studio, MetaMask, Rabby, TradingView, CoinDesk, Cointelegraph, The Block, Decrypt, The Defiant, crypto.news and Yahoo Finance are trademarks of their owners. Octo Gens is an independent project and is not affiliated with or endorsed by any of them.
+OpenRouter, Cloudflare, Ollama, LM Studio, MetaMask, Rabby, TradingView, CoinDesk, Cointelegraph, The Block, Decrypt, The Defiant, crypto.news and Yahoo Finance are trademarks of their owners. OctoNeo is an independent project and is not affiliated with or endorsed by any of them.

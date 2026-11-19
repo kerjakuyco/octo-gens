@@ -39,7 +39,7 @@ const BODY_LIMIT: usize = 24_000_000;
 /// Most candles asked for in one call.
 pub const MAX_CANDLES: usize = 500;
 /// The name an API wallet approved from this app carries on the exchange.
-pub const AGENT_NAME: &str = "OctoGens";
+pub const AGENT_NAME: &str = "OctoNeo";
 
 impl Network {
     /// The exchange's futures API origin for this network.
@@ -489,7 +489,7 @@ impl ExchangeClient {
         }
     }
 
-    /// Points the client at another origin. Used by tests and by `OCTOGENS_*_URL`.
+    /// Points the client at another origin. Used by tests and by `OCTONEO_*_URL`.
     pub fn with_base(mut self, base: &str) -> Self {
         self.base = base.trim_end_matches('/').to_string();
         self
@@ -907,7 +907,7 @@ impl ExchangeClient {
         let rows = data.as_array().ok_or_else(|| self.malformed())?;
         if rows.iter().any(|row| row["positionSide"] == "LONG" || row["positionSide"] == "SHORT") {
             bail!(
-                "This account is in hedge mode. Octo Gens trades in one-way mode; switch the account's position mode to one-way first."
+                "This account is in hedge mode. OctoNeo trades in one-way mode; switch the account's position mode to one-way first."
             );
         }
         Ok(rows.iter().filter_map(position_from).collect())

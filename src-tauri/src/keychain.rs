@@ -5,10 +5,13 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use keyring::{Entry, Error};
-use octogens_core::desk_err;
-use octogens_core::error::Result;
-use octogens_core::store::SecretStore;
+use octoneo_core::desk_err;
+use octoneo_core::error::Result;
+use octoneo_core::store::SecretStore;
 
+/// The name secrets are filed under. It is the app's identifier, which keeps the
+/// name the app had before it was called OctoNeo: changing it would leave every
+/// stored key behind, and make the system ask again whether the app may read them.
 const SERVICE: &str = "org.octogens.desktop";
 
 /// Stores secrets in the system keychain.

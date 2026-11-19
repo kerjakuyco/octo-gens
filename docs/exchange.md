@@ -1,13 +1,13 @@
 # The exchange
 
-Octo Gens trades perpetual futures on one decentralised exchange, through its futures API. This page describes what the app sends, how it signs, and how a wallet is connected. The code is in `crates/octogens-core/src/exchange` and `crates/octogens-core/src/connect`.
+OctoNeo trades perpetual futures on one decentralised exchange, through its futures API. This page describes what the app sends, how it signs, and how a wallet is connected. The code is in `crates/octoneo-core/src/exchange` and `crates/octoneo-core/src/connect`.
 
 | Network | What it is |
 | --- | --- |
 | Mainnet | Real funds |
 | Testnet | The same order flow with test funds |
 
-Each network has its own API origin and its own site, where you deposit and withdraw. Both are constants at the top of [`exchange/mod.rs`](../crates/octogens-core/src/exchange/mod.rs); the app opens the site for you where it is needed.
+Each network has its own API origin and its own site, where you deposit and withdraw. Both are constants at the top of [`exchange/mod.rs`](../crates/octoneo-core/src/exchange/mod.rs); the app opens the site for you where it is needed.
 
 ## What the app asks the exchange
 
@@ -67,15 +67,15 @@ Account requests are signed by the **API wallet**: a secp256k1 key held in your 
    message  { msg: "<the parameter string>" }
    ```
 
-   The domain's name is `DOMAIN_NAME` in [`signing.rs`](../crates/octogens-core/src/exchange/signing.rs); your wallet shows it when you approve an API wallet. `chainId` is `1666` on mainnet and `714` on testnet, so a signature made for one network is worthless on the other.
+   The domain's name is `DOMAIN_NAME` in [`signing.rs`](../crates/octoneo-core/src/exchange/signing.rs); your wallet shows it when you approve an API wallet. `chainId` is `1666` on mainnet and `714` on testnet, so a signature made for one network is worthless on the other.
 3. The request is sent as that same string with `&signature=0x…` appended. What was signed is what is sent, byte for byte.
 
 ## Connecting a wallet
 
-The exchange lets a wallet approve an *agent* that may trade for it. Octo Gens asks for the narrowest approval:
+The exchange lets a wallet approve an *agent* that may trade for it. OctoNeo asks for the narrowest approval:
 
 ```
-user=<your wallet>&nonce=<microseconds>&agentName=OctoGens&agentAddress=<API wallet>
+user=<your wallet>&nonce=<microseconds>&agentName=OctoNeo&agentAddress=<API wallet>
 &expired=<milliseconds>&signatureChainId=56
 &canSpotTrade=false&canPerpTrade=true&canWithdraw=false&ipWhitelist=
 ```
@@ -165,13 +165,13 @@ Market data, the account and tickets need nothing but the app. If you want the a
 Tests never reach the internet. They run against a stand-in for the exchange that keeps positions and orders and rejects any account request the API wallet did not sign for the right network.
 
 ```sh
-cargo test -p octogens-core                  # the stand-in, in process
+cargo test -p octoneo-core                  # the stand-in, in process
 pnpm tauri build --debug --no-bundle
 pnpm smoke                                   # the real window against a stand-in on this computer
-cargo run -p octogens-core --example probe   # live, read-only: prices, book, trades, funding on both networks
+cargo run -p octoneo-core --example probe   # live, read-only: prices, book, trades, funding on both networks
 ```
 
-`OCTOGENS_MAINNET_URL` and `OCTOGENS_TESTNET_URL` point a network at another origin. The smoke test uses them. Anything you point them at receives your signed requests, so do not use them to route real trading through a server you do not control.
+`OCTONEO_MAINNET_URL` and `OCTONEO_TESTNET_URL` point a network at another origin. The smoke test uses them. Anything you point them at receives your signed requests, so do not use them to route real trading through a server you do not control.
 
 What has been checked against the live service so far:
 

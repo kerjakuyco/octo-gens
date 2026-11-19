@@ -2,8 +2,8 @@
 //! over them, and the articles behind the first results. It is read-only, and
 //! the only requests it makes are for the feeds and for those pages.
 //!
-//!     cargo run -p octogens-core --example news -- bitcoin etf
-//!     cargo run -p octogens-core --example news -- '$NVDA' earnings
+//!     cargo run -p octoneo-core --example news -- bitcoin etf
+//!     cargo run -p octoneo-core --example news -- '$NVDA' earnings
 //!
 //! A word written with `$` is taken for the ticker of a share or a fund, the
 //! way the app takes one the exchange lists, and its own headlines are fetched
@@ -13,8 +13,8 @@
 //! still parse, and which publishers let an app read their pages.
 
 use chrono::Utc;
-use octogens_core::assistant::tools::age;
-use octogens_core::web::{Ticker, Web, tickers_in};
+use octoneo_core::assistant::tools::age;
+use octoneo_core::web::{Ticker, Web, tickers_in};
 
 #[tokio::main]
 async fn main() {

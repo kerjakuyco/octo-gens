@@ -111,7 +111,7 @@ export function Sidebar({ overlay }: { overlay: boolean }) {
     <aside ref={root} className="sidebar" data-overlay={overlay} aria-label="Sidebar">
       <div className="sidebar-head" data-tauri-drag-region>
         <span className="brand" data-tauri-drag-region>
-          Octo Gens
+          OctoNeo
         </span>
         <span className="grow drag" data-tauri-drag-region />
         <button type="button" className="icon-btn" aria-label="Close sidebar" onClick={toggleSidebar}>

@@ -1,6 +1,6 @@
 # Security
 
-Octo Gens holds a key that can trade on your exchange account, so security reports are taken seriously.
+OctoNeo holds a key that can trade on your exchange account, so security reports are taken seriously.
 
 ## Reporting a vulnerability
 
@@ -35,7 +35,7 @@ Fixes are released for the latest version only.
 
 ## What you should do
 
-- **Never type a seed phrase or your wallet's private key into Octo Gens**, or into any chat. The app never needs them.
+- **Never type a seed phrase or your wallet's private key into OctoNeo**, or into any chat. The app never needs them.
 - Read what your wallet asks you to sign. The approval must say `canWithdraw=false`.
 - Choose a short approval period, and remove the API wallet on the exchange's API wallet page when you stop using the app on a computer.
 - Keep the leverage limit low, and practise on testnet first.
@@ -55,5 +55,5 @@ Fixes are released for the latest version only.
 - **The liquidation price on a ticket is an estimate.** It ignores fees, funding and margin tiers. The exchange's own figure appears once the position is open.
 - **A stop-loss is placed after the entry.** If the exchange refuses it, the position is open without one and the ticket says so. Stops trigger market orders and can fill worse than their trigger.
 - If your system has no keychain, keys are kept in memory for the session and the wallet must be connected again next launch.
-- `OCTOGENS_MAINNET_URL` and `OCTOGENS_TESTNET_URL` send a network's requests, signed ones included, to another origin. They exist for tests.
+- `OCTONEO_MAINNET_URL` and `OCTONEO_TESTNET_URL` send a network's requests, signed ones included, to another origin. They exist for tests.
 - Installers are not signed with a developer certificate or notarized, because this repository holds no certificates. macOS builds carry an ad-hoc signature only, so macOS and Windows warn before the first launch of a downloaded copy.
