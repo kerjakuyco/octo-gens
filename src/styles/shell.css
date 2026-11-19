@@ -70,19 +70,6 @@
 }
 
 /*
- * The octopus of the app icon, without its tile. The file gives the shape and the theme
- * gives the colour, so it reads on a light sidebar and on a dark one.
- */
-.brand-mark {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  background: var(--brand);
-  -webkit-mask: url("../assets/mark.svg") center / contain no-repeat;
-  mask: url("../assets/mark.svg") center / contain no-repeat;
-}
-
-/*
  * The macOS app draws its window buttons over the top-left corner: keep that corner clear.
  * The buttons are centred on the bar (`trafficLightPosition` in tauri.conf.json: the window
  * library centres them in a strip as tall as a button plus `y`, so `y` is the bar's height

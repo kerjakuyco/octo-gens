@@ -43,7 +43,7 @@ The app is now called **OctoNeo**. A new interface built around the conversation
 - Requests to a model on this computer never go through a system proxy.
 - Turning off mainnet tickets from the assistant also discards one that is waiting.
 - An account in Multi-Assets mode, where only cross margin exists, now gets cross-margin tickets instead of an error when the order is confirmed. Settings shows that the margin choice does not apply.
-- The sidebar shows the octopus of the app icon, without its tile, in place of the app's name.
+- Neither the app's mark nor its name is drawn inside the window; the icon is for the Dock and the installer.
 - While a setting is being applied, for example a local model being loaded, messages and other changes wait for it.
 
 ### Removed
