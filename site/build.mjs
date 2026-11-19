@@ -1,7 +1,8 @@
 // Builds the site into dist/. No dependencies; Node 20 or newer.
 //
 //   node build.mjs
-//   SITE_URL=https://octoneo.example node build.mjs
+//   node build.mjs --site-url=https://octoneo.xyz      (what `pnpm run deploy` does)
+//   SITE_URL=https://octoneo.example node build.mjs   (the flag wins when both are given)
 //
 // Pages come from src/pages/*.mjs and share the frame in src/layout.mjs. Everything under
 // src/assets/ is copied to /assets/ with a content hash in its name, so it can be cached for a
@@ -35,7 +36,8 @@ const SIZES = {
 const PHONE = { media: "(max-width: 640px)", sizes: "calc(100vw - 32px)" };
 
 function siteUrl() {
-  const raw = (process.env.SITE_URL ?? "").trim();
+  const flag = process.argv.find((arg) => arg.startsWith("--site-url="));
+  const raw = (flag ? flag.slice("--site-url=".length) : (process.env.SITE_URL ?? "")).trim();
   if (!raw) return "";
   let url;
   try {

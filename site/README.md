@@ -20,7 +20,7 @@ Run them in this folder.
 | `pnpm run check` | Builds, then checks `dist/`. It fails when an internal link or picture does not resolve, when anything names the exchange, when a page loads anything from another site or has inline code the security policy would block, or when two pages share a title or a description. |
 | `pnpm run dev` | Builds, rebuilds when a file in `src/` changes, and serves `dist/` on http://localhost:8788. Refresh the browser after a change. `PORT` picks another port. |
 | `pnpm run preview` | Builds, then serves `dist/` with `wrangler dev`, the way Cloudflare will, headers included. |
-| `pnpm run deploy` | Builds, then deploys with `wrangler deploy`. |
+| `pnpm run deploy` | Builds for https://octoneo.xyz, then deploys with `wrangler deploy`. |
 
 ## How it is put together
 
@@ -66,12 +66,14 @@ When the first release with installers is published, update `src/pages/download.
 
 Leave off Cloudflare features that add scripts to pages, such as Rocket Loader or automatic Web Analytics: the policy blocks them, and the site makes no third-party requests.
 
-## SITE_URL
+## The site's address
 
-Set `SITE_URL` to the site's origin, such as `https://octoneo.example`, when you build for a real address. The build then adds a canonical link and absolute `og:url` and `og:image` to every page, a `Sitemap:` line to `robots.txt`, and `sitemap.xml`. Without it those are left out, because they need an absolute address and the build will not guess one.
+The site lives at https://octoneo.xyz, with www.octoneo.xyz as a second name for it. `pnpm run deploy` builds with `--site-url=https://octoneo.xyz`, which adds a canonical link and absolute `og:url` and `og:image` to every page, a `Sitemap:` line to `robots.txt`, and `sitemap.xml`.
+
+`pnpm run build`, `check` and `dev` leave those out, because they need an absolute address. To build for another address, pass `--site-url=` or set `SITE_URL` (the flag wins):
 
 ```sh
-SITE_URL=https://octoneo.example pnpm run deploy
+node build.mjs --site-url=https://octoneo.example
 ```
 
 ## Deploying
@@ -83,7 +85,7 @@ pnpm exec wrangler login        # once, opens Cloudflare in your browser
 pnpm install && pnpm run deploy
 ```
 
-The first deploy creates the Worker `octoneo` in your account and prints its `workers.dev` address. Add a custom domain in the dashboard under the Worker's settings, then deploy again with `SITE_URL` set to it. `pnpm exec wrangler deploy --dry-run` shows what would be uploaded without signing in.
+Deploying creates or updates the Worker `octoneo` and attaches the custom domains in `wrangler.jsonc` (octoneo.xyz and www.octoneo.xyz). Cloudflare creates their DNS records and certificates, which only works when octoneo.xyz is a zone in the same Cloudflare account as the Worker. The Worker also stays reachable at its `workers.dev` address. `pnpm exec wrangler deploy --dry-run` shows what would be uploaded without signing in.
 
 ### With Cloudflare's Git integration (Workers Builds)
 
@@ -92,9 +94,9 @@ In the Cloudflare dashboard, create a Worker from this Git repository and set:
 | Setting | Value |
 | --- | --- |
 | Root directory | `site` |
-| Build command | `pnpm install && pnpm run build` |
-| Deploy command | `npx wrangler deploy` |
-| Build variables | `SITE_URL`, set to the site's address; `NODE_VERSION=22` if the build image does not read `.node-version` |
+| Build command | `pnpm install --frozen-lockfile` |
+| Deploy command | `pnpm run deploy` (builds for octoneo.xyz, then deploys) |
+| Build variables | `NODE_VERSION=22` if the build image does not read `.node-version` |
 
 The Worker's name in the dashboard must be `octoneo`, the name in `wrangler.jsonc`. Every push to the production branch then builds and deploys the site.
 
