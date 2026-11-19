@@ -174,6 +174,7 @@ src-tauri/              Desktop shell: window, keychain, one command per core ac
 src/                    Interface in React and TypeScript.
 docs/                   Architecture, the assistant, the exchange.
 scripts/                Smoke test for the built app.
+site/                   The project's website: static pages served by Cloudflare Workers. See site/README.md.
 ```
 
 [docs/architecture.md](docs/architecture.md) explains how the parts fit together.

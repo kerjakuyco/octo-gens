@@ -29,6 +29,7 @@ You do not need a wallet or a model key. Market data is public, and the tests ru
 | The core | `cargo test -p octoneo-core` | Rust only |
 | The interface | `pnpm dev` (browser, mock core) | Node only |
 | The whole app | `pnpm tauri dev` | Both |
+| The website | `cd site && pnpm install && pnpm run dev` | Node 22 |
 
 Four examples run the core without a window. None of them signs or sends anything:
 
