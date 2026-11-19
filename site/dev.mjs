@@ -1,8 +1,10 @@
 // Builds the site, rebuilds it when a source changes, and serves dist/ on this computer.
 // No dependencies; Node 20 or newer.
 //
-//   node dev.mjs            http://localhost:8788
+//   node dev.mjs                       http://localhost:8788
 //   PORT=9000 node dev.mjs
+//   PORT=9001 node dev.mjs --out=../x   builds into and serves another folder, so two people
+//                                       can preview at once without overwriting each other
 //
 // The server behaves like Cloudflare's asset handling closely enough for development: a page's
 // address without its trailing slash is redirected to it, an unknown address gets 404.html with
@@ -10,11 +12,12 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, statSync, watch } from "node:fs";
 import { createServer } from "node:http";
-import { dirname, extname, join, normalize, sep } from "node:path";
+import { dirname, extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
-const DIST = join(ROOT, "dist");
+const OUT_FLAG = process.argv.find((arg) => arg.startsWith("--out="));
+const DIST = OUT_FLAG ? resolve(OUT_FLAG.slice("--out=".length)) : join(ROOT, "dist");
 const PORT = Number(process.env.PORT || 8788);
 
 const TYPES = {
@@ -32,7 +35,7 @@ const TYPES = {
 /** Each build runs in its own process, so edited page modules are always read afresh. */
 function build() {
   const started = Date.now();
-  const result = spawnSync(process.execPath, [join(ROOT, "build.mjs")], { cwd: ROOT, encoding: "utf8" });
+  const result = spawnSync(process.execPath, [join(ROOT, "build.mjs"), `--out=${DIST}`], { cwd: ROOT, encoding: "utf8" });
   if (result.status === 0) console.log(`Built in ${Date.now() - started} ms.`);
   else console.error(result.stderr || result.stdout);
   rules = readRules();
@@ -92,4 +95,4 @@ createServer((request, response) => {
     return send(response, 200, index, path);
   }
   send(response, 404, join(DIST, "404.html"), path);
-}).listen(PORT, () => console.log(`Serving dist/ on http://localhost:${PORT}`));
+}).listen(PORT, () => console.log(`Serving ${OUT_FLAG ? DIST : "dist/"} on http://localhost:${PORT}`));

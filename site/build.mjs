@@ -11,13 +11,15 @@
 // sitemap.xml with canonical and share links. Without SITE_URL those are left out rather than guessed.
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, extname, join } from "node:path";
+import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { BOOT, layout } from "./src/layout.mjs";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SRC = join(ROOT, "src");
-const DIST = join(ROOT, "dist");
+// `--out=<folder>` builds or checks somewhere other than dist/, so two people can work at once.
+const OUT_FLAG = process.argv.find((arg) => arg.startsWith("--out="));
+const DIST = OUT_FLAG ? resolve(OUT_FLAG.slice("--out=".length)) : join(ROOT, "dist");
 
 /**
  * Rendered widths, in CSS pixels, for each kind of picture; they follow the layout in site.css.
@@ -253,7 +255,7 @@ ${pageRules}
 
   const total = [...assets.values()].reduce((sum, a) => sum + a.bytes, 0);
   if (!quiet) {
-    console.log(`Built ${pages.length} pages and ${assets.size} assets (${(total / 1024 / 1024).toFixed(1)} MB) into dist/${origin ? ` for ${origin}` : ""}.`);
+    console.log(`Built ${pages.length} pages and ${assets.size} assets (${(total / 1024 / 1024).toFixed(1)} MB) into ${OUT_FLAG ? DIST : "dist/"}${origin ? ` for ${origin}` : ""}.`);
     if (!origin) console.log("SITE_URL is not set: no sitemap, canonical links or share image.");
   }
   return { pages, assets, csp, origin };

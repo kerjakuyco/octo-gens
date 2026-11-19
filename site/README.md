@@ -19,6 +19,7 @@ Run them in this folder.
 | `pnpm run build` | Builds the site into `dist/`. |
 | `pnpm run check` | Builds, then checks `dist/`. It fails when an internal link or picture does not resolve, when anything names the exchange, when a page loads anything from another site or has inline code the security policy would block, or when two pages share a title or a description. |
 | `pnpm run dev` | Builds, rebuilds when a file in `src/` changes, and serves `dist/` on http://localhost:8788. Refresh the browser after a change. `PORT` picks another port. |
+| `--out=<folder>` | `build.mjs`, `check.mjs` and `dev.mjs` all take it, to build into, check or serve another folder than `dist/`: two people (or two agents) can preview at once, each on their own `PORT`, without overwriting each other. |
 | `pnpm run preview` | Builds, then serves `dist/` with `wrangler dev`, the way Cloudflare will, headers included. |
 | `pnpm run deploy` | Builds for https://octoneo.xyz, then deploys with `wrangler deploy`. |
 
@@ -28,7 +29,7 @@ Run them in this folder.
 build.mjs           Renders the pages, copies assets with a content hash in their names, writes _headers,
                     robots.txt and, with SITE_URL, sitemap.xml.
 check.mjs           Checks the built site. Run by `pnpm run check`.
-dev.mjs             Rebuilds on change and serves dist/ on this computer.
+dev.mjs             Rebuilds on change and serves dist/ (or --out) on this computer.
 wrangler.jsonc      The assets-only Worker.
 src/layout.mjs      The head, header and footer every page shares.
 src/site.mjs        Links, icons and small HTML helpers: tables, facts, code blocks, the page index.

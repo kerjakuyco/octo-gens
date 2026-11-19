@@ -11,11 +11,13 @@
 // No dependencies; Node 20 or newer.
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
+import { dirname, join, relative, sep, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
-const DIST = join(ROOT, "dist");
+// `--out=<folder>` builds or checks somewhere other than dist/, so two people can work at once.
+const OUT_FLAG = process.argv.find((arg) => arg.startsWith("--out="));
+const DIST = OUT_FLAG ? resolve(OUT_FLAG.slice("--out=".length)) : join(ROOT, "dist");
 const problems = [];
 const fail = (where, what) => problems.push(`${where}: ${what}`);
 
