@@ -1,6 +1,7 @@
 import type { BookLevel, Network } from "../../api/types";
-import { clockSeconds, price, size } from "../../lib/format";
+import { clockSeconds, compact, price, size } from "../../lib/format";
 import { usePolled } from "../../lib/hooks";
+import { tapePressure } from "../../lib/indicators";
 import { request } from "../../state/app";
 import { ShareBar } from "./Readings";
 
@@ -50,6 +51,7 @@ export function BookTab({ symbol, network, base }: { symbol: string; network: Ne
   const asks = book.data.asks.slice(0, DEPTH);
   const bids = book.data.bids.slice(0, DEPTH);
   const deepest = Math.max(Number(asks[asks.length - 1]?.total ?? 0), Number(bids[bids.length - 1]?.total ?? 0)) || 1;
+  const flow = trades.data ? tapePressure(trades.data) : null;
 
   return (
     <>
@@ -79,7 +81,28 @@ export function BookTab({ symbol, network, base }: { symbol: string; network: Ne
 
       <ShareBar bidPct={book.data.bidSharePct} />
 
-      <h3 className="panel-sub">Trades</h3>
+      <div className="tape-head">
+        <h3 className="panel-sub">Trades</h3>
+        {flow ? (
+          <span className={`tape-net num ${flow.netNotional >= 0 ? "up" : "down"}`}>
+            {flow.netNotional >= 0 ? "+" : "−"}
+            {compact(Math.abs(flow.netNotional))} net
+          </span>
+        ) : null}
+      </div>
+
+      {flow ? (
+        <div className="share">
+          <div className="share-bar" aria-hidden="true">
+            <span className="share-bid" style={{ width: `${flow.buyPct}%` }} />
+          </div>
+          <div className="share-legend num">
+            <span className="up">Buy flow {Math.round(flow.buyPct)}%</span>
+            <span className="down">Sell {100 - Math.round(flow.buyPct)}%</span>
+          </div>
+        </div>
+      ) : null}
+
       {trades.data ? (
         <ol className="tape num">
           {trades.data.slice(0, TAPE).map((trade, index) => (

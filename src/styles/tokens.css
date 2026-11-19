@@ -22,7 +22,8 @@
   --surface-strong: #ececec;
   --popover: #ffffff;
   --raised: #ffffff;
-  --sidebar-hover: #ececec;
+  --sidebar-hover: #efefef;
+  --sidebar-active: #e6e6e6;
   --border: #e5e5e5;
   --border-strong: #cdcdcd;
   --text: #0d0d0d;
@@ -41,9 +42,10 @@
   --warn-soft: rgba(214, 150, 20, 0.16);
 
   --focus: #2563eb;
-  /* Chart overlays: two moving averages that must not read as up or down. */
+  /* Chart overlays: moving averages that must not read as up or down. */
   --line-a: #2563eb;
   --line-b: #b45fd0;
+  --line-c: #c27803;
 
   --scrim: rgba(0, 0, 0, 0.38);
   --shadow: 0 10px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
@@ -67,7 +69,6 @@
   --r-pill: 999px;
 
   --sidebar-width: 260px;
-  --panel-width: 400px;
   --measure: 768px;
   --bar-height: 52px;
 }
@@ -81,7 +82,8 @@
   --surface-strong: #3a3a3a;
   --popover: #2f2f2f;
   --raised: #4a4a4a;
-  --sidebar-hover: #2a2a2a;
+  --sidebar-hover: #242424;
+  --sidebar-active: #2e2e2e;
   --border: rgba(255, 255, 255, 0.1);
   --border-strong: rgba(255, 255, 255, 0.22);
   --text: #ececec;
@@ -102,6 +104,7 @@
   --focus: #7aa7ff;
   --line-a: #7aa7ff;
   --line-b: #d49be6;
+  --line-c: #e5a93c;
 
   --scrim: rgba(0, 0, 0, 0.56);
   --shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
@@ -117,7 +120,8 @@
     --surface-strong: #3a3a3a;
     --popover: #2f2f2f;
     --raised: #4a4a4a;
-    --sidebar-hover: #2a2a2a;
+    --sidebar-hover: #242424;
+    --sidebar-active: #2e2e2e;
     --border: rgba(255, 255, 255, 0.1);
     --border-strong: rgba(255, 255, 255, 0.22);
     --text: #ececec;
@@ -138,6 +142,7 @@
     --focus: #7aa7ff;
     --line-a: #7aa7ff;
     --line-b: #d49be6;
+    --line-c: #e5a93c;
 
     --scrim: rgba(0, 0, 0, 0.56);
     --shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);

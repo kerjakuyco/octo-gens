@@ -5,7 +5,16 @@ import { Segmented } from "../../components/Segmented";
 import { activeWallet, instrumentFor } from "../../lib/market";
 import { exchangeSite, networkName } from "../../lib/network";
 import { ticketStatus } from "../../lib/ticket";
-import { app, closeTrade, openExternal, openSettings, prepareTicket, useApp, useSnapshot } from "../../state/app";
+import {
+  type TradePrefill,
+  app,
+  closeTrade,
+  openExternal,
+  openSettings,
+  prepareTicket,
+  useApp,
+  useSnapshot,
+} from "../../state/app";
 import { TicketCard } from "./TicketCard";
 
 type AmountMode = "units" | "value";
@@ -42,17 +51,17 @@ function WalletNeeded() {
   );
 }
 
-function TradeForm({ review }: { review: TicketView | null }) {
+function TradeForm({ review, prefill }: { review: TicketView | null; prefill?: TradePrefill }) {
   const snapshot = useSnapshot();
   const busy = useApp((state) => Boolean(state.working));
   const { risk } = snapshot;
-  const [symbol, setSymbol] = useState(snapshot.focus);
-  const [side, setSide] = useState<Side>("buy");
+  const [symbol, setSymbol] = useState(prefill?.symbol ?? snapshot.focus);
+  const [side, setSide] = useState<Side>(prefill?.side ?? "buy");
   const [mode, setMode] = useState<AmountMode>("units");
   const [amount, setAmount] = useState("");
   const [leverage, setLeverage] = useState(String(Math.min(risk.maxLeverage, 3)));
-  const [stopLoss, setStopLoss] = useState("");
-  const [takeProfit, setTakeProfit] = useState("");
+  const [stopLoss, setStopLoss] = useState(prefill?.stopLoss ?? "");
+  const [takeProfit, setTakeProfit] = useState(prefill?.takeProfit ?? "");
   const [reduceOnly, setReduceOnly] = useState(false);
   const [ticket, setTicket] = useState<TicketView | null>(review);
 
@@ -232,7 +241,7 @@ export function TradeDialog() {
     <Dialog open={trade !== null} onClose={closeTrade} title={review ? "Review order" : "New order"}>
       {trade ? (
         <div className="dialog-body">
-          <TradeForm review={review} />
+          <TradeForm review={review} prefill={trade.prefill} />
         </div>
       ) : null}
     </Dialog>

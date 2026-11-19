@@ -5,24 +5,51 @@ import { RsiBar, TrendChip, macdWords } from "./Readings";
 
 interface LevelsProps {
   label: string;
+  kind: "support" | "resistance";
   levels: number[];
   /** The current price, to show how far away each level is. */
   from: number;
+  onPickLevel?: (kind: "support" | "resistance", level: number) => void;
 }
 
-function Levels({ label, levels, from }: LevelsProps) {
+function Levels({ label, kind, levels, from, onPickLevel }: LevelsProps) {
+  const hint = kind === "support" ? "SL" : "TP";
+  const purpose = kind === "support" ? "stop-loss" : "take-profit";
   return (
     <div className="level-group">
       <dt>{label}</dt>
       {levels.length === 0 ? (
         <dd className="muted">None nearby</dd>
       ) : (
-        levels.map((level) => (
-          <dd key={level} className="num">
-            <span>{price(level)}</span>
-            <span className="muted">{from > 0 ? percent((level / from - 1) * 100) : ""}</span>
-          </dd>
-        ))
+        levels.map((level) => {
+          const text = price(level);
+          const dist = from > 0 ? percent((level / from - 1) * 100) : "";
+          return (
+            <dd key={level} className="num">
+              {onPickLevel ? (
+                <button
+                  type="button"
+                  className="level-pick"
+                  aria-label={`Use ${text} as ${purpose} in order form`}
+                  onClick={() => onPickLevel(kind, level)}
+                >
+                  <span>{text}</span>
+                  <span className="level-meta">
+                    <span className="muted">{dist}</span>
+                    <span className="level-hint" aria-hidden="true">
+                      {hint}
+                    </span>
+                  </span>
+                </button>
+              ) : (
+                <>
+                  <span>{text}</span>
+                  <span className="muted">{dist}</span>
+                </>
+              )}
+            </dd>
+          );
+        })
       )}
     </div>
   );
@@ -32,10 +59,14 @@ interface TechnicalsTabProps {
   technicals: Polled<TechnicalsView>;
   /** The chart's timeframe, whose levels are listed. */
   timeframe: Timeframe;
+  /** Switches the chart's timeframe when a row is chosen. */
+  onSelectTimeframe?: (timeframe: Timeframe) => void;
+  /** Prefills the manual order form from a clicked support or resistance level. */
+  onPickLevel?: (kind: "support" | "resistance", level: number) => void;
 }
 
 /** Trend, momentum and volatility on every timeframe, then the levels drawn on the chart. */
-export function TechnicalsTab({ technicals, timeframe }: TechnicalsTabProps) {
+export function TechnicalsTab({ technicals, timeframe, onSelectTimeframe, onPickLevel }: TechnicalsTabProps) {
   const view = technicals.data;
   if (!view) {
     return technicals.error ? (
@@ -69,9 +100,30 @@ export function TechnicalsTab({ technicals, timeframe }: TechnicalsTabProps) {
         <tbody>
           {view.frames.map((item) => {
             const momentum = macdWords(item.macd);
+            const active = item.timeframe === timeframe;
             return (
-              <tr key={item.timeframe} data-current={item.timeframe === timeframe}>
-                <th scope="row">{item.timeframe}</th>
+              <tr
+                key={item.timeframe}
+                data-current={active}
+                onClick={onSelectTimeframe ? () => onSelectTimeframe(item.timeframe) : undefined}
+              >
+                <th scope="row">
+                  {onSelectTimeframe ? (
+                    <button
+                      type="button"
+                      className="tech-tf"
+                      aria-pressed={active}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onSelectTimeframe(item.timeframe);
+                      }}
+                    >
+                      {item.timeframe}
+                    </button>
+                  ) : (
+                    item.timeframe
+                  )}
+                </th>
                 <td>
                   <TrendChip trend={item.trend} />
                 </td>
@@ -88,12 +140,27 @@ export function TechnicalsTab({ technicals, timeframe }: TechnicalsTabProps) {
 
       {frame ? (
         <>
-          <h3 className="panel-sub">
-            Levels <span className="muted">{timeframe}</span>
-          </h3>
+          <div className="levels-head">
+            <h3 className="panel-sub">
+              Levels <span className="muted">{timeframe}</span>
+            </h3>
+            {onPickLevel ? <span className="levels-tip">Click level to set SL / TP</span> : null}
+          </div>
           <dl className="level-list">
-            <Levels label="Resistance" levels={frame.resistance} from={Number(view.price)} />
-            <Levels label="Support" levels={frame.support} from={Number(view.price)} />
+            <Levels
+              label="Resistance"
+              kind="resistance"
+              levels={frame.resistance}
+              from={Number(view.price)}
+              onPickLevel={onPickLevel}
+            />
+            <Levels
+              label="Support"
+              kind="support"
+              levels={frame.support}
+              from={Number(view.price)}
+              onPickLevel={onPickLevel}
+            />
           </dl>
         </>
       ) : null}

@@ -17,10 +17,12 @@ import type {
   ProviderView,
   RiskRequest,
   RunView,
+  Side,
   Snapshot,
   Theme,
   TicketRequest,
   TicketView,
+  Timeframe,
   TurnEvent,
   FundingRequest,
   WalletBrowserRequest,
@@ -31,13 +33,20 @@ import { networkName } from "../lib/network";
 import { devParams } from "./dev";
 import { createStore, useStore } from "./store";
 
-export type Page = "chat" | "markets" | "account" | "activity";
+export type Page = "chat" | "markets" | "market" | "account" | "activity";
 export type SettingsTab = "models" | "wallet" | "trading" | "tools" | "appearance" | "about";
-export type PanelTab = "book" | "funding" | "technicals" | "watchlist";
+export type MarketTab = "book" | "funding" | "technicals" | "watchlist";
 
-/** Window widths from which the sidebar and the market panel sit beside the page instead of over it. */
+export interface ChartOverlays {
+  ema: boolean;
+  ema200: boolean;
+  bollinger: boolean;
+  levels: boolean;
+  orders: boolean;
+}
+
+/** Window width from which the sidebar sits beside the page instead of over it. */
 export const SIDEBAR_INLINE = "(min-width: 900px)";
-export const PANEL_INLINE = "(min-width: 1180px)";
 
 /** The turn currently being streamed. */
 export interface LiveTurn {
@@ -53,9 +62,18 @@ export interface Notice {
   tone: "info" | "error";
 }
 
+/** Optional values prefilled into the manual order form (for example from a clicked chart level). */
+export interface TradePrefill {
+  symbol?: string;
+  side?: Side;
+  stopLoss?: string;
+  takeProfit?: string;
+}
+
 /** The open trade dialog. With a ticket it shows that ticket for review instead of the order form. */
 export interface TradeState {
   ticket: TicketView | null;
+  prefill?: TradePrefill;
 }
 
 /** The open settings dialog. `setup` opens the Models tab straight on one provider. */
@@ -69,23 +87,51 @@ export interface AppState {
   bootError: string;
   snapshot: Snapshot | null;
   page: Page;
+  /** Where the Back button on the Market detail view returns to. */
+  previousPage: Exclude<Page, "market">;
   live: LiveTurn | null;
   /** What the in-flight command is doing, or empty when idle. */
   working: string;
   notice: Notice | null;
-  /** Whether the sidebar and the market panel are kept open on a wide window. Remembered between launches. */
+  /** Whether the sidebar is kept open on a wide window. Remembered between launches. */
   sidebarOpen: boolean;
-  panelOpen: boolean;
-  /** Which of the two is slid over the page on a window too narrow to show it beside the page. */
-  drawer: "sidebar" | "panel" | null;
-  panelTab: PanelTab;
+  /** Whether the sidebar is slid over the page on a narrow window. */
+  drawer: "sidebar" | null;
+  marketTab: MarketTab;
+  chartTimeframe: Timeframe;
+  chartOverlays: ChartOverlays;
   settings: SettingsState | null;
   trade: TradeState | null;
   /** Incremented to ask the composer to take focus. */
   composerFocus: number;
 }
 
-const PANEL_TABS: readonly PanelTab[] = ["book", "funding", "technicals", "watchlist"];
+const MARKET_TABS: readonly MarketTab[] = ["book", "funding", "technicals", "watchlist"];
+const TIMEFRAMES: readonly Timeframe[] = ["15m", "1h", "4h", "1d"];
+const DEFAULT_OVERLAYS: ChartOverlays = {
+  ema: true,
+  ema200: false,
+  bollinger: false,
+  levels: true,
+  orders: true,
+};
+
+function rememberedOverlays(): ChartOverlays {
+  const raw = remembered("overlays");
+  if (!raw) return DEFAULT_OVERLAYS;
+  try {
+    const parsed = JSON.parse(raw) as Partial<ChartOverlays>;
+    return {
+      ema: typeof parsed.ema === "boolean" ? parsed.ema : DEFAULT_OVERLAYS.ema,
+      ema200: typeof parsed.ema200 === "boolean" ? parsed.ema200 : DEFAULT_OVERLAYS.ema200,
+      bollinger: typeof parsed.bollinger === "boolean" ? parsed.bollinger : DEFAULT_OVERLAYS.bollinger,
+      levels: typeof parsed.levels === "boolean" ? parsed.levels : DEFAULT_OVERLAYS.levels,
+      orders: typeof parsed.orders === "boolean" ? parsed.orders : DEFAULT_OVERLAYS.orders,
+    };
+  } catch {
+    return DEFAULT_OVERLAYS;
+  }
+}
 
 // The prefix keeps the name the app had before it was called OctoNeo, so what was remembered is still found.
 function remembered(key: string): string | null {
@@ -113,13 +159,15 @@ export const app = createStore<AppState>({
   bootError: "",
   snapshot: null,
   page: "chat",
+  previousPage: "markets",
   live: null,
   working: "",
   notice: null,
   sidebarOpen: remembered("sidebar") !== "0",
-  panelOpen: remembered("panel") !== "0",
   drawer: null,
-  panelTab: PANEL_TABS.find((tab) => tab === remembered("tab")) ?? "book",
+  marketTab: MARKET_TABS.find((tab) => tab === remembered("tab")) ?? "book",
+  chartTimeframe: TIMEFRAMES.find((tf) => tf === remembered("timeframe")) ?? "4h",
+  chartOverlays: rememberedOverlays(),
   settings: null,
   trade: null,
   composerFocus: 0,
@@ -193,11 +241,7 @@ export async function start(): Promise<void> {
     const dev = devParams();
     const patch: Partial<AppState> = { phase: "ready", snapshot, page: dev.page ?? "chat" };
     if (dev.sidebar !== undefined) patch.sidebarOpen = dev.sidebar;
-    if (dev.panel !== undefined) {
-      patch.panelOpen = dev.panel;
-      if (dev.panel && !wide(PANEL_INLINE)) patch.drawer = "panel";
-    }
-    if (dev.tab) patch.panelTab = dev.tab;
+    if (dev.tab) patch.marketTab = dev.tab;
     if (dev.settings || dev.setup) patch.settings = { tab: dev.settings ?? "models", setup: dev.setup ?? null };
     if (dev.dialog === "trade") patch.trade = { ticket: null };
     app.set(patch);
@@ -293,27 +337,24 @@ export function toggleSidebar(): void {
   }
 }
 
-function showPanel(open: boolean): void {
-  if (wide(PANEL_INLINE)) {
-    remember("panel", open ? "1" : "0");
-    app.set({ panelOpen: open });
-  } else {
-    app.set({ drawer: open ? "panel" : null });
-  }
-}
-
-export function togglePanel(): void {
-  const state = app.get();
-  showPanel(wide(PANEL_INLINE) ? !state.panelOpen : state.drawer !== "panel");
-}
-
 export function closeDrawer(): void {
   if (app.get().drawer) app.set({ drawer: null });
 }
 
-export function setPanelTab(tab: PanelTab): void {
+export function setMarketTab(tab: MarketTab): void {
   remember("tab", tab);
-  app.set({ panelTab: tab });
+  app.set({ marketTab: tab });
+}
+
+export function setChartTimeframe(timeframe: Timeframe): void {
+  remember("timeframe", timeframe);
+  app.set({ chartTimeframe: timeframe });
+}
+
+export function toggleChartOverlay(key: keyof ChartOverlays): void {
+  const next: ChartOverlays = { ...app.get().chartOverlays, [key]: !app.get().chartOverlays[key] };
+  remember("overlays", JSON.stringify(next));
+  app.set({ chartOverlays: next });
 }
 
 export function openSettings(tab: SettingsTab = "models", setup: Provider | null = null): void {
@@ -324,9 +365,9 @@ export function closeSettings(): void {
   app.set({ settings: null });
 }
 
-/** Opens the trade dialog: on the order form, or on a drafted ticket to review. */
-export function openTrade(ticket: TicketView | null = null): void {
-  app.set({ trade: { ticket } });
+/** Opens the trade dialog: on the order form (optionally prefilled), or on a drafted ticket to review. */
+export function openTrade(ticket: TicketView | null = null, prefill?: TradePrefill): void {
+  app.set({ trade: { ticket, prefill } });
 }
 
 export function closeTrade(): void {
@@ -449,10 +490,18 @@ export const selectSymbol = (symbol: string) => command("Loading the market", (a
 export const watchAdd = (symbol: string) => command("Adding the market", (api) => api.watchAdd(symbol));
 export const watchRemove = (symbol: string) => command("Updating the watchlist", (api) => api.watchRemove(symbol));
 
-/** Shows a market in the panel, opening the panel if it is closed. */
+/** Opens the full-width Market view for `symbol`, remembering where to return. */
 export async function focusMarket(symbol: string): Promise<void> {
-  showPanel(true);
-  if (app.get().snapshot?.focus !== symbol) await selectSymbol(symbol);
+  const state = app.get();
+  const patch: Partial<AppState> = { page: "market", drawer: null };
+  if (state.page !== "market") patch.previousPage = state.page;
+  app.set(patch);
+  if (state.snapshot?.focus !== symbol) await selectSymbol(symbol);
+}
+
+/** Returns from the Market detail view to the page that opened it. */
+export function leaveMarket(): void {
+  app.set({ page: app.get().previousPage, drawer: null });
 }
 
 /** Background price refresh for the watchlist. */

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ThreadView } from "../api/types";
-import { groupThreads } from "./threads";
+import { filterThreads, groupThreads } from "./threads";
 
 const NOW = new Date(2026, 10, 18, 15, 30).getTime();
 const HOUR = 3_600_000;
 
-function thread(id: string, hoursAgo: number): ThreadView {
-  return { id, title: id, time: new Date(NOW - hoursAgo * HOUR).toISOString(), network: "testnet", turns: 1 };
+function thread(id: string, hoursAgo: number, title = id): ThreadView {
+  return { id, title, time: new Date(NOW - hoursAgo * HOUR).toISOString(), network: "testnet", turns: 1 };
 }
 
 describe("groupThreads", () => {
@@ -27,5 +27,24 @@ describe("groupThreads", () => {
     expect(groupThreads([], NOW)).toEqual([]);
     const broken = { ...thread("x", 0), time: "not a date" };
     expect(groupThreads([broken], NOW).map((group) => group.label)).toEqual(["Older"]);
+  });
+});
+
+describe("filterThreads", () => {
+  const list = [
+    thread("1", 0, "BTC outlook"),
+    thread("2", 1, "ETH funding this week"),
+    thread("3", 2, "Compare SOL and SUI"),
+  ];
+
+  it("returns the same array when the query is blank", () => {
+    expect(filterThreads(list, "")).toBe(list);
+    expect(filterThreads(list, "   ")).toBe(list);
+  });
+
+  it("matches every whitespace-separated term regardless of case or order", () => {
+    expect(filterThreads(list, "eth week").map((item) => item.id)).toEqual(["2"]);
+    expect(filterThreads(list, "SUI sol").map((item) => item.id)).toEqual(["3"]);
+    expect(filterThreads(list, "btc eth")).toEqual([]);
   });
 });

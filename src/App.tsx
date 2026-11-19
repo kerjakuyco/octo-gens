@@ -1,10 +1,10 @@
-import { useEffect, useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { isDesktop } from "./api";
 import { Toast } from "./components/Toast";
 import { AccountPage } from "./features/account/AccountPage";
 import { ActivityPage } from "./features/activity/ActivityPage";
 import { ChatPage } from "./features/chat/ChatPage";
-import { MarketPanel } from "./features/market/MarketPanel";
+import { MarketPage } from "./features/market/MarketPage";
 import { TradeDialog } from "./features/market/TradeDialog";
 import { MarketsPage } from "./features/markets/MarketsPage";
 import { SettingsDialog } from "./features/settings/SettingsDialog";
@@ -12,7 +12,6 @@ import { Sidebar } from "./features/shell/Sidebar";
 import { TopBar } from "./features/shell/TopBar";
 import { useMedia } from "./lib/hooks";
 import {
-  PANEL_INLINE,
   SIDEBAR_INLINE,
   app,
   closeDrawer,
@@ -21,6 +20,7 @@ import {
   refreshQuotes,
   start,
   stopTurn,
+  toggleSidebar,
   useApp,
   useSnapshot,
 } from "./state/app";
@@ -33,30 +33,43 @@ const ACCOUNT_REFRESH_MS = 15_000;
 function platform(): string | undefined {
   const forced = devParams().platform;
   if (forced) return forced;
-  return isDesktop() && /Mac/i.test(navigator.userAgent) ? "macos" : undefined;
+  const mac = /Mac/i.test(navigator.userAgent) || /Mac/i.test(navigator.platform ?? "");
+  return isDesktop() && mac ? "macos" : undefined;
 }
 
 function Shell() {
   const snapshot = useSnapshot();
   const page = useApp((state) => state.page);
   const sidebarOpen = useApp((state) => state.sidebarOpen);
-  const panelOpen = useApp((state) => state.panelOpen);
   const drawer = useApp((state) => state.drawer);
   const sidebarBeside = useMedia(SIDEBAR_INLINE);
-  const panelBeside = useMedia(PANEL_INLINE);
 
   const sidebarShown = sidebarBeside ? sidebarOpen : drawer === "sidebar";
-  const panelShown = panelBeside ? panelOpen : drawer === "panel";
-  const overlaid = (sidebarShown && !sidebarBeside) || (panelShown && !panelBeside);
+  const sidebarOverlaid = sidebarShown && !sidebarBeside;
+  const sidebarTriggerRef = useRef<HTMLButtonElement>(null);
+  const wasSidebarDrawer = useRef(false);
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = snapshot.theme;
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="color-scheme"]');
+    if (meta) meta.content = snapshot.theme === "system" ? "light dark" : snapshot.theme;
   }, [snapshot.theme]);
 
   // A drawer belongs to the narrow layout; widening the window puts it away.
   useEffect(() => {
-    if ((drawer === "sidebar" && sidebarBeside) || (drawer === "panel" && panelBeside)) closeDrawer();
-  }, [drawer, sidebarBeside, panelBeside]);
+    if (drawer === "sidebar" && sidebarBeside) closeDrawer();
+  }, [drawer, sidebarBeside]);
+
+  // Return focus to the sidebar button when the narrow drawer closes, unless another control took focus.
+  useEffect(() => {
+    if (wasSidebarDrawer.current && !sidebarOverlaid && !sidebarBeside) {
+      const active = document.activeElement;
+      if (!active || active === document.body || active.closest("#app-sidebar")) {
+        sidebarTriggerRef.current?.focus();
+      }
+    }
+    wasSidebarDrawer.current = sidebarOverlaid;
+  }, [sidebarOverlaid, sidebarBeside]);
 
   // Prices and the account are re-read on a timer, but only while the window is in view.
   useEffect(() => {
@@ -74,9 +87,18 @@ function Shell() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        focusComposer();
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey) {
+        const key = event.key.toLowerCase();
+        if (key === "k") {
+          event.preventDefault();
+          focusComposer();
+          return;
+        }
+        if (key === "b" && !document.querySelector("dialog[open]")) {
+          event.preventDefault();
+          toggleSidebar();
+          return;
+        }
       }
       // A dialog or a menu that is open handles its own Escape.
       if (event.key !== "Escape" || event.defaultPrevented || document.querySelector("dialog[open]")) return;
@@ -90,16 +112,24 @@ function Shell() {
 
   return (
     <div className="app">
-      {sidebarShown ? <Sidebar overlay={!sidebarBeside} /> : null}
-      <main className="main">
-        <TopBar sidebarBeside={sidebarShown && sidebarBeside} panelShown={panelShown} />
+      {sidebarBeside ? (
+        sidebarOpen ? <Sidebar key="inline" overlay={false} open /> : null
+      ) : (
+        <Sidebar key="overlay" overlay open={sidebarShown} />
+      )}
+      <main className="main" inert={sidebarOverlaid || undefined}>
+        <TopBar
+          sidebarBeside={sidebarShown && sidebarBeside}
+          sidebarShown={sidebarShown}
+          sidebarTriggerRef={sidebarTriggerRef}
+        />
         {page === "chat" ? <ChatPage /> : null}
         {page === "markets" ? <MarketsPage /> : null}
+        {page === "market" ? <MarketPage /> : null}
         {page === "account" ? <AccountPage /> : null}
         {page === "activity" ? <ActivityPage /> : null}
       </main>
-      {panelShown ? <MarketPanel overlay={!panelBeside} /> : null}
-      {overlaid ? <div className="scrim" onClick={closeDrawer} /> : null}
+      <div className="scrim" data-open={sidebarOverlaid} aria-hidden="true" onClick={closeDrawer} />
       <SettingsDialog />
       <TradeDialog />
       <Toast />

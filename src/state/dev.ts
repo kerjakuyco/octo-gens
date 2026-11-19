@@ -3,10 +3,9 @@
  * a plain browser against the mock backend. Used for screenshots and for
  * jumping straight to the state you are working on. Ignored in the desktop app.
  *
- *   page=chat|markets|account|activity
+ *   page=chat|markets|market|account|activity
  *   sidebar=1|0                                  sidebar open or closed on a wide window
- *   panel=1|0                                    market panel open or closed (the drawer on narrow windows)
- *   tab=book|funding|technicals|watchlist        tab of the market panel
+ *   tab=book|funding|technicals|watchlist        tab of the market view
  *   settings=models|wallet|trading|tools|appearance|about
  *                                                open Settings on a tab
  *   setup=openrouter|cloudflare|ollama|lmstudio  open Settings on that provider's setup
@@ -19,13 +18,12 @@
 
 import { isDesktop } from "../api";
 import type { Provider } from "../api/types";
-import type { Page, PanelTab, SettingsTab } from "./app";
+import type { MarketTab, Page, SettingsTab } from "./app";
 
 export interface DevParams {
   page?: Page;
   sidebar?: boolean;
-  panel?: boolean;
-  tab?: PanelTab;
+  tab?: MarketTab;
   settings?: SettingsTab;
   setup?: Provider;
   dialog?: "trade";
@@ -33,8 +31,8 @@ export interface DevParams {
   platform?: "macos";
 }
 
-const PAGES: readonly Page[] = ["chat", "markets", "account", "activity"];
-const TABS: readonly PanelTab[] = ["book", "funding", "technicals", "watchlist"];
+const PAGES: readonly Page[] = ["chat", "markets", "market", "account", "activity"];
+const TABS: readonly MarketTab[] = ["book", "funding", "technicals", "watchlist"];
 const SETTINGS: readonly SettingsTab[] = ["models", "wallet", "trading", "tools", "appearance", "about"];
 const PROVIDERS: readonly Provider[] = ["openrouter", "cloudflare", "ollama", "lmstudio"];
 
@@ -54,7 +52,6 @@ export function devParams(): DevParams {
   return {
     page: oneOf(params.get("page"), PAGES),
     sidebar: flag(params.get("sidebar")),
-    panel: flag(params.get("panel")),
     tab: oneOf(params.get("tab"), TABS),
     settings: oneOf(params.get("settings"), SETTINGS),
     setup: oneOf(params.get("setup"), PROVIDERS),

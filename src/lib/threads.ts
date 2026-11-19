@@ -10,6 +10,16 @@ export interface ThreadGroup {
 const DAY_MS = 86_400_000;
 const LABELS: ThreadGroupLabel[] = ["Today", "Yesterday", "Previous 7 days", "Older"];
 
+/** Keeps conversations whose title contains every word in `query`, ignoring case. */
+export function filterThreads(threads: ThreadView[], query: string): ThreadView[] {
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (terms.length === 0) return threads;
+  return threads.filter((thread) => {
+    const title = thread.title.toLowerCase();
+    return terms.every((term) => title.includes(term));
+  });
+}
+
 /** Conversations bucketed by the local day of their latest turn, keeping the order they came in. */
 export function groupThreads(threads: ThreadView[], now: number = Date.now()): ThreadGroup[] {
   const midnight = new Date(now);

@@ -12,14 +12,15 @@ import {
   createChart,
 } from "lightweight-charts";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import type { CandleSeries } from "../../api/types";
+import type { CandleSeries, OpenOrderView, PositionView } from "../../api/types";
 import { axisPrice, price, pricePrecision } from "../../lib/format";
-import { ema } from "../../lib/indicators";
+import { bollinger, ema } from "../../lib/indicators";
 import { token, withAlpha } from "../../lib/theme";
+import type { ChartOverlays } from "../../state/app";
 
 const FONT = 'system-ui, -apple-system, Roboto, "Noto Sans", sans-serif';
 /** Bars in view when a market opens. The rest is one drag away. */
-const BARS_IN_VIEW = 90;
+const BARS_IN_VIEW = 96;
 
 interface Handles {
   chart: IChartApi;
@@ -27,6 +28,9 @@ interface Handles {
   volume: ISeriesApi<"Histogram">;
   fast: ISeriesApi<"Line">;
   slow: ISeriesApi<"Line">;
+  ema200: ISeriesApi<"Line">;
+  bbUpper: ISeriesApi<"Line">;
+  bbLower: ISeriesApi<"Line">;
 }
 
 interface Bar {
@@ -45,6 +49,12 @@ interface PriceChartProps {
   series: CandleSeries | null;
   /** Support and resistance prices to mark on the price axis. */
   levels: ChartLevels | null;
+  /** Active position on this market, drawn as Entry & Liquidation lines when `overlays.orders` is on. */
+  position: PositionView | null;
+  /** Open orders on this market, drawn as SL / TP / Limit lines when `overlays.orders` is on. */
+  orders: OpenOrderView[];
+  /** Which overlay layers are visible on the plot. */
+  overlays: ChartOverlays;
   /** Changes whenever the colours on screen change, so the canvas can be repainted. */
   themeKey: string;
   /** Loading or error message laid over the plot. */
@@ -87,15 +97,31 @@ function Readout({ bar }: { bar: Bar | null }) {
   );
 }
 
+function orderLineKind(order: OpenOrderView): { title: string; tone: "up" | "down" | "focus" } {
+  const type = order.type.toUpperCase();
+  if (type.includes("TAKE_PROFIT")) return { title: "TP", tone: "up" };
+  if (type.includes("STOP")) return { title: "SL", tone: "down" };
+  return { title: "Limit", tone: "focus" };
+}
 
 /**
- * Candlesticks with a volume strip, two moving averages and the nearest
- * support and resistance, drawn by TradingView Lightweight Charts.
+ * Candlesticks with volume, toggleable moving averages (EMA 20/50/200), Bollinger
+ * bands, support/resistance levels, and live position/order price lines.
  */
-export function PriceChart({ series, levels, themeKey, overlay, credit }: PriceChartProps) {
+export function PriceChart({
+  series,
+  levels,
+  position,
+  orders,
+  overlays,
+  themeKey,
+  overlay,
+  credit,
+}: PriceChartProps) {
   const host = useRef<HTMLDivElement>(null);
   const handles = useRef<Handles | null>(null);
-  const lines = useRef<IPriceLine[]>([]);
+  const levelLines = useRef<IPriceLine[]>([]);
+  const tradeLines = useRef<IPriceLine[]>([]);
   // Decimals the axis shows; follows the market on screen.
   const precision = useRef(2);
   // Which market and timeframe the visible range was last set for.
@@ -114,8 +140,8 @@ export function PriceChart({ series, levels, themeKey, overlay, credit }: PriceC
         attributionLogo: false,
       },
       grid: { vertLines: { visible: false } },
-      rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.24 } },
-      timeScale: { borderVisible: false, rightOffset: 3, secondsVisible: false },
+      rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.22 } },
+      timeScale: { borderVisible: false, rightOffset: 4, secondsVisible: false },
       crosshair: { mode: CrosshairMode.Normal },
       localization: { priceFormatter: (value: number) => axisPrice(value, precision.current) },
     });
@@ -126,20 +152,30 @@ export function PriceChart({ series, levels, themeKey, overlay, credit }: PriceC
       lastValueVisible: false,
       priceLineVisible: false,
     });
-    chart.priceScale("").applyOptions({ scaleMargins: { top: 0.86, bottom: 0 } });
-    const average = { lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false } as const;
-    const fast = chart.addSeries(LineSeries, average);
-    const slow = chart.addSeries(LineSeries, average);
+    chart.priceScale("").applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
+    const lineOpts = {
+      lineWidth: 1,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    } as const;
+    const fast = chart.addSeries(LineSeries, lineOpts);
+    const slow = chart.addSeries(LineSeries, lineOpts);
+    const ema200 = chart.addSeries(LineSeries, lineOpts);
+    const bbOpts = { ...lineOpts, lineStyle: LineStyle.Dotted } as const;
+    const bbUpper = chart.addSeries(LineSeries, bbOpts);
+    const bbLower = chart.addSeries(LineSeries, bbOpts);
 
     chart.subscribeCrosshairMove((event) => {
       const bar = event.seriesData.get(candles);
       setHovered(bar && "open" in bar ? { open: bar.open, high: bar.high, low: bar.low, close: bar.close } : null);
     });
 
-    handles.current = { chart, candles, volume, fast, slow };
+    handles.current = { chart, candles, volume, fast, slow, ema200, bbUpper, bbLower };
     return () => {
       handles.current = null;
-      lines.current = [];
+      levelLines.current = [];
+      tradeLines.current = [];
       chart.remove();
     };
   }, []);
@@ -152,6 +188,7 @@ export function PriceChart({ series, levels, themeKey, overlay, credit }: PriceC
     const down = token("--down");
     const muted = token("--muted");
     const label = token("--surface-strong");
+    const band = withAlpha(muted, 0.55);
     current.chart.applyOptions({
       layout: { textColor: muted },
       grid: { horzLines: { color: token("--border") } },
@@ -169,7 +206,21 @@ export function PriceChart({ series, levels, themeKey, overlay, credit }: PriceC
     });
     current.fast.applyOptions({ color: token("--line-a") });
     current.slow.applyOptions({ color: token("--line-b") });
+    current.ema200.applyOptions({ color: token("--line-c") });
+    current.bbUpper.applyOptions({ color: band });
+    current.bbLower.applyOptions({ color: band });
   }, [themeKey]);
+
+  // Toggle overlay series visibility without re-uploading candle data.
+  useEffect(() => {
+    const current = handles.current;
+    if (!current) return;
+    current.fast.applyOptions({ visible: overlays.ema });
+    current.slow.applyOptions({ visible: overlays.ema });
+    current.ema200.applyOptions({ visible: overlays.ema200 });
+    current.bbUpper.applyOptions({ visible: overlays.bollinger });
+    current.bbLower.applyOptions({ visible: overlays.bollinger });
+  }, [overlays.ema, overlays.ema200, overlays.bollinger]);
 
   useEffect(() => {
     const current = handles.current;
@@ -195,10 +246,14 @@ export function PriceChart({ series, levels, themeKey, overlay, credit }: PriceC
         color: Number(close) >= Number(open) ? up : down,
       })),
     );
-    const average = (period: number) =>
-      ema(closes, period).flatMap((value, index) => (value === null ? [] : [{ time: times[index]!, value }]));
-    current.fast.setData(average(20));
-    current.slow.setData(average(50));
+    const toPoints = (values: (number | null)[]) =>
+      values.flatMap((value, index) => (value === null ? [] : [{ time: times[index]!, value }]));
+    current.fast.setData(toPoints(ema(closes, 20)));
+    current.slow.setData(toPoints(ema(closes, 50)));
+    current.ema200.setData(toPoints(ema(closes, 200)));
+    const bands = bollinger(closes, 20, 2);
+    current.bbUpper.setData(toPoints(bands.upper));
+    current.bbLower.setData(toPoints(bands.lower));
 
     const last = rows[rows.length - 1];
     if (last) {
@@ -208,6 +263,9 @@ export function PriceChart({ series, levels, themeKey, overlay, credit }: PriceC
       current.candles.applyOptions({ priceFormat: format });
       current.fast.applyOptions({ priceFormat: format });
       current.slow.applyOptions({ priceFormat: format });
+      current.ema200.applyOptions({ priceFormat: format });
+      current.bbUpper.applyOptions({ priceFormat: format });
+      current.bbLower.applyOptions({ priceFormat: format });
     }
     current.chart.applyOptions({ timeScale: { timeVisible: series?.timeframe !== "1d" } });
     // Frame the latest bars when another market or timeframe arrives. A refresh of the same one leaves the
@@ -216,23 +274,23 @@ export function PriceChart({ series, levels, themeKey, overlay, credit }: PriceC
     if (view === framed.current || rows.length === 0) return;
     framed.current = view;
     if (rows.length > BARS_IN_VIEW) {
-      current.chart.timeScale().setVisibleLogicalRange({ from: rows.length - BARS_IN_VIEW, to: rows.length + 2 });
+      current.chart.timeScale().setVisibleLogicalRange({ from: rows.length - BARS_IN_VIEW, to: rows.length + 3 });
     } else {
       current.chart.timeScale().fitContent();
     }
   }, [series, themeKey]);
 
+  // Support and resistance dashed lines.
   useEffect(() => {
     const current = handles.current;
     if (!current) return;
-    for (const line of lines.current) current.candles.removePriceLine(line);
-    lines.current = [];
-    if (!levels) return;
+    for (const line of levelLines.current) current.candles.removePriceLine(line);
+    levelLines.current = [];
+    if (!levels || !overlays.levels) return;
     const plate = token("--surface-strong");
-    // The nearest level on each side is named on the axis; the next one is only a line, so labels do not pile up.
     const draw = (values: number[], color: string) => {
       for (const [index, value] of values.slice(0, 2).entries()) {
-        lines.current.push(
+        levelLines.current.push(
           current.candles.createPriceLine({
             price: value,
             color,
@@ -247,7 +305,58 @@ export function PriceChart({ series, levels, themeKey, overlay, credit }: PriceC
     };
     draw(levels.support, token("--up"));
     draw(levels.resistance, token("--down"));
-  }, [levels, themeKey]);
+  }, [levels, overlays.levels, themeKey]);
+
+  // Live position entry, liquidation, and open SL/TP/Limit order lines.
+  useEffect(() => {
+    const current = handles.current;
+    if (!current) return;
+    for (const line of tradeLines.current) current.candles.removePriceLine(line);
+    tradeLines.current = [];
+    if (!overlays.orders) return;
+
+    const up = token("--up");
+    const down = token("--down");
+    const warn = token("--warn");
+    const focus = token("--focus");
+    const plate = token("--bg");
+
+    const add = (value: number, color: string, title: string, lineStyle: LineStyle) => {
+      if (!Number.isFinite(value) || value <= 0) return;
+      tradeLines.current.push(
+        current.candles.createPriceLine({
+          price: value,
+          color,
+          lineWidth: 1,
+          lineStyle,
+          axisLabelVisible: true,
+          axisLabelColor: color,
+          axisLabelTextColor: plate,
+          title,
+        }),
+      );
+    };
+
+    if (position) {
+      add(
+        Number(position.entryPrice),
+        position.side === "long" ? up : down,
+        position.side === "long" ? "Long entry" : "Short entry",
+        LineStyle.Solid,
+      );
+      if (position.liquidationPrice) {
+        add(Number(position.liquidationPrice), warn, "Liq", LineStyle.SparseDotted);
+      }
+    }
+
+    for (const order of orders) {
+      const level = Number(order.stopPrice ?? order.price);
+      if (!Number.isFinite(level) || level <= 0) continue;
+      const kind = orderLineKind(order);
+      const color = kind.tone === "up" ? up : kind.tone === "down" ? down : focus;
+      add(level, color, kind.title, LineStyle.LargeDashed);
+    }
+  }, [position, orders, overlays.orders, themeKey]);
 
   return (
     <>

@@ -33,5 +33,6 @@ export function createStore<T extends object>(initial: T): Store<T> {
  * unchanged state compares equal between renders.
  */
 export function useStore<T, S>(store: Store<T>, selector: (state: T) => S): S {
-  return useSyncExternalStore(store.subscribe, () => selector(store.get()));
+  const snap = () => selector(store.get());
+  return useSyncExternalStore(store.subscribe, snap, snap);
 }

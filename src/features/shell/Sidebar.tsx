@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Theme, ThreadView } from "../../api/types";
 import { Icon, type IconName } from "../../components/Icon";
-import { Menu, MenuItem } from "../../components/Menu";
 import { shortAddress } from "../../lib/format";
 import { activeWallet } from "../../lib/market";
-import { groupThreads } from "../../lib/threads";
+import { networkName } from "../../lib/network";
+import { useResolvedTheme } from "../../lib/theme";
+import { filterThreads, groupThreads } from "../../lib/threads";
 import {
   deleteThread,
   navigate,
@@ -18,10 +19,10 @@ import {
   useSnapshot,
 } from "../../state/app";
 
-const THEMES: { value: Theme; label: string }[] = [
-  { value: "system", label: "System" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
+const THEMES: { value: Theme; label: string; icon: IconName }[] = [
+  { value: "system", label: "System", icon: "monitor" },
+  { value: "light", label: "Light", icon: "sun" },
+  { value: "dark", label: "Dark", icon: "moon" },
 ];
 
 interface NavItemProps {
@@ -45,29 +46,114 @@ function NavItem({ icon, label, current = false, count, countLabel, disabled, on
       disabled={disabled}
       onClick={onClick}
     >
-      <Icon name={icon} />
+      <Icon name={icon} size={17} />
       <span className="grow truncate">{label}</span>
       {count ? <span className="nav-count num">{count}</span> : null}
     </button>
   );
 }
 
+interface ThemeSwitchProps {
+  value: Theme;
+  resolved: "light" | "dark";
+  disabled: boolean;
+  onChange: (theme: Theme) => void;
+}
+
+/** Compact three-state theme selector with radiogroup semantics and arrow-key navigation. */
+function ThemeSwitch({ value, resolved, disabled, onChange }: ThemeSwitchProps) {
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (disabled) return;
+    let nextIndex = -1;
+    const index = THEMES.findIndex((option) => option.value === value);
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (index + 1) % THEMES.length;
+    else if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (index - 1 + THEMES.length) % THEMES.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = THEMES.length - 1;
+    if (nextIndex < 0) return;
+    event.preventDefault();
+    const next = THEMES[nextIndex];
+    if (!next) return;
+    onChange(next.value);
+    const buttons = event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+    buttons[nextIndex]?.focus();
+  }
+
+  return (
+    <div className="theme-switch" role="radiogroup" aria-label="Theme" onKeyDown={onKeyDown}>
+      {THEMES.map((option) => {
+        const checked = option.value === value;
+        const name = option.value === "system" ? `System theme (currently ${resolved})` : `${option.label} theme`;
+        const hint = option.value === "system" ? `System (${resolved})` : option.label;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            className="theme-option"
+            role="radio"
+            aria-checked={checked}
+            aria-label={name}
+            title={hint}
+            tabIndex={checked ? 0 : -1}
+            disabled={disabled}
+            onClick={() => {
+              if (!checked) onChange(option.value);
+            }}
+          >
+            <Icon name={option.icon} size={14} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ThreadRow({ thread, current, locked }: { thread: ThreadView; current: boolean; locked: boolean }) {
   const [confirming, setConfirming] = useState(false);
+  const deleteBtn = useRef<HTMLButtonElement>(null);
+  const restoreDeleteFocus = useRef(false);
+
+  useEffect(() => {
+    if (!confirming && restoreDeleteFocus.current) {
+      restoreDeleteFocus.current = false;
+      deleteBtn.current?.focus();
+    }
+  }, [confirming]);
+
+  function cancelConfirm() {
+    restoreDeleteFocus.current = true;
+    setConfirming(false);
+  }
 
   if (confirming) {
     return (
-      <li className="thread-row" data-confirm="true">
-        <span className="grow truncate">Delete chat?</span>
-        <button type="button" className="btn btn-sm btn-danger" disabled={locked} onClick={() => void deleteThread(thread.id)}>
+      <li
+        className="thread-row"
+        data-confirm="true"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            cancelConfirm();
+          }
+        }}
+      >
+        <span className="grow truncate">Delete?</span>
+        <button
+          type="button"
+          className="btn btn-sm btn-danger"
+          disabled={locked}
+          onClick={() => void deleteThread(thread.id)}
+        >
           Delete
         </button>
-        <button type="button" className="btn btn-sm btn-ghost" autoFocus onClick={() => setConfirming(false)}>
+        <button type="button" className="btn btn-sm btn-ghost" autoFocus onClick={cancelConfirm}>
           Cancel
         </button>
       </li>
     );
   }
+
   return (
     <li className="thread-row" data-current={current}>
       <button
@@ -79,103 +165,249 @@ function ThreadRow({ thread, current, locked }: { thread: ThreadView; current: b
       >
         <span className="truncate">{thread.title}</span>
       </button>
-      <Menu
-        label={`Options for ${thread.title}`}
-        triggerClass="icon-btn thread-more"
-        trigger={<Icon name="dots" size={16} />}
-        align="end"
+      <button
+        ref={deleteBtn}
+        type="button"
+        className="icon-btn thread-delete"
+        aria-label={`Delete ${thread.title}`}
+        disabled={locked}
+        onClick={() => setConfirming(true)}
       >
-        <MenuItem icon="trash" tone="danger" label="Delete" onSelect={() => setConfirming(true)} />
-      </Menu>
+        <Icon name="trash" size={15} />
+      </button>
     </li>
   );
 }
 
-/** Navigation and conversations. Beside the page on a wide window, over it on a narrow one. */
-export function Sidebar({ overlay }: { overlay: boolean }) {
+interface SidebarProps {
+  /** Slid over the page on a narrow window instead of docked beside it. */
+  overlay: boolean;
+  /** Whether the overlay drawer is currently open. Always true when docked inline. */
+  open?: boolean;
+}
+
+/** Navigation, conversations and footer controls. Docked beside the page on a wide window, animated drawer on a narrow one. */
+export function Sidebar({ overlay, open = true }: SidebarProps) {
   const snapshot = useSnapshot();
   const page = useApp((state) => state.page);
   // The core refuses to start, open or delete a conversation while a turn is running.
   const locked = useBusy();
-  const root = useRef<HTMLElement>(null);
-  const groups = useMemo(() => groupThreads(snapshot.threads), [snapshot.threads]);
+  const resolvedTheme = useResolvedTheme(snapshot.theme);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const searchToggle = useRef<HTMLButtonElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const searchInputId = useId();
+
+  const hasThreads = snapshot.threads.length > 0;
+  const activeQuery = searchOpen && hasThreads ? query : "";
+  const visibleThreads = useMemo(() => filterThreads(snapshot.threads, activeQuery), [snapshot.threads, activeQuery]);
+  const groups = useMemo(() => groupThreads(visibleThreads), [visibleThreads]);
   const wallet = activeWallet(snapshot);
   const positions = snapshot.account?.positions.length ?? 0;
 
-  // Slid over the page, the sidebar takes focus so the keyboard lands in it.
+  // When opened as a drawer, move keyboard focus straight to the close control without scrolling.
   useEffect(() => {
-    if (overlay) root.current?.querySelector<HTMLElement>(".nav-item")?.focus();
-  }, [overlay]);
+    if (overlay && open) closeButton.current?.focus({ preventScroll: true });
+  }, [overlay, open]);
+
+  useEffect(() => {
+    if (searchOpen && hasThreads) searchInput.current?.focus();
+  }, [searchOpen, hasThreads]);
+
+  const hidden = overlay && !open;
+  const walletTone = wallet.connected ? (wallet.needsDeposit ? "warn" : "up") : undefined;
 
   return (
-    <aside ref={root} className="sidebar" data-overlay={overlay} aria-label="Sidebar">
+    <aside
+      id="app-sidebar"
+      className="sidebar"
+      data-overlay={overlay}
+      data-open={open}
+      role={overlay && open ? "dialog" : undefined}
+      aria-modal={overlay && open ? true : undefined}
+      aria-hidden={hidden ? true : undefined}
+      aria-label="Sidebar"
+      inert={hidden ? true : undefined}
+    >
       <div className="sidebar-head" data-tauri-drag-region>
         <span className="grow drag" data-tauri-drag-region />
-        <button type="button" className="icon-btn" aria-label="Close sidebar" onClick={toggleSidebar}>
+        <button
+          ref={closeButton}
+          type="button"
+          className="icon-btn"
+          aria-label="Close sidebar"
+          onClick={toggleSidebar}
+        >
           <Icon name="sidebar" />
         </button>
       </div>
 
-      <nav className="sidebar-nav" aria-label="Main">
-        <NavItem icon="compose" label="New chat" disabled={locked} onClick={() => void newThread()} />
-        <NavItem icon="chart" label="Markets" current={page === "markets"} onClick={() => navigate("markets")} />
-        <NavItem
-          icon="account"
-          label="Account"
-          current={page === "account"}
-          count={positions}
-          countLabel={positions === 1 ? "open position" : "open positions"}
-          onClick={() => navigate("account")}
-        />
-        <NavItem icon="activity" label="Activity" current={page === "activity"} onClick={() => navigate("activity")} />
+      <div className="sidebar-primary">
+        <button type="button" className="sidebar-cta" disabled={locked} onClick={() => void newThread()}>
+          <Icon name="compose" size={16} />
+          <span className="truncate">New chat</span>
+        </button>
+      </div>
+
+      <nav className="sidebar-nav" aria-label="Workspace">
+        <ul>
+          <li>
+            <NavItem
+              icon="chart"
+              label="Markets"
+              current={page === "markets" || page === "market"}
+              onClick={() => navigate("markets")}
+            />
+          </li>
+          <li>
+            <NavItem
+              icon="account"
+              label="Account"
+              current={page === "account"}
+              count={positions}
+              countLabel={positions === 1 ? "open position" : "open positions"}
+              onClick={() => navigate("account")}
+            />
+          </li>
+          <li>
+            <NavItem icon="activity" label="Activity" current={page === "activity"} onClick={() => navigate("activity")} />
+          </li>
+        </ul>
       </nav>
 
-      <div className="sidebar-threads">
-        {groups.map((group) => (
-          <section key={group.label} aria-label={group.label}>
-            <h2 className="thread-group">{group.label}</h2>
-            <ul>
-              {group.threads.map((thread) => (
-                <ThreadRow
-                  key={thread.id}
-                  thread={thread}
-                  current={page === "chat" && thread.id === snapshot.thread}
-                  locked={locked}
-                />
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
+      <div className="sidebar-threads-wrap">
+        <div className="threads-head">
+          <h2 className="threads-title">Chats</h2>
+          {hasThreads ? (
+            <button
+              ref={searchToggle}
+              type="button"
+              className="icon-btn threads-search-btn"
+              aria-label={searchOpen ? "Close chat filter" : "Filter chats"}
+              aria-expanded={searchOpen}
+              aria-controls={searchOpen ? searchInputId : undefined}
+              onClick={() => {
+                if (searchOpen) {
+                  setSearchOpen(false);
+                  setQuery("");
+                } else {
+                  setSearchOpen(true);
+                }
+              }}
+            >
+              <Icon name={searchOpen ? "close" : "search"} size={15} />
+            </button>
+          ) : null}
+        </div>
 
-      <div className="sidebar-foot">
-        <Menu
-          triggerClass="nav-item"
-          side="top"
-          trigger={
-            <>
-              {wallet.connected ? <span className="dot" data-tone="up" /> : <Icon name="wallet" />}
-              <span className="grow truncate num">{wallet.connected ? shortAddress(wallet.user) : "Connect wallet"}</span>
-              <Icon name="dots" size={16} />
-            </>
-          }
-        >
-          <MenuItem icon="wallet" label="Wallet" onSelect={() => openSettings("wallet")} />
-          <MenuItem icon="settings" label="Settings" onSelect={() => openSettings("models")} />
-          <div className="menu-sep" role="separator" />
-          <div className="menu-label">Theme</div>
-          {THEMES.map((theme) => (
-            <MenuItem
-              key={theme.value}
-              label={theme.label}
-              checked={snapshot.theme === theme.value}
-              onSelect={() => {
-                if (snapshot.theme !== theme.value) void setTheme(theme.value);
+        {searchOpen && hasThreads ? (
+          <div className="threads-filter">
+            <Icon name="search" size={14} />
+            <input
+              ref={searchInput}
+              id={searchInputId}
+              type="search"
+              className="threads-filter-input"
+              placeholder="Filter chats"
+              aria-label="Filter chats"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                event.preventDefault();
+                event.stopPropagation();
+                if (query) {
+                  setQuery("");
+                } else {
+                  setSearchOpen(false);
+                  searchToggle.current?.focus();
+                }
               }}
             />
-          ))}
-        </Menu>
+            {query ? (
+              <button
+                type="button"
+                className="threads-filter-clear"
+                aria-label="Clear filter"
+                onClick={() => {
+                  setQuery("");
+                  searchInput.current?.focus();
+                }}
+              >
+                <Icon name="close" size={13} />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="sidebar-threads">
+          {groups.length > 0 ? (
+            groups.map((group) => (
+              <div key={group.label} className="thread-section">
+                <h3 className="thread-group">{group.label}</h3>
+                <ul>
+                  {group.threads.map((thread) => (
+                    <ThreadRow
+                      key={thread.id}
+                      thread={thread}
+                      current={page === "chat" && thread.id === snapshot.thread}
+                      locked={locked}
+                    />
+                  ))}
+                </ul>
+              </div>
+            ))
+          ) : !hasThreads ? (
+            <p className="threads-empty">No conversations yet</p>
+          ) : (
+            <div className="threads-empty">
+              <p>No matching chats</p>
+              <button
+                type="button"
+                className="link"
+                onClick={() => {
+                  setQuery("");
+                  searchInput.current?.focus();
+                }}
+              >
+                Clear filter
+              </button>
+            </div>
+          )}
+        </div>
       </div>
+
+      <footer className="sidebar-foot">
+        <button type="button" className="foot-wallet" onClick={() => openSettings("wallet")}>
+          {wallet.connected ? <span className="dot" data-tone={walletTone} /> : <Icon name="wallet" size={16} />}
+          <span className="grow truncate num">{wallet.connected ? shortAddress(wallet.user) : "Connect wallet"}</span>
+          {wallet.connected ? (
+            <span className="foot-badge" data-tone={wallet.needsDeposit ? "warn" : undefined}>
+              {wallet.needsDeposit ? "Deposit" : networkName(snapshot.network)}
+            </span>
+          ) : (
+            <Icon name="chevron" size={14} />
+          )}
+        </button>
+
+        <div className="foot-bar">
+          <button type="button" className="foot-btn" onClick={() => openSettings("models")}>
+            <Icon name="settings" size={16} />
+            <span className="truncate">Settings</span>
+          </button>
+
+          <ThemeSwitch
+            value={snapshot.theme}
+            resolved={resolvedTheme}
+            disabled={locked}
+            onChange={(next) => {
+              if (snapshot.theme !== next) void setTheme(next);
+            }}
+          />
+        </div>
+      </footer>
     </aside>
   );
 }

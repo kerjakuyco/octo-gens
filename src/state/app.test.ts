@@ -78,3 +78,40 @@ describe("wallet pages", () => {
     expect(state.app.get().snapshot?.pendingWallet).toBeNull();
   });
 });
+
+describe("market navigation", () => {
+  let state: Awaited<ReturnType<typeof started>>;
+
+  beforeAll(async () => {
+    state = await started();
+  });
+
+  it("opens the full-width market view and returns to the page that opened it", async () => {
+    state.navigate("chat");
+    await state.focusMarket("ETHUSDT");
+    expect(state.app.get().page).toBe("market");
+    expect(state.app.get().previousPage).toBe("chat");
+    expect(state.app.get().snapshot?.focus).toBe("ETHUSDT");
+
+    // Switching to another coin while already in the market view keeps the original return page.
+    await state.focusMarket("BTCUSDT");
+    expect(state.app.get().page).toBe("market");
+    expect(state.app.get().previousPage).toBe("chat");
+    expect(state.app.get().snapshot?.focus).toBe("BTCUSDT");
+
+    state.leaveMarket();
+    expect(state.app.get().page).toBe("chat");
+  });
+
+  it("updates chart timeframe and overlay toggles cleanly", () => {
+    expect(state.app.get().chartTimeframe).toBe("4h");
+    state.setChartTimeframe("1h");
+    expect(state.app.get().chartTimeframe).toBe("1h");
+
+    expect(state.app.get().chartOverlays.ema200).toBe(false);
+    state.toggleChartOverlay("ema200");
+    expect(state.app.get().chartOverlays.ema200).toBe(true);
+    state.toggleChartOverlay("ema200");
+    expect(state.app.get().chartOverlays.ema200).toBe(false);
+  });
+});
