@@ -17,7 +17,7 @@ export default {
         <a class="button button-brand" href="/download/">Get OctoNeo</a>
         <a class="button button-quiet" href="${REPO}">View source on GitHub</a>
       </div>
-      <p class="hero-meta">Builds on Windows, macOS and Linux. Open source under GPL-3.0-only, with no sign-up and no telemetry.</p>
+      <p class="hero-meta">Runs on Windows, macOS and Linux. Open source under GPL-3.0-only, with no sign-up and no telemetry.</p>
     </div>
     <div class="hero-demo">
 ${demo()}

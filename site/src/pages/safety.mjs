@@ -121,7 +121,7 @@ ${reference("Environment variables, meant for tests", table({
 <li><strong>The liquidation price on a ticket is an estimate.</strong> It ignores fees, funding and margin tiers. The exchange’s own figure appears once the position is open.</li>
 <li><strong>A stop-loss is placed after the entry.</strong> If the exchange refuses it, the position is open without one and the ticket says so. Stops trigger market orders and can fill worse than their trigger.</li>
 <li><strong>No keychain, no memory between launches.</strong> If your system has no keychain, keys are kept in memory for the session and the wallet must be connected again at the next launch.</li>
-<li><strong>Installers, once published, are not signed with a developer certificate or notarized.</strong> macOS builds carry an ad-hoc signature only, so macOS and Windows will warn before the first launch of a downloaded copy. <a href="/download/#first-launch">What that looks like</a>.</li>
+<li><strong>Installers are not signed with a developer certificate or notarized.</strong> macOS builds carry an ad-hoc signature only, so macOS and Windows will warn before the first launch of a downloaded copy. <a href="/download/#first-launch">What that looks like</a>.</li>
 </ul>`,
         },
         {

@@ -1,15 +1,19 @@
-import { REPO, RELEASES, ISSUES, VERSION, code, doc, docPage, facts, out, shell } from "../site.mjs";
+import { REPO, RELEASES, ISSUES, VERSION, code, doc, docPage, facts, out, shell, table } from "../site.mjs";
+
+/** Where the installers of this version are attached. */
+const FILES = `${RELEASES}/download/v${VERSION}`;
+const file = (name, label = name) => out(`${FILES}/${name}`, label);
 
 export default {
   path: "/download/",
   title: "Get OctoNeo",
   description:
-    "OctoNeo 0.5.0 for Windows, macOS and Linux. No installer has been published yet: build it from source with a few commands, then practice on testnet.",
+    "Download OctoNeo 0.5.0 for Windows, macOS or Linux, or build it from source. What to expect at the first launch, and how to start on testnet.",
   render: (ctx) =>
     docPage({
       path: "/download/",
       title: "Get OctoNeo",
-      lead: `Version ${VERSION} for Windows, macOS and Linux. Installers will be attached to each release on GitHub. None has been published yet, so for now you build it from source.`,
+      lead: `Version ${VERSION} for Windows, macOS and Linux. Download the installer for your system, or build it from source.`,
       picture: `<div class="release">
   <img class="release-icon" src="${ctx.asset("images/icon.svg")}" width="88" height="88" alt="">
   <div class="release-body">
@@ -17,15 +21,30 @@ export default {
       ["Version", VERSION],
       ["Platforms", "Windows, macOS, Linux"],
       ["License", "GPL-3.0-only"],
-      ["Installers", "None published yet"],
+      ["Released", "November 19, 2026"],
     ], "release-facts")}
     <div class="actions">
-      <a class="button button-brand" href="#build">Build from source</a>
-      <a class="button button-quiet" href="${RELEASES}">Open the Releases page</a>
+      <a class="button button-brand" href="#download">Choose your installer</a>
+      <a class="button button-quiet" href="${RELEASES}/tag/v${VERSION}">Open the release on GitHub</a>
     </div>
   </div>
 </div>`,
       sections: [
+        {
+          id: "download",
+          title: "Download",
+          lead: "Pick the file for your system. Every installer is built from this repository by GitHub Actions, and the release page lists each file’s SHA-256 checksum.",
+          body: `${table({
+            head: ["System", "Installer", "Also available"],
+            rows: [
+              ["macOS, Apple silicon (M1 and later)", file(`OctoNeo_${VERSION}_aarch64.dmg`), "—"],
+              ["Windows, 64-bit", file(`OctoNeo_${VERSION}_x64-setup.exe`), file(`OctoNeo_${VERSION}_x64_en-US.msi`, "MSI package")],
+              ["Linux, 64-bit", file(`OctoNeo_${VERSION}_amd64.AppImage`, "AppImage, any distribution"), `${file(`OctoNeo_${VERSION}_amd64.deb`, "Debian or Ubuntu (.deb)")}, ${file(`OctoNeo-${VERSION}-1.x86_64.rpm`, "Fedora or openSUSE (.rpm)")}`],
+            ],
+            stack: true,
+          })}
+<p>There is no installer for Intel Macs; you can <a href="#build">build OctoNeo from source</a> on one. On macOS, open the disk image and drag OctoNeo to Applications. On Linux, make the AppImage executable (${code("chmod +x")}) and run it, or install the package for your distribution. All files and notes are on the ${out(`${RELEASES}/tag/v${VERSION}`, "release page")}.</p>`,
+        },
         {
           id: "build",
           title: "Build from source",
@@ -54,7 +73,7 @@ ${shell([
         {
           id: "first-launch",
           title: "The first launch of a downloaded copy",
-          lead: "When installers are published, macOS and Windows will warn you before the first launch of a downloaded copy. The repository holds no certificates, so installers are not signed with a developer certificate or notarized, and macOS builds carry an ad-hoc signature only.",
+          lead: "macOS and Windows warn you before the first launch of a downloaded copy. The repository holds no certificates, so the installers are not signed with a developer certificate or notarized, and macOS builds carry an ad-hoc signature only.",
           body: `${facts([
             ["macOS", "macOS will not open the app the first time, because it cannot verify it. Open System Settings, then Privacy &amp; Security, and choose Open Anyway beside the message about OctoNeo. macOS asks you to confirm once more; after that the app opens normally."],
             ["Windows", "Microsoft Defender SmartScreen may say that Windows protected your PC. Choose More info, then Run anyway."],

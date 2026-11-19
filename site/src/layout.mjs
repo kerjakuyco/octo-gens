@@ -91,7 +91,7 @@ function footer() {
   <div class="wrap footer-top">
     <div class="footer-brand">
       <a class="brand" href="/">${tile(28)}<span>OctoNeo</span></a>
-      <p>A desktop AI assistant for perpetual futures on a decentralized exchange. Version ${VERSION} for Windows, macOS and Linux. No installers yet: build from source.</p>
+      <p>A desktop AI assistant for perpetual futures on a decentralized exchange. Version ${VERSION} for Windows, macOS and Linux.</p>
     </div>
     <nav class="footer-nav" aria-label="Footer">
       <div>

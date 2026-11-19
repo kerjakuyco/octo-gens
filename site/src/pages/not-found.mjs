@@ -19,7 +19,7 @@ export default {
     <li><a href="/news/">News</a><p>Eight publishers, searched on your computer.</p></li>
     <li><a href="/wallet/">Wallet and funds</a><p>The trade-only key, deposits and withdrawals.</p></li>
     <li><a href="/safety/">Safety and privacy</a><p>What the assistant cannot do, and where your data lives.</p></li>
-    <li><a href="/download/">Get OctoNeo</a><p>No installers yet: how to build OctoNeo from source.</p></li>
+    <li><a href="/download/">Get OctoNeo</a><p>Installers for Windows, macOS and Linux, and how to build it from source.</p></li>
     <li><a href="/open-source/">Open source</a><p>The license, the architecture, and how to contribute.</p></li>
   </ul>
 </div>
