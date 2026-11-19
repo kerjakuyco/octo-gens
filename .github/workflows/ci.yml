@@ -55,6 +55,25 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
+  website:
+    name: Website
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: site/.node-version
+      # pnpm comes from the `packageManager` field in site/package.json.
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      # Builds every page, then checks links, assets, titles, the content policy and that the exchange is not named.
+      - run: pnpm run check
+      # Proves the Cloudflare Worker configuration is valid, without logging in or deploying.
+      - run: pnpm exec wrangler deploy --dry-run
+
   app:
     name: App (${{ matrix.os }})
     strategy:
