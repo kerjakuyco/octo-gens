@@ -6,6 +6,10 @@ node_modules/
 /dist/
 *.tsbuildinfo
 
+# The website: build output and Wrangler's local state
+/site/dist/
+/site/.wrangler/
+
 # Tauri: generated capability schemas
 /src-tauri/gen/schemas/
 

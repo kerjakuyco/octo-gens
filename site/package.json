@@ -1,0 +1,27 @@
+{
+  "name": "octoneo-site",
+  "private": true,
+  "type": "module",
+  "description": "The OctoNeo website: static pages served by Cloudflare Workers Static Assets",
+  "license": "GPL-3.0-only",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node build.mjs && node check.mjs",
+    "dev": "node dev.mjs",
+    "preview": "node build.mjs && wrangler dev",
+    "deploy": "node build.mjs && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.157.0"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "esbuild",
+      "workerd"
+    ]
+  }
+}

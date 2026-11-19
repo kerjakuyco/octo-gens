@@ -1,0 +1,16 @@
+// An assets-only Worker: Cloudflare serves the files in dist/ and runs no code of ours.
+// Build dist/ first (`pnpm run build`); `pnpm run deploy` does both.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "octoneo",
+  "compatibility_date": "2026-11-01",
+  // Wrangler's own usage reports about this project's deploys; the site itself has no telemetry either.
+  "send_metrics": false,
+  "assets": {
+    "directory": "./dist",
+    // Unknown addresses get dist/404.html with status 404.
+    "not_found_handling": "404-page",
+    // /assistant redirects to /assistant/, which serves assistant/index.html.
+    "html_handling": "auto-trailing-slash"
+  }
+}

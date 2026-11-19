@@ -1,0 +1,2427 @@
+/*
+ * The OctoNeo site.
+ *
+ * The palette is the app's own: neutral greys carry the structure. Blue is for the one action on a
+ * page and for links. Green and red mean long and short, gains and losses, and appear only inside
+ * the preview of the app. Amber is for something to read before acting, as in the app.
+ * Type is the system's own face; no font files are loaded.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --paper: #ffffff;
+  --rail: #f9f9f9;
+  --well: #f4f4f4;
+  --well-strong: #ececec;
+  --rule: #e5e5e5;
+  --rule-strong: #cdcdcd;
+  --ink: #0d0d0d;
+  --muted: #5d5d5d;
+  --faint: #8f8f8f;
+
+  --brand: #2a63dd;
+  --brand-hover: #2152c4;
+  --on-brand: #ffffff;
+  --link: #2a63dd;
+  --focus: #2563eb;
+
+  /* The app's own buttons, used inside the preview. */
+  --primary: #0d0d0d;
+  --primary-hover: #2f2f2f;
+  --on-primary: #ffffff;
+
+  --up: #06733b;
+  --up-soft: rgba(6, 115, 59, 0.1);
+  --down: #c5221f;
+  --down-soft: rgba(197, 34, 31, 0.09);
+  --warn: #8a5a00;
+  --warn-soft: rgba(214, 150, 20, 0.14);
+
+  --font: system-ui, -apple-system, Roboto, "Noto Sans", sans-serif;
+  --mono: ui-monospace, monospace;
+
+  --gutter: 32px;
+  --measure: 46rem;
+  /* Running text stops at about 75 characters a line; tables and pictures keep the column's width. */
+  --text: 36rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #212121;
+    --rail: #181818;
+    --well: #2f2f2f;
+    --well-strong: #3a3a3a;
+    --rule: rgba(255, 255, 255, 0.1);
+    --rule-strong: rgba(255, 255, 255, 0.22);
+    --ink: #ececec;
+    --muted: #b4b4b4;
+    --faint: #8e8e8e;
+
+    --brand: #2a63dd;
+    --brand-hover: #3a73ec;
+    --link: #7aa7ff;
+    --focus: #7aa7ff;
+
+    --primary: #ffffff;
+    --primary-hover: #dcdcdc;
+    --on-primary: #0d0d0d;
+
+    --up: #3ecf8e;
+    --up-soft: rgba(62, 207, 142, 0.14);
+    --down: #ff8a80;
+    --down-soft: rgba(255, 138, 128, 0.14);
+    --warn: #f2b84b;
+    --warn-soft: rgba(242, 184, 75, 0.12);
+  }
+}
+
+/* ------------------------------------------------------------------- base */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: 24px;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  font-kerning: normal;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+dl,
+dd,
+figure,
+pre {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+li,
+dd,
+figcaption {
+  text-wrap: pretty;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+svg {
+  flex: none;
+}
+
+button {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--link);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+main:focus {
+  outline: none;
+}
+
+code {
+  padding: 0.1em 0.35em;
+  border-radius: 5px;
+  background: var(--well);
+  font-family: var(--mono);
+  font-size: 0.875em;
+  overflow-wrap: anywhere;
+}
+
+strong {
+  font-weight: 600;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.up {
+  color: var(--up);
+}
+
+.down {
+  color: var(--down);
+}
+
+.icon {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.wrap {
+  width: 100%;
+  max-width: calc(1136px + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  z-index: 10;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 12px;
+}
+
+/* ----------------------------------------------------------------- header */
+
+.site-header {
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+.header-bar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 64px;
+}
+
+.brand {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.site-nav {
+  margin-right: auto;
+}
+
+.site-nav ul {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-nav a {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 0.12s,
+    color 0.12s;
+}
+
+.site-nav a:hover {
+  background: var(--well);
+  color: var(--ink);
+}
+
+/* The page you are on is marked by weight and a bar, not by a tint alone. */
+.site-nav a[aria-current="page"] {
+  border-radius: 0;
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--ink);
+}
+
+.nav-github {
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--rule);
+}
+
+.menu-button {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--faint);
+  border-radius: 10px;
+  background: var(--paper);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.menu-close {
+  display: none;
+}
+
+.menu-button[aria-expanded="true"] .menu-open {
+  display: none;
+}
+
+.menu-button[aria-expanded="true"] .menu-close {
+  display: inline;
+}
+
+.menu-open,
+.menu-close {
+  line-height: 0;
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s;
+}
+
+.button-brand {
+  background: var(--brand);
+  color: var(--on-brand);
+}
+
+.button-brand:hover {
+  background: var(--brand-hover);
+}
+
+/* The border is the only edge a quiet button has, so it keeps 3:1 against the page in both themes. */
+.button-quiet {
+  border-color: var(--faint);
+  background: transparent;
+  color: var(--ink);
+}
+
+.button-quiet:hover {
+  background: var(--well);
+}
+
+.button-quiet[aria-current="page"] {
+  border-color: var(--ink);
+}
+
+.button-small {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 0.9375rem;
+}
+
+/* ------------------------------------------------------------------- hero */
+
+.hero {
+  padding: 48px 0 56px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--rail);
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 480px) minmax(0, 1fr);
+  align-items: center;
+  gap: 56px;
+}
+
+.hero-title {
+  font-size: 2.875rem;
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+}
+
+.hero-title span {
+  display: block;
+}
+
+.hero-lead {
+  max-width: var(--text);
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 1.125rem;
+  line-height: 1.55;
+}
+
+.hero-copy .actions {
+  margin-top: 28px;
+}
+
+/* Platforms, license and privacy in one plain line under the buttons. */
+.hero-meta {
+  max-width: var(--text);
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.hero-demo {
+  min-width: 0;
+}
+
+/* -------------------------------------------- the preview of the app's chat */
+
+.demo {
+  display: grid;
+  gap: 12px;
+}
+
+/* The suggestions are the tabs of the conversations, so they come before them in the page, and the
+   grid draws them under the message box, where the app has them. */
+.d-window {
+  container-type: inline-size;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  height: clamp(540px, calc(100vh - 170px), 700px);
+  height: clamp(540px, calc(100svh - 170px), 700px);
+  overflow: hidden;
+  padding-bottom: 14px;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background: var(--paper);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.d-bar {
+  grid-row: 1;
+}
+
+.d-panels {
+  grid-row: 2;
+}
+
+.d-composer {
+  grid-row: 3;
+}
+
+.d-suggestions {
+  grid-row: 4;
+}
+
+.d-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 12px 0 18px;
+}
+
+.d-bar-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.d-model {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.d-model .icon {
+  color: var(--muted);
+}
+
+.d-bar-end {
+  display: flex;
+  gap: 8px;
+}
+
+.d-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.d-pill .icon {
+  color: var(--muted);
+}
+
+.d-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+.d-panels {
+  min-height: 0;
+}
+
+/* No overscroll containment: once the conversation is at its end, the wheel or a swipe scrolls the page. */
+.d-panel {
+  height: 100%;
+  overflow-y: auto;
+  padding: 8px 20px 24px;
+  scrollbar-width: thin;
+}
+
+.d-panel:focus-visible {
+  outline-offset: -3px;
+  border-radius: 0;
+}
+
+/* Until the script has set the first conversation up to play, it is not drawn, so it does not
+   flash finished. If the script never arrives, it appears after two seconds anyway. */
+.js .demo:not([data-ready]) .d-panel {
+  visibility: hidden;
+  animation: d-show 0s 2s forwards;
+}
+
+@keyframes d-show {
+  to {
+    visibility: visible;
+  }
+}
+
+.d-turn {
+  display: grid;
+  gap: 14px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.d-said {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.d-bubble {
+  max-width: 85%;
+  padding: 9px 16px;
+  border-radius: 18px;
+  background: var(--well);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.d-answer {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.d-activity summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px 0;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  list-style: none;
+  cursor: pointer;
+}
+
+.d-activity summary::-webkit-details-marker {
+  display: none;
+}
+
+.d-activity summary:hover {
+  color: var(--ink);
+}
+
+.d-activity-chevron {
+  color: var(--faint);
+  transition: transform 0.12s;
+}
+
+.d-activity[open] .d-activity-chevron {
+  transform: rotate(90deg);
+}
+
+/* While the assistant works, a dot breathes before the line. The line itself stays at full contrast. */
+.d-activity-text[data-running]::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: d-pulse 1.6s ease-in-out infinite;
+}
+
+.d-steps {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--well);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  list-style: none;
+}
+
+.d-step {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.d-step-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 19px;
+  color: var(--muted);
+}
+
+.d-step-body {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+}
+
+.d-step-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.d-step-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.d-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.d-step-preview {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.d-muted {
+  color: var(--muted);
+}
+
+.d-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.d-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--paper);
+  font-size: 0.84375rem;
+  line-height: 1.45;
+}
+
+.d-card-wide {
+  grid-column: 1 / -1;
+}
+
+.is-new {
+  animation: d-fade 0.18s ease-out;
+}
+
+.d-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.d-symbol {
+  font-weight: 600;
+}
+
+.d-symbol .d-muted {
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+.d-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--well);
+  color: var(--muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.d-chip[data-tone="up"] {
+  background: var(--up-soft);
+  color: var(--up);
+}
+
+.d-rows {
+  display: grid;
+  margin: -6px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.d-row {
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  border-top: 1px solid var(--rule);
+}
+
+.d-row:first-child {
+  border-top: 0;
+}
+
+.d-quote-row {
+  grid-template-columns: minmax(0, 1fr) auto auto auto 56px;
+}
+
+.d-quote-price,
+.d-quote-change,
+.d-quote-funding {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.d-spark polyline {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.d-spark-up polyline {
+  stroke: var(--up);
+}
+
+.d-spark-down polyline {
+  stroke: var(--down);
+}
+
+.d-facts {
+  display: grid;
+  gap: 6px;
+}
+
+.d-facts-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 28px;
+}
+
+.d-fact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.d-fact dt {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.d-fact dd {
+  min-width: 0;
+  text-align: right;
+}
+
+/* The three figures a card leads with. */
+.d-levels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.d-levels .d-fact {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--well);
+}
+
+.d-levels .d-fact dt {
+  font-size: 0.75rem;
+}
+
+.d-levels .d-fact dd {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.d-rsi {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.d-rsi-rail {
+  fill: var(--well-strong);
+}
+
+.d-rsi-band {
+  fill: var(--rule-strong);
+}
+
+.d-rsi-dot {
+  fill: var(--ink);
+}
+
+.d-share {
+  display: grid;
+  gap: 6px;
+}
+
+.d-share-bar {
+  display: block;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.d-share-ask {
+  fill: var(--down);
+}
+
+.d-share-bid {
+  fill: var(--up);
+}
+
+.d-share-gap {
+  fill: var(--paper);
+}
+
+.d-share-legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+}
+
+.d-card-empty {
+  color: var(--muted);
+}
+
+.d-news-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.d-news-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 10px;
+  padding: 10px 0;
+}
+
+.d-news-title {
+  grid-column: 1 / -1;
+}
+
+.d-news-source,
+.d-news-age {
+  font-size: 0.75rem;
+}
+
+.d-news-age {
+  text-align: right;
+}
+
+.d-md {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.d-md ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.d-md li::marker {
+  color: var(--muted);
+}
+
+.d-ticket {
+  max-width: 520px;
+}
+
+.d-ticket-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.d-ticket-effect {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.d-ticket-why {
+  color: var(--muted);
+}
+
+.d-ticket-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.d-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.12s,
+    color 0.12s;
+}
+
+.d-btn-primary {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.d-btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.d-btn-ghost {
+  color: var(--muted);
+}
+
+.d-btn-ghost:hover {
+  background: var(--well);
+  color: var(--ink);
+}
+
+.d-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--well);
+  font-size: 0.8125rem;
+}
+
+.d-note .icon {
+  margin-top: 1px;
+  color: var(--muted);
+}
+
+.d-ticket[data-state="dismissed"] .d-ticket-effect,
+.d-ticket[data-state="dismissed"] .d-facts,
+.d-ticket[data-state="dismissed"] .d-ticket-why {
+  opacity: 0.55;
+}
+
+.d-dismissed {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.d-composer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  margin: 0 16px;
+  padding: 8px 8px 8px 18px;
+  border-radius: 26px;
+  background: var(--well);
+}
+
+.d-composer-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.d-composer-text[data-typing] {
+  color: var(--ink);
+}
+
+.d-send {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--on-primary);
+  opacity: 0.25;
+  transition: opacity 0.12s;
+}
+
+.d-composer[data-ready] .d-send {
+  opacity: 1;
+}
+
+.d-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px 0;
+}
+
+.d-suggestion {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition:
+    background-color 0.12s,
+    color 0.12s;
+}
+
+.d-suggestion:hover {
+  background: var(--well);
+  color: var(--ink);
+}
+
+.d-suggestion[aria-selected="true"] {
+  border-color: var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.demo-caption {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.demo-note {
+  max-width: 62ch;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.demo-note strong {
+  color: var(--ink);
+}
+
+.demo-replay {
+  flex: none;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--faint);
+  border-radius: 8px;
+  background: var(--paper);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.demo-replay:hover {
+  background: var(--well);
+}
+
+@keyframes d-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes d-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@container (max-width: 520px) {
+  .d-quote-row {
+    grid-template-columns: minmax(0, 1fr) auto auto 56px;
+  }
+
+  .d-quote-funding {
+    display: none;
+  }
+
+  .d-facts-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .d-balance {
+    display: none;
+  }
+
+  .d-panel {
+    padding-inline: 14px;
+  }
+}
+
+@container (max-width: 400px) {
+  .d-levels .d-fact {
+    padding: 8px 10px;
+  }
+
+  .d-levels .d-fact dd {
+    font-size: 0.875rem;
+  }
+}
+
+/* ------------------------------------------------------------------ bands */
+
+.band {
+  padding: 88px 0;
+}
+
+.band-rail {
+  border-block: 1px solid var(--rule);
+  background: var(--rail);
+}
+
+.band-head {
+  max-width: var(--measure);
+  margin-bottom: 40px;
+}
+
+.band-head h2,
+.closing h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.band-head p,
+.closing p {
+  max-width: var(--text);
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 1.125rem;
+  line-height: 1.55;
+}
+
+.more {
+  margin-top: 24px;
+  font-weight: 600;
+}
+
+/* The steps from a question to an order: a real sequence, so it is numbered, in line with each step. */
+.flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 32px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: flow;
+}
+
+.flow li {
+  padding-top: 16px;
+  border-top: 1px solid var(--rule-strong);
+  counter-increment: flow;
+}
+
+.flow h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.flow h3::before {
+  content: counter(flow) ". ";
+  font-variant-numeric: tabular-nums;
+}
+
+.flow p {
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.index {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 32px;
+  margin: 40px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.index a {
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.index p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+/* What runs on your computer, and what it talks to. */
+.topology {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+}
+
+.topology-side {
+  padding: 28px 32px 32px;
+}
+
+.topology-local {
+  border-right: 1px solid var(--rule);
+  background: var(--rail);
+}
+
+.topology h3 {
+  margin-bottom: 18px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.topology dl {
+  display: grid;
+  gap: 16px;
+}
+
+.topology dl > div {
+  position: relative;
+}
+
+.topology dt {
+  font-weight: 600;
+}
+
+.topology dd {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+/* Each connection runs straight from the edge of your computer. */
+.topology-remote dl > div::before {
+  content: "";
+  position: absolute;
+  top: 0.8em;
+  left: -32px;
+  width: 22px;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.topology-remote dl > div::after {
+  content: "";
+  position: absolute;
+  top: calc(0.8em - 3.5px);
+  left: -36px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+.topology figcaption {
+  grid-column: 1 / -1;
+  padding: 18px 32px;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.closing {
+  border-top: 1px solid var(--rule);
+}
+
+.closing-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px 48px;
+}
+
+.closing-grid > div:first-child {
+  max-width: 40rem;
+}
+
+/* ---------------------------------------------------------- feature pages */
+
+.page-head {
+  padding: 56px 0 0;
+}
+
+/* Never larger than the home page's title, and no jump at any width. */
+.page-head h1 {
+  max-width: 22em;
+  font-size: clamp(1.875rem, 1.4rem + 1.6vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.page-lead {
+  max-width: var(--text);
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 1.1875rem;
+  line-height: 1.55;
+}
+
+.page-picture {
+  margin-top: 40px;
+}
+
+/* The text keeps the page's left edge; the index of sections sits to its right. */
+.doc {
+  display: grid;
+  grid-template-columns: minmax(0, 760px) minmax(0, 13rem);
+  justify-content: space-between;
+  gap: 64px;
+  padding-top: 64px;
+  padding-bottom: 104px;
+}
+
+.toc {
+  position: sticky;
+  top: 24px;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding-left: 20px;
+  border-left: 1px solid var(--rule);
+}
+
+.doc-body {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.toc-title {
+  margin-bottom: 10px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.toc ol {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc a {
+  display: block;
+  margin-left: -10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.toc a:hover {
+  background: var(--well);
+  color: var(--ink);
+}
+
+/* The section being read is marked by a bar as well as a tint. */
+.toc a[aria-current="location"] {
+  border-radius: 0 8px 8px 0;
+  background: var(--well);
+  color: var(--ink);
+  box-shadow: inset 2px 0 0 var(--ink);
+}
+
+.doc-body {
+  min-width: 0;
+}
+
+.table-wrap + .facts,
+.facts + .table-wrap {
+  margin-top: 32px;
+}
+
+/* The table above already ends on a rule. */
+.table-wrap + .facts {
+  border-top: 0;
+}
+
+.doc-section + .doc-section {
+  margin-top: 80px;
+}
+
+.doc-section > * + * {
+  margin-top: 18px;
+}
+
+.doc-section h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.doc-section > h3 {
+  margin-top: 40px;
+  font-size: 1.1875rem;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+
+.doc-section > h3 + * {
+  margin-top: 12px;
+}
+
+.section-lead {
+  color: var(--muted);
+  font-size: 1.125rem;
+  line-height: 1.55;
+}
+
+.doc-section > p,
+.doc-section > ul,
+.doc-section > ol,
+.section-lead,
+.callout {
+  max-width: var(--text);
+}
+
+.doc-section > .shot,
+.doc-section > .shot + *,
+.doc-section > .tab-figures,
+.doc-section > .panel-figures {
+  margin-top: 32px;
+}
+
+/* Pictures take one of two widths: the text column's, 760, or the page's, 1136. */
+.shot-column .pic,
+.shot-inset .pic {
+  max-width: min(100%, 760px);
+}
+
+/* Label and value pairs. */
+.facts {
+  display: grid;
+  border-top: 1px solid var(--rule);
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
+  gap: 4px 24px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.fact dt {
+  font-weight: 600;
+}
+
+.release-facts .fact {
+  grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+  padding: 9px 0;
+}
+
+/* A list of rules or limits. */
+.checks {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.checks li {
+  position: relative;
+  padding-left: 26px;
+}
+
+.checks li::before {
+  content: "";
+  position: absolute;
+  top: 0.8em;
+  left: 2px;
+  width: 12px;
+  border-top: 2px solid var(--ink);
+}
+
+/* Numbered steps, drawn like the steps of the app's wallet page. */
+.steps-list {
+  display: grid;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps-list li {
+  position: relative;
+  padding: 0 0 22px 46px;
+  counter-increment: step;
+}
+
+.steps-list li:last-child {
+  padding-bottom: 0;
+}
+
+.steps-list li::before {
+  content: counter(step);
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  background: var(--paper);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.steps-list li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 32px;
+  bottom: 4px;
+  left: 14px;
+  border-left: 1px solid var(--rule-strong);
+}
+
+/* Code and literal text. */
+.code {
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--well);
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.code code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+.code-pre {
+  overflow-x: auto;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
+.code .comment {
+  color: var(--muted);
+}
+
+/* Tables. */
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.table th,
+.table td {
+  padding: 12px 20px 12px 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th:last-child,
+.table td:last-child {
+  padding-right: 0;
+}
+
+.table thead th {
+  padding-top: 0;
+  border-bottom-color: var(--rule-strong);
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.table tbody th {
+  min-width: 9rem;
+  font-weight: 600;
+}
+
+.table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.table .nowrap {
+  white-space: nowrap;
+}
+
+.table code {
+  white-space: normal;
+}
+
+.table.compact {
+  font-size: 0.875rem;
+}
+
+.table.compact th,
+.table.compact td {
+  min-width: 7.5rem;
+}
+
+.table.split td {
+  width: 50%;
+}
+
+/* Pictures of the app. */
+.shot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  gap: 12px;
+}
+
+/* The frame takes the picture's shape and natural width from a rule the build writes for it. */
+.pic {
+  display: block;
+  max-width: 100%;
+}
+
+.pic img {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  background: var(--well);
+  box-shadow: 0 0 0 1px var(--rule);
+}
+
+.shot figcaption {
+  max-width: 62ch;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.panel-figures {
+  display: grid;
+  grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
+  align-items: start;
+  gap: 32px;
+}
+
+.panel-tabs-text > * + * {
+  margin-top: 16px;
+}
+
+.tab-figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 28px 24px;
+}
+
+.shot-tab figcaption {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.callout {
+  max-width: var(--text);
+  padding: 16px 20px;
+  border-left: 3px solid var(--warn);
+  border-radius: 0 10px 10px 0;
+  background: var(--warn-soft);
+  font-size: 1rem;
+}
+
+.release {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  max-width: var(--measure);
+  padding: 28px;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background: var(--rail);
+}
+
+.release-icon {
+  flex: none;
+  width: 88px;
+  height: 88px;
+}
+
+.release-body {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 22px;
+  min-width: 0;
+}
+
+/* The three layers of the app. */
+.layers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 15rem);
+  gap: 20px 32px;
+}
+
+.layers-stack {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.layers-stack li {
+  padding: 16px 20px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+.layers-stack li + li {
+  margin-top: -1px;
+}
+
+.layers-stack li:first-child {
+  border-radius: 12px 12px 0 0;
+}
+
+.layers-stack li:last-child {
+  border-radius: 0 0 12px 12px;
+  background: var(--rail);
+}
+
+.layers-stack li > * + * {
+  margin-top: 4px;
+}
+
+.layer-name {
+  font-weight: 600;
+}
+
+.layer-name span {
+  margin-left: 6px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.layers-stack li > p:last-child {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.layers-out {
+  align-self: end;
+  padding-left: 20px;
+  border-left: 2px solid var(--ink);
+}
+
+.layers-out-title {
+  font-weight: 600;
+}
+
+.layers-out ul {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.layers figcaption {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* Reference a reader can open when they need it: request budgets, error codes, full lists. */
+.reference {
+  border-block: 1px solid var(--rule);
+}
+
+.reference + .reference {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.reference > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 0;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  list-style: none;
+}
+
+.reference > summary::-webkit-details-marker {
+  display: none;
+}
+
+.reference > summary:hover .reference-title {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.reference > summary .icon {
+  color: var(--muted);
+  transition: transform 0.12s;
+}
+
+.reference[open] > summary .icon {
+  transform: rotate(90deg);
+}
+
+.reference-body {
+  padding: 4px 0 28px;
+}
+
+.reference-body > * + * {
+  margin-top: 16px;
+}
+
+.reference-body > p,
+.reference-body > ul,
+.reference-body > ol {
+  max-width: var(--text);
+}
+
+/* The page's index, folded above the text where there is no room for it beside the text. */
+.toc-inline {
+  display: none;
+}
+
+.toc-inline ol {
+  display: grid;
+  margin: 0;
+  padding: 0 0 12px;
+  list-style: none;
+}
+
+.toc-inline a {
+  display: block;
+  padding: 9px 0;
+  text-decoration: none;
+}
+
+.toc-inline a:hover {
+  text-decoration: underline;
+}
+
+/* Where to go next, and the one action, at the end of a feature page. */
+.doc-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px 32px;
+  margin-top: 88px;
+  padding-top: 32px;
+  border-top: 1px solid var(--rule);
+}
+
+.doc-next {
+  display: grid;
+  gap: 2px;
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+
+.doc-next-label {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.doc-next a {
+  font-weight: 600;
+}
+
+/* A table with a column per provider is turned around on a phone: a block per provider. */
+.table-across {
+  display: none;
+}
+
+/* ----------------------------------------------------------------- 404 */
+
+.notfound {
+  padding-top: 72px;
+  padding-bottom: 104px;
+}
+
+.notfound-icon {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 28px;
+}
+
+.notfound h1 {
+  font-size: clamp(1.875rem, 1.4rem + 1.6vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.index-tight {
+  gap: 24px 32px;
+}
+
+/* ----------------------------------------------------------------- footer */
+
+.site-footer {
+  padding: 48px 0 40px;
+  border-top: 1px solid var(--rule);
+  background: var(--rail);
+  font-size: 0.9375rem;
+}
+
+.footer-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 40px 64px;
+}
+
+.footer-brand p {
+  max-width: 36ch;
+  margin-top: 12px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.footer-nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(10rem, auto));
+  gap: 32px 56px;
+}
+
+.footer-nav h2 {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Each link is a 44-pixel target; the padding is the space between them. */
+.footer-nav ul {
+  display: grid;
+  padding: 0;
+  list-style: none;
+}
+
+.footer-nav a {
+  display: inline-block;
+  padding-block: 10px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer-nav a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+/* The rule sits on the text's own box, so it starts and ends where the text does. */
+.footer-legal {
+  display: grid;
+  gap: 10px;
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.footer-legal p {
+  max-width: 88ch;
+}
+
+.footer-legal strong {
+  color: var(--ink);
+}
+
+.footer-legal a {
+  color: inherit;
+}
+
+/* ------------------------------------------------------------- narrower */
+
+@media (max-width: 1179px) {
+  .hero-grid {
+    grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+    gap: 40px;
+  }
+
+  .hero-title {
+    font-size: 2.5rem;
+  }
+}
+
+/* The header's links fit on one line down to about 965 pixels; below 1000 they fold into a menu. */
+@media (max-width: 999px) {
+  .header-bar {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-block: 12px;
+  }
+
+  .brand {
+    margin-right: auto;
+  }
+
+  .site-nav {
+    flex-basis: 100%;
+    order: 3;
+    margin: 0;
+  }
+
+  .site-nav ul {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 4px 0 8px;
+  }
+
+  .site-nav a {
+    padding: 11px 12px;
+    font-size: 1rem;
+  }
+
+  .site-nav a[aria-current="page"] {
+    box-shadow: inset 3px 0 0 var(--ink);
+  }
+
+  .nav-github {
+    margin: 6px 0 0;
+    padding: 6px 0 0;
+    border-top: 1px solid var(--rule);
+    border-left: 0;
+  }
+
+  .js .menu-button {
+    display: inline-flex;
+    order: 1;
+  }
+
+  .header-download {
+    order: 2;
+  }
+
+  .js .site-nav:not([data-open]) {
+    display: none;
+  }
+}
+
+@media (max-width: 1040px) {
+  .hero-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+
+  .hero-title {
+    font-size: clamp(2rem, 1rem + 2.9vw, 2.5rem);
+  }
+
+  .hero-copy {
+    max-width: 44rem;
+  }
+
+  .hero-demo {
+    max-width: 760px;
+  }
+
+  .flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 36px 32px;
+  }
+
+  .doc {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding-top: 48px;
+  }
+
+  .doc-body {
+    grid-column: 1;
+  }
+
+  .toc {
+    display: none;
+  }
+
+  .toc-inline {
+    display: block;
+    margin-bottom: 56px;
+  }
+
+  .index {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .panel-figures,
+  .layers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .layers-out {
+    align-self: start;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --gutter: 16px;
+  }
+
+  body {
+    font-size: 1rem;
+  }
+
+  .hero {
+    padding: 32px 0 40px;
+  }
+
+  .hero-lead {
+    font-size: 1.0625rem;
+  }
+
+  /* Two buttons side by side still fit a 360-pixel screen. */
+  .button {
+    padding: 0 16px;
+  }
+
+  .d-window {
+    height: min(620px, calc(100vh - 96px));
+    height: min(620px, calc(100svh - 96px));
+    min-height: 480px;
+  }
+
+  .demo-caption {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .band {
+    padding: 56px 0;
+  }
+
+  .band-head {
+    margin-bottom: 28px;
+  }
+
+  .band-head h2,
+  .closing h2 {
+    font-size: 1.625rem;
+  }
+
+  .band-head p,
+  .closing p {
+    font-size: 1.0625rem;
+  }
+
+  .flow,
+  .index,
+  .tab-figures {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .topology {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .topology-side {
+    padding: 22px 20px 24px;
+  }
+
+  .topology-local {
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .topology-remote dl > div::before,
+  .topology-remote dl > div::after {
+    display: none;
+  }
+
+  .topology figcaption {
+    padding: 16px 20px;
+  }
+
+  .page-head {
+    padding-top: 36px;
+  }
+
+  .page-lead {
+    font-size: 1.0625rem;
+  }
+
+  .page-picture {
+    margin-top: 28px;
+  }
+
+  .doc {
+    padding-top: 36px;
+    padding-bottom: 72px;
+  }
+
+  .doc-section + .doc-section {
+    margin-top: 60px;
+  }
+
+  .doc-section h2 {
+    font-size: 1.5rem;
+  }
+
+  .fact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .release {
+    flex-direction: column;
+    padding: 22px 20px;
+  }
+
+  .release-icon {
+    width: 64px;
+    height: 64px;
+  }
+
+  .release-facts .fact {
+    grid-template-columns: minmax(0, 7rem) minmax(0, 1fr);
+  }
+
+  /* A table that has row headers becomes one block per row. */
+  .table.stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .table.stack,
+  .table.stack tbody,
+  .table.stack tr,
+  .table.stack th,
+  .table.stack td {
+    display: block;
+  }
+
+  .table.stack tr {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .table.stack tbody th,
+  .table.stack td {
+    padding: 0;
+    border: 0;
+  }
+
+  .table.stack td {
+    margin-top: 6px;
+  }
+
+  .table.stack .num {
+    text-align: left;
+  }
+
+  .table.stack td::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--muted);
+    font-size: 0.8125rem;
+  }
+
+  .table-along {
+    display: none;
+  }
+
+  .table-across {
+    display: block;
+  }
+
+  .doc-end {
+    margin-top: 64px;
+  }
+
+  .footer-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .footer-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 24px;
+  }
+}
+
+/* On a touch screen, every control in the header and the preview is at least 44 pixels high. */
+@media (pointer: coarse) {
+  .header-download,
+  .menu-button,
+  .d-suggestion,
+  .demo-replay {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
