@@ -3,8 +3,9 @@ name: Release
 # Builds installers for every platform and attaches them to a draft release.
 # Push a tag such as v0.3.0, review the draft on GitHub, then publish it.
 #
-# The installers are not code-signed: signing needs certificates this
-# repository does not hold. See SECURITY.md.
+# The installers are not signed with a developer certificate or notarized:
+# that needs certificates this repository does not hold. macOS builds are
+# sealed with an ad-hoc signature only. See SECURITY.md.
 
 on:
   push:

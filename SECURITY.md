@@ -31,5 +31,5 @@ Fixes are released for the latest version only.
 ## Limits you should know
 
 - If your system has no keychain, keys are kept in memory for the session and must be entered again next launch.
-- Local builds are not code-signed. Signed, notarized installers need certificates this repository does not hold.
+- Installers are not signed with a developer certificate or notarized, because this repository holds no certificates. macOS builds carry an ad-hoc signature only, so macOS and Windows warn before the first launch of a downloaded copy.
 - The paper account ignores fees and slippage. It is for practice, not a prediction of live results.
