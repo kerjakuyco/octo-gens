@@ -41,11 +41,13 @@ src/og/card.html    The picture shown when a link to the site is shared, before 
 tools/              Scripts that take the screenshots and render the share picture. Not part of the build.
 ```
 
-Every page works without JavaScript. The one script, `src/assets/site.js`, opens the menu on narrow screens, marks the section being read in the page index, and plays the preview on the home page; it respects reduced motion.
+Every page works without JavaScript. The one script, `src/assets/site.js`, opens the Product menu and the menu on narrow screens, marks the section being read in the page index, plays the Assistant card on the home page once when it comes into view, and plays the demo's answers when a prompt is picked; it respects reduced motion.
 
-### The preview on the home page
+The look is monochrome and dark only: near-black, white and grey text, hairlines, a white pill for the main action and a dark pill for the second. Colour means something: green and red for up and down, amber for testnet and warnings, and the brand blue only on the "New" chip at the top of the home page. The pictures of the app on the home page and at the top of each feature page are drawn in HTML and CSS, not screenshots.
 
-The conversation at the top of the home page is HTML, not a picture. Its three prompts are suggestions the app itself offers, and every figure and sentence in it is what the app's built-in mock answers on testnet with its fictional model, "Lantern 2 Large". The page says so beside it. If the app's answers or cards change, update `src/demo.mjs` from the mock: run the interface with `pnpm dev` in the repository root and ask the same prompts.
+### The demo and the sample figures
+
+The cards under the home page's headline, the demo window beside "From question to order" and the drawn panels on the feature pages are HTML, not pictures. The demo's three prompts are suggestions the app itself offers, and every figure and sentence in it is what the app's built-in mock answers on testnet with its fictional model, "Lantern 2 Large". `src/demo.mjs` exports those figures, and the cards and the share picture reuse them, so the site agrees with itself. Each page says beside them that they are samples. If the app's answers or cards change, update `src/demo.mjs` from the mock: run the interface with `pnpm dev` in the repository root and ask the same prompts.
 
 ### Rules the content keeps
 
@@ -55,7 +57,7 @@ The conversation at the top of the home page is HTML, not a picture. Its three p
 - **Type is the system's own.** `system-ui, -apple-system, Roboto, "Noto Sans", sans-serif` and `ui-monospace, monospace`. No font files.
 - **Other companies' names are text only**, never their logos. The footer carries the trademark note from `NOTICE.md`, and pictures with a chart credit TradingView.
 
-When the first release with installers is published, update `src/pages/download.mjs` and the "None published yet" line on it.
+On each release, update `VERSION` in `src/site.mjs` (the download page builds its links from it) and `RELEASED` in `src/pages/download.mjs`.
 
 ## Headers and caching
 
@@ -103,7 +105,7 @@ The Worker's name in the dashboard must be `octoneo`, the name in `wrangler.json
 
 ## Pictures
 
-The screenshots in `src/assets/shots/` are of the app's interface running in a browser against its built-in mock: a fictional account and a fictional model, nothing real. Each is saved in light and dark as `<name>-<light|dark>-<pixel width>.webp`, and the build turns them into `<picture>` elements that follow the visitor's color scheme. A picture is shown at one of two widths: 760 pixels, the text column, or 1136, the page. A picture named `<name>-phone` is a crop that replaces `<name>` on screens up to 640 pixels wide, where a whole window would shrink its text past reading. To take them again, after a change to the interface:
+The screenshots in `src/assets/shots/` are of the app's interface running in a browser against its built-in mock: a fictional account and a fictional model, nothing real. Each is saved in light and dark as `<name>-<light|dark>-<pixel width>.webp`, and the build turns the dark ones into `<picture>` elements: the site is dark only. It publishes only the pictures a page shows; the light copies and the pictures no page uses stay in the folder for later. Pictures sit in the text column of the feature pages, 760 pixels wide at most. A picture named `<name>-phone` is a crop that replaces `<name>` on screens up to 640 pixels wide, where a whole window would shrink its text past reading. To take them again, after a change to the interface:
 
 ```sh
 cd ..                                            # the repository root
@@ -116,4 +118,4 @@ CHROME=/path/to/chrome node tools/screenshots.mjs        # or name the pictures 
 
 The three pictures of the wallet page (`wallet-*.webp`) are of the page the app opens in your browser, taken against a stand-in for the exchange with a test wallet; `cargo run -p octoneo-core --example wallet_page -- connect` serves that page. They are taken 2200 pixels wide; the 1520 and 760 copies are made from them with `cwebp -q 80 -m 6 -sharp_yuv -resize <width> 0`.
 
-The share picture `src/assets/images/og.png` is rendered from `src/og/card.html`, and the 180-pixel touch icon from the app icon; `CHROME=/path/to/chrome node tools/render-images.mjs` renders both again. The icon in `src/assets/images/icon.svg` is the app icon, `src-tauri/app-icon.svg`, cropped to its tile; `favicon.svg` is `public/favicon.svg`.
+The share picture `src/assets/images/og.png` is rendered from `src/og/card.html`, and the 180-pixel touch icon from the app icon; `CHROME=/path/to/chrome node tools/render-images.mjs` renders both again. The icon in `src/assets/images/icon.svg` is the app icon, `src-tauri/app-icon.svg`, cropped to its tile, and is the source of the touch icon; `favicon.svg` is `public/favicon.svg`. The site's own mark, in the header, the footer, the 404 page and the share picture, is `octopus.svg`: the app icon's white octopus without its tile. The share picture embeds it, so render the picture again after changing it.

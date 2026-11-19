@@ -1,49 +1,93 @@
-import { REPO, RELEASES, ISSUES, VERSION, code, doc, docPage, facts, out, shell, table } from "../site.mjs";
+import { REPO, RELEASES, ISSUES, VERSION, code, doc, docPage, esc, facts, out, shell } from "../site.mjs";
 
-/** Where the installers of this version are attached. */
+/** Where the installers of this version are attached, and the release they belong to. */
 const FILES = `${RELEASES}/download/v${VERSION}`;
-const file = (name, label = name) => out(`${FILES}/${name}`, label);
+const RELEASE = `${RELEASES}/tag/v${VERSION}`;
+const RELEASED = "November 19, 2026";
+
+/**
+ * The installers, by system. The first file of each is the one most people want, drawn as the white
+ * button; the others are dark. Every name is a file attached to the release.
+ */
+const PLATFORMS = [
+  {
+    id: "windows",
+    name: "Windows",
+    detail: "64-bit",
+    files: [
+      [`OctoNeo_${VERSION}_x64-setup.exe`, "Installer (.exe)"],
+      [`OctoNeo_${VERSION}_x64_en-US.msi`, "MSI package (.msi)"],
+    ],
+  },
+  {
+    id: "macos",
+    name: "macOS",
+    detail: "Apple silicon, M1 and later",
+    files: [[`OctoNeo_${VERSION}_aarch64.dmg`, "Disk image (.dmg)"]],
+    note: `No installer for Intel Macs: <a href="#build">build it from source</a> on one.`,
+  },
+  {
+    id: "linux",
+    name: "Linux",
+    detail: "64-bit",
+    files: [
+      [`OctoNeo_${VERSION}_amd64.AppImage`, "AppImage, any distribution"],
+      [`OctoNeo_${VERSION}_amd64.deb`, "Debian or Ubuntu (.deb)"],
+      [`OctoNeo-${VERSION}-1.x86_64.rpm`, "Fedora or openSUSE (.rpm)"],
+    ],
+  },
+];
+
+const platform = (p) => `<section class="platform" aria-labelledby="platform-${p.id}">
+<h2 class="platform-name" id="platform-${p.id}">${p.name}</h2>
+<p class="platform-detail">${p.detail}</p>
+<ul class="platform-files">
+${p.files
+  .map(
+    ([name, label], index) =>
+      `<li><a class="button ${index === 0 ? "button-brand" : "button-quiet"}" href="${esc(`${FILES}/${name}`)}">${label}</a></li>`,
+  )
+  .join("\n")}
+</ul>
+${p.note ? `<p class="platform-note">${p.note}</p>` : ""}
+<p class="platform-names">${p.files.map(([name]) => `<code>${esc(name)}</code>`).join("")}</p>
+</section>`;
+
+const INSTALLERS = `<div class="platforms" id="download">
+${PLATFORMS.map(platform).join("\n")}
+</div>
+<p class="platforms-note">Every installer is built from this repository by GitHub Actions, and the ${out(RELEASE, "release page")} lists each file’s <span class="nowrap">SHA-256</span> checksum.</p>`;
+
+/** Numbered steps: a real sequence, done in this order. */
+const steps = (items) => `<ol class="steps-list">
+${items.map((item) => `<li>${item}</li>`).join("\n")}
+</ol>`;
 
 export default {
   path: "/download/",
-  title: "Get OctoNeo",
+  title: "Download OctoNeo",
   description:
     "Download OctoNeo 0.5.0 for Windows, macOS or Linux, or build it from source. What to expect at the first launch, and how to start on testnet.",
-  render: (ctx) =>
+  render: () =>
     docPage({
       path: "/download/",
-      title: "Get OctoNeo",
+      title: "Download OctoNeo",
       lead: `Version ${VERSION} for Windows, macOS and Linux. Download the installer for your system, or build it from source.`,
-      picture: `<div class="release">
-  <img class="release-icon" src="${ctx.asset("images/icon.svg")}" width="88" height="88" alt="">
-  <div class="release-body">
-    ${facts([
-      ["Version", VERSION],
-      ["Platforms", "Windows, macOS, Linux"],
-      ["License", "GPL-3.0-only"],
-      ["Released", "November 19, 2026"],
-    ], "release-facts")}
-    <div class="actions">
-      <a class="button button-brand" href="#download">Choose your installer</a>
-      <a class="button button-quiet" href="${RELEASES}/tag/v${VERSION}">Open the release on GitHub</a>
-    </div>
-  </div>
-</div>`,
+      buttons: "",
+      meta: `<span>Version ${VERSION}</span><span>Released ${RELEASED}</span><span>GPL-3.0-only</span>${out(RELEASE, "Release notes")}`,
+      visual: INSTALLERS,
       sections: [
         {
-          id: "download",
-          title: "Download",
-          lead: "Pick the file for your system. Every installer is built from this repository by GitHub Actions, and the release page lists each file’s SHA-256 checksum.",
-          body: `${table({
-            head: ["System", "Installer", "Also available"],
-            rows: [
-              ["macOS, Apple silicon (M1 and later)", file(`OctoNeo_${VERSION}_aarch64.dmg`), "—"],
-              ["Windows, 64-bit", file(`OctoNeo_${VERSION}_x64-setup.exe`), file(`OctoNeo_${VERSION}_x64_en-US.msi`, "MSI package")],
-              ["Linux, 64-bit", file(`OctoNeo_${VERSION}_amd64.AppImage`, "AppImage, any distribution"), `${file(`OctoNeo_${VERSION}_amd64.deb`, "Debian or Ubuntu (.deb)")}, ${file(`OctoNeo-${VERSION}-1.x86_64.rpm`, "Fedora or openSUSE (.rpm)")}`],
+          id: "install",
+          title: "Install",
+          body: `${facts(
+            [
+              ["macOS", "Open the disk image and drag OctoNeo to Applications."],
+              ["Linux", `Make the AppImage executable (${code("chmod +x")}) and run it, or install the package for your distribution.`],
+              ["Every file", `All files and notes are on the ${out(RELEASE, "release page")}.`],
             ],
-            stack: true,
-          })}
-<p>There is no installer for Intel Macs; you can <a href="#build">build OctoNeo from source</a> on one. On macOS, open the disk image and drag OctoNeo to Applications. On Linux, make the AppImage executable (${code("chmod +x")}) and run it, or install the package for your distribution. All files and notes are on the ${out(`${RELEASES}/tag/v${VERSION}`, "release page")}.</p>`,
+          )}
+<p>There is no installer for Intel Macs; you can <a href="#build">build OctoNeo from source</a> on one.</p>`,
         },
         {
           id: "build",
@@ -54,30 +98,51 @@ export default {
             ["Node.js", `Version 20 or newer, from ${out("https://nodejs.org", "nodejs.org")}`],
             ["pnpm", `Version 10, from ${out("https://pnpm.io", "pnpm.io")}`],
             ["Tauri’s system dependencies", `For your platform, as listed in ${out("https://tauri.app/start/prerequisites/", "Tauri’s prerequisites")}`],
-          ], "facts-wide")}
-${shell([
-  "git clone https://github.com/kerjakuyco/octo-neo.git",
-  "cd octo-neo",
-  "pnpm install",
-  "pnpm tauri dev      # run the app with hot reload",
-  "pnpm tauri build    # build the installer for this platform",
-])}
+          ])}
+${shell(
+  [
+    "git clone https://github.com/kerjakuyco/octo-neo.git",
+    "cd octo-neo",
+    "pnpm install",
+    "pnpm tauri dev      # run the app with hot reload",
+    "pnpm tauri build    # build the installer for this platform",
+  ],
+  { title: "Terminal" },
+)}
 <p>To work on the interface alone, ${code("pnpm dev")} runs it in a browser against a built-in mock of the core: a fictional account and a fictional model, nothing real.</p>
 <h3>Builds on macOS and the keychain</h3>
 <p>A build made on your Mac is sealed with an ad-hoc signature that is different for every build. macOS ties keychain access to it, so each new build asks again whether it may read the keys an earlier build stored. To keep one identity across builds, sign with a certificate you already have, for example an Apple Development certificate:</p>
-${shell([
-  "security find-identity -v -p codesigning     # the identities you can sign with",
-  'APPLE_SIGNING_IDENTITY="Apple Development: you@example.com (TEAMID)" pnpm tauri build --bundles app',
-])}`,
+${shell(
+  [
+    "security find-identity -v -p codesigning     # the identities you can sign with",
+    'APPLE_SIGNING_IDENTITY="Apple Development: you@example.com (TEAMID)" pnpm tauri build --bundles app',
+  ],
+  { title: "Terminal" },
+)}`,
         },
         {
           id: "first-launch",
           title: "The first launch of a downloaded copy",
           lead: "macOS and Windows warn you before the first launch of a downloaded copy. The repository holds no certificates, so the installers are not signed with a developer certificate or notarized, and macOS builds carry an ad-hoc signature only.",
-          body: `${facts([
-            ["macOS", "macOS will not open the app the first time, because it cannot verify it. Open System Settings, then Privacy &amp; Security, and choose Open Anyway beside the message about OctoNeo. macOS asks you to confirm once more; after that the app opens normally."],
-            ["Windows", "Microsoft Defender SmartScreen may say that Windows protected your PC. Choose More info, then Run anyway."],
-          ], "facts-wide")}
+          body: `<div class="launch-steps">
+<div class="launch">
+<h3>macOS</h3>
+${steps([
+  "macOS will not open the app the first time, because it cannot verify it.",
+  "Open System Settings, then Privacy &amp; Security.",
+  "Choose Open Anyway beside the message about OctoNeo.",
+  "macOS asks you to confirm once more. After that, the app opens normally.",
+])}
+</div>
+<div class="launch">
+<h3>Windows</h3>
+${steps([
+  "Microsoft Defender SmartScreen may say that Windows protected your PC.",
+  "Choose More info.",
+  "Choose Run anyway.",
+])}
+</div>
+</div>
 <p>Do this only for a copy you downloaded from the project’s ${out(RELEASES, "Releases page")}, or one you built yourself.</p>`,
         },
         {

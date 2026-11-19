@@ -24,7 +24,10 @@ export const NAV = [
 const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 export const esc = (value) => String(value).replace(/[&<>"']/g, (c) => ESCAPES[c]);
 
-/** Line icons on a 24 px grid, the app's own shapes. They take the text color. */
+/**
+ * Line icons on a 24 px grid, the app's own shapes unless marked. They take the text color. Other
+ * companies' marks are never drawn: an operating system or a provider is named in text.
+ */
 const ICONS = {
   chevron: '<path d="m9 6 6 6-6 6"/>',
   chevronDown: '<path d="m6 9 6 6 6-6"/>',
@@ -36,28 +39,27 @@ const ICONS = {
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   close: '<path d="m6 6 12 12M18 6 6 18"/>',
   external: '<path d="M10 5H5.5v13.5H19V14M14 4.5h5.5V10M19.5 4.5 11 13"/>',
+  model: '<rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 4v3M14 4v3M17 10h3M17 14h3M14 17v3M10 17v3M4 10h3M4 14h3"/>',
+  trade: '<path d="M4 8.5h15m-4-4 4 4-4 4M20 15.5H5m4 4-4-4 4-4"/>',
+  plug: '<path d="M9 4v4M15 4v4M6.5 8h11v3a5.5 5.5 0 0 1-11 0zM12 16.5V20"/>',
+  appearance: '<circle cx="12" cy="12" r="7.5"/><path d="M12 4.5a7.5 7.5 0 0 1 0 15z" fill="currentColor" stroke="none"/>',
+  info: '<circle cx="12" cy="12" r="8"/><path d="M12 11.2v5M12 7.8v.2"/>',
+  // Not the app's: an arrow to the next page, and a folder and a file for the drawn code window.
+  arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
+  folder: '<path d="M4 6.5h5.5l2 2H20v10H4z"/>',
+  file: '<path d="M6.5 4h7.5l4 4v12h-11.5zM14 4v4h4"/>',
 };
 
 export function icon(name, size = 18, className = "") {
   return `<svg class="icon${className ? ` ${className}` : ""}" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICONS[name]}</svg>`;
 }
 
-/** The app icon in its tile, drawn small: the simplified mark the favicon uses. */
-export function tile(size = 28) {
-  return `<svg class="tile" viewBox="0 0 32 32" width="${size}" height="${size}" aria-hidden="true" focusable="false">
-  <rect width="32" height="32" rx="7.5" fill="#2a63dd"/>
-  <g fill="none" stroke="#ffffff" stroke-width="2.7" stroke-linecap="round">
-    <path d="M 20.6 16.6 C 23.6 18.6, 27.2 17.6, 27.2 14.2"/>
-    <path d="M 20 19 C 22 22.6, 25.6 23.4, 27.4 21.4"/>
-    <path d="M 18 20.2 C 18.2 23.8, 20.4 26.4, 23.6 26.2"/>
-    <path d="M 11.4 16.6 C 8.4 18.6, 4.8 17.6, 4.8 14.2"/>
-    <path d="M 12 19 C 10 22.6, 6.4 23.4, 4.6 21.4"/>
-    <path d="M 14 20.2 C 13.8 23.8, 11.6 26.4, 8.4 26.2"/>
-  </g>
-  <ellipse cx="16" cy="12.6" rx="7.4" ry="7.6" fill="#ffffff"/>
-  <rect x="11.4" y="12.6" width="3.4" height="1.5" rx="0.75" fill="#2a63dd"/>
-  <rect x="17.2" y="12.6" width="3.4" height="1.5" rx="0.75" fill="#2a63dd"/>
-</svg>`;
+/**
+ * Something to read before acting. Its words say what it is; the dot beside them only marks its
+ * kind: amber for what has not been tried on the live exchange, red for the risk of trading.
+ */
+export function callout(html, tone = "warn") {
+  return `<div class="callout" data-tone="${tone}" role="note"><span class="callout-dot" aria-hidden="true"></span><div class="callout-body">${html}</div></div>`;
 }
 
 /** Inline code. */
@@ -100,7 +102,10 @@ ${body}
 </tbody></table></div>`;
 }
 
-/** Label and value pairs, the way the app lists the facts of a ticket. */
+/**
+ * Label and value pairs, the way the app lists the facts of a ticket. In a section they are laid
+ * out as a grid of short items; in a reference, as rows.
+ */
 export function facts(pairs, className = "") {
   return `<dl class="facts${className ? ` ${className}` : ""}">${pairs
     .map(([term, value]) => `<div class="fact"><dt>${term}</dt><dd>${value}</dd></div>`)
@@ -121,12 +126,22 @@ ${body}
  * that says what is inside, then the material. Nothing in it is left out of the page.
  */
 export function reference(summary, body) {
-  return `<details class="reference">
+  // A reference that holds one table and nothing else lets the table fill it, under the summary.
+  const flush = /^\s*<div class="table-wrap">[\s\S]*<\/table><\/div>\s*$/.test(body);
+  return `<details class="reference${flush ? " reference-flush" : ""}">
 <summary>${icon("chevron", 16)}<span class="reference-title">${summary}</span></summary>
 <div class="reference-body">
 ${body}
 </div>
 </details>`;
+}
+
+/** The two actions the site offers everywhere: the download, and the source. */
+export function actions() {
+  return `<div class="actions">
+  <a class="button button-brand" href="/download/">Download OctoNeo${icon("chevron", 16, "button-chevron")}</a>
+  <a class="button button-quiet" href="${REPO}">View source on GitHub</a>
+</div>`;
 }
 
 /** The feature pages in reading order. Each ends by pointing at the next. */
@@ -138,37 +153,52 @@ const TOUR = [
   ["/wallet/", "Wallet and funds"],
   ["/safety/", "Safety and privacy"],
   ["/open-source/", "Open source"],
-  ["/download/", "Get OctoNeo"],
+  ["/download/", "Download OctoNeo"],
 ];
 
-/** The end of a feature page: the next page, and the one action. */
-function docEnd(path) {
+/**
+ * The last line of a page's text: the next page of the tour. Where that would be the download, the
+ * closing band's button is the way there, so there is no line.
+ */
+function docNext(path) {
   const at = TOUR.findIndex(([href]) => href === path);
   if (at < 0) return "";
   const [href, label] = TOUR[(at + 1) % TOUR.length];
-  // Where the next page is the download page, the action is the way there.
-  const next = href === "/download/" ? "" : `<p class="doc-next"><span class="doc-next-label">Next</span> <a href="${href}">${label}</a></p>`;
-  const action = path === "/download/" ? "" : `<a class="button button-brand" href="/download/">Get OctoNeo</a>`;
-  return `<div class="doc-end">
-${next}
-${action}
-</div>`;
+  if (href === "/download/") return "";
+  return `<p class="doc-next"><span class="doc-next-label">Next</span><a href="${href}">${label}${icon("arrow", 18, "doc-next-arrow")}</a></p>`;
+}
+
+/** The band that closes a feature page: one line, and the two actions. Words from the home page. */
+function docClose(path) {
+  if (path === "/download/") return "";
+  return `<section class="page-close" aria-labelledby="page-close-title">
+  <div class="wrap">
+    <h2 id="page-close-title">Start with a question</h2>
+    <p>Download OctoNeo, connect a model and ask “BTC outlook”. When you are ready to trade, start on testnet.</p>
+    ${actions()}
+  </div>
+</section>`;
 }
 
 /**
- * A feature page: its title, a lead, an optional picture, then sections beside an index of them,
- * and at the end the next page. `sections` is a list of { id, title, lead, body }; the index
- * names each section by its heading. Where there is no room beside the text, the index is folded
- * above it.
+ * A feature page: a centered head with its title, a lead and the two actions; one large picture of
+ * the app drawn in HTML (`visual`); then sections beside an index of them, the next page, and the
+ * closing band. `sections` is a list of { id, title, lead, body }; the index names each section by
+ * its heading. Where there is no room beside the text, the index is folded above it. `meta` is a
+ * short line under the actions; `buttons` replaces the two actions; `notice`, such as a callout,
+ * stands under the picture, before the text.
  */
-export function docPage({ path, title, lead, picture = "", sections }) {
+export function docPage({ path, title, lead, meta = "", buttons = actions(), visual = "", notice = "", sections }) {
   const index = sections.map((s) => `<li><a href="#${s.id}">${s.title}</a></li>`).join("\n");
   return `<div class="page-head">
-  <div class="wrap">
+  <div class="wrap page-intro">
     <h1>${title}</h1>
     <p class="page-lead">${lead}</p>
+    ${buttons}
+    ${meta ? `<p class="page-meta">${meta}</p>` : ""}
   </div>
-  ${picture ? `<div class="wrap page-picture">${picture}</div>` : ""}
+  ${visual ? `<div class="wrap page-visual">${visual}</div>` : ""}
+  ${notice ? `<div class="wrap page-notice">${notice}</div>` : ""}
 </div>
 <div class="wrap doc">
   <nav class="toc" aria-labelledby="toc-title">
@@ -187,24 +217,67 @@ ${index}
 </nav>
 </details>
 ${sections.map((s) => section(s.id, s.title, s.body, { lead: s.lead })).join("\n")}
-${docEnd(path)}
+${docNext(path)}
   </div>
-</div>`;
+</div>
+${docClose(path)}`;
 }
 
-/** Shell commands in a block. Lines that start with # are comments. */
-export function shell(lines) {
+/**
+ * Shell commands in a block. Lines that start with # are comments. Each line is its own element,
+ * so the stylesheet can mark commands with a prompt and indent a command that wraps; the line
+ * breaks stay in the text, for copying and for reading without styles. With `title`, the block is
+ * a window with that name in its bar.
+ */
+export function shell(lines, { title = "" } = {}) {
   const html = lines
     .map((line) => {
+      if (line.startsWith("#")) return `<span class="line comment">${esc(line)}</span>`;
       const [command, comment] = line.split(/(\s+#\s.*)$/);
-      if (line.startsWith("#")) return `<span class="comment">${esc(line)}</span>`;
-      return `${esc(command)}${comment ? `<span class="comment">${esc(comment)}</span>` : ""}`;
+      return `<span class="line command">${esc(command)}${comment ? `<span class="comment">${esc(comment)}</span>` : ""}</span>`;
     })
     .join("\n");
-  return `<pre class="code"><code>${html}</code></pre>`;
+  const block = `<pre class="code shell"><code>${html}</code></pre>`;
+  if (!title) return block;
+  return `<div class="code-window">
+<div class="code-window-bar"><span class="code-window-dots" aria-hidden="true"><span></span><span></span><span></span></span><span class="code-window-title">${title}</span></div>
+${block}
+</div>`;
 }
 
 /** A literal block, such as a message the app signs. */
 export function literal(text, label) {
   return `<pre class="code" aria-label="${esc(label)}"><code>${esc(text)}</code></pre>`;
 }
+
+/* ----------------------------------------------- the app, drawn in HTML */
+
+/**
+ * A slice of the app drawn in HTML: the picture at the head of a feature page. It holds sample
+ * data, and its caption says whose. Like a picture, it is read by its label: assistive technology
+ * gets `label` instead of every number and drawn button inside it, and nothing in it takes focus.
+ */
+export function ui({ label, caption, body, className = "" }) {
+  return `<figure class="ui-figure${className ? ` ${className}` : ""}">
+<div class="ui" role="img" aria-label="${esc(label)}">
+${body}
+</div>
+<figcaption>${caption}</figcaption>
+</figure>`;
+}
+
+/** A small rounded label, as the app draws a side, a network or a status. */
+export const chip = (text, tone = "") => `<span class="ui-chip"${tone ? ` data-tone="${tone}"` : ""}>${text}</span>`;
+
+/** A network: amber for testnet, as the app marks it, and the same for real funds. */
+export const network = (text, tone = "warn") => `<span class="ui-chip ui-network" data-tone="${tone}"><span class="ui-dot"></span>${text}</span>`;
+
+/** Label and value pairs inside a drawn card, values in figures. */
+export function uiFacts(pairs, className = "") {
+  return `<dl class="ui-facts${className ? ` ${className}` : ""}">${pairs
+    .map(([term, value, tone = ""]) => `<div><dt>${term}</dt><dd class="num${tone ? ` ${tone}` : ""}">${value}</dd></div>`)
+    .join("")}</dl>`;
+}
+
+/** A drawn button: a picture of one, so it is a span, not a control. */
+export const uiButton = (text, kind = "") => `<span class="ui-button${kind ? ` ui-button-${kind}` : ""}">${text}</span>`;

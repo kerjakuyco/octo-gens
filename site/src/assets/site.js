@@ -1,36 +1,109 @@
-// The site's one script: the menu on narrow screens, keyboard access to wide tables, the page
-// index, and the preview of the assistant on the home page. Every page works without it.
+// The site's one script: the header's menus, keyboard access to wide tables, the page index, and on
+// the home page the conversation that plays in once and the preview of the assistant. Every page
+// works without it.
 (() => {
   "use strict";
 
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-  /* ------------------------------------------------------------------ menu */
+  /* ---------------------------------------------------------------- header */
 
-  // The button comes right before the links in the page, so Tab goes from it into the open menu.
-  const menuButton = document.querySelector(".menu-button");
-  const nav = document.getElementById("site-nav");
-  if (menuButton && nav) {
-    const isOpen = () => menuButton.getAttribute("aria-expanded") === "true";
-    const setOpen = (open) => {
-      menuButton.setAttribute("aria-expanded", String(open));
-      nav.toggleAttribute("data-open", open);
+  const header = document.querySelector("[data-header]");
+
+  // The bar tightens once the page has moved.
+  if (header) {
+    let pending = false;
+    const mark = () => {
+      pending = false;
+      header.toggleAttribute("data-scrolled", window.scrollY > 8);
     };
-    menuButton.addEventListener("click", () => setOpen(!isOpen()));
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && isOpen()) {
-        setOpen(false);
-        menuButton.focus();
-      }
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (pending) return;
+        pending = true;
+        requestAnimationFrame(mark);
+      },
+      { passive: true },
+    );
+    mark();
+  }
+
+  // Product: a button that opens a panel of links. Enter, Space or a click toggles it, ArrowDown
+  // opens it at its first link, the arrows move between its links, and Escape, a click elsewhere or
+  // leaving it with Tab closes it.
+  const group = header?.querySelector("[data-nav-group]");
+  const trigger = group?.querySelector(".nav-trigger");
+  const items = group ? [...group.querySelectorAll(".nav-item")] : [];
+  const panelOpen = () => trigger?.getAttribute("aria-expanded") === "true";
+  const setPanel = (open) => {
+    if (!trigger) return;
+    trigger.setAttribute("aria-expanded", String(open));
+    group.toggleAttribute("data-open", open);
+  };
+  if (group && trigger && items.length) {
+    trigger.addEventListener("click", () => setPanel(!panelOpen()));
+    trigger.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      event.preventDefault();
+      setPanel(true);
+      (event.key === "ArrowDown" ? items[0] : items.at(-1)).focus();
     });
-    document.addEventListener("click", (event) => {
-      if (isOpen() && !nav.contains(event.target) && !menuButton.contains(event.target)) setOpen(false);
+    group.addEventListener("keydown", (event) => {
+      // Only keys pressed on a link of the panel; the button's own keys are handled above.
+      const at = items.indexOf(event.target);
+      if (at < 0) return;
+      const last = items.length - 1;
+      const next = { ArrowDown: at === last ? 0 : at + 1, ArrowUp: at === 0 ? last : at - 1, Home: 0, End: last }[event.key];
+      if (next === undefined) return;
+      event.preventDefault();
+      items[next].focus();
     });
-    // The width at which site.css folds the links into the menu.
-    window.matchMedia("(min-width: 1000px)").addEventListener("change", (event) => {
-      if (event.matches) setOpen(false);
+    group.addEventListener("focusout", (event) => {
+      if (panelOpen() && !group.contains(event.relatedTarget)) setPanel(false);
+    });
+    document.addEventListener("pointerdown", (event) => {
+      if (panelOpen() && !group.contains(event.target)) setPanel(false);
     });
   }
+
+  // On a phone, the menu button opens a sheet over the whole page. The button comes right before
+  // the links in the page, so Tab goes from it into the sheet; the page under the sheet, and the
+  // link that skips to it, are inert.
+  const menuButton = header?.querySelector(".menu-button");
+  const nav = document.getElementById("site-nav");
+  const phone = window.matchMedia("(max-width: 800px)");
+  const behind = [document.querySelector(".skip-link"), document.querySelector("main"), document.querySelector(".site-footer")].filter(Boolean);
+  const sheetOpen = () => menuButton?.getAttribute("aria-expanded") === "true";
+  const setSheet = (open) => {
+    if (!menuButton || !nav) return;
+    menuButton.setAttribute("aria-expanded", String(open));
+    nav.toggleAttribute("data-open", open);
+    document.documentElement.toggleAttribute("data-menu-open", open);
+    for (const node of behind) node.inert = open;
+  };
+  if (menuButton && nav) {
+    menuButton.addEventListener("click", () => setSheet(!sheetOpen()));
+    // A link to a part of the page it is on closes the sheet, so the page can be seen.
+    nav.addEventListener("click", (event) => {
+      if (event.target.closest("a") && sheetOpen()) setSheet(false);
+    });
+    phone.addEventListener("change", (event) => {
+      if (!event.matches) setSheet(false);
+      setPanel(false);
+    });
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (panelOpen()) {
+      setPanel(false);
+      trigger.focus();
+    } else if (sheetOpen()) {
+      setSheet(false);
+      menuButton.focus();
+    }
+  });
 
   /* ---------------------------------------------- wide tables and code */
 
@@ -103,8 +176,35 @@
     }
   }
 
+  /* ------------------------------------------ the conversation that plays once */
+
+  // The Assistant panel of the home page's grid is the page's one moment of motion: the first time
+  // it is in view, its question, reading, plan and answer come in one after another. site.css draws
+  // the steps; this only says when. Without the script, or under reduced motion, it is drawn finished.
+  const once = document.querySelector("[data-play-once]");
+  if (once && !reduced.matches) {
+    once.setAttribute("data-armed", "");
+    const play = () => once.setAttribute("data-play", "");
+    if ("IntersectionObserver" in window) {
+      const watch = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          watch.disconnect();
+          play();
+        },
+        { threshold: 0.4 },
+      );
+      watch.observe(once);
+    } else {
+      play();
+    }
+  }
+
   /* --------------------------------------------------------------- preview */
 
+  // The preview of the assistant opens on its first conversation, finished. Picking a prompt, or
+  // Replay, plays a conversation step by step, as the app shows one; under reduced motion it is
+  // shown finished at once.
   const demo = document.querySelector("[data-demo]");
   if (!demo) return;
 
@@ -124,12 +224,6 @@
   let run = 0;
   let playing = false;
   let follow = true;
-  // Watches for the preview to come into view before the first conversation plays.
-  let watcher = null;
-  const stopWaiting = () => {
-    watcher?.disconnect();
-    watcher = null;
-  };
 
   const current = () => panels.find((panel) => !panel.hidden) ?? panels[0];
   const after = (ms, id) =>
@@ -221,20 +315,6 @@
     panel.scrollTop = 0;
   }
 
-  /**
-   * The first frame of the first conversation: the question sent and the first reading drawn, so
-   * the preview never opens on an empty window.
-   */
-  function prime(panel) {
-    clear(panel);
-    const p = parts(panel);
-    p.said.hidden = false;
-    p.activity.hidden = false;
-    p.text.setAttribute("data-running", "");
-    p.text.textContent = p.phases[1] ?? p.phases[0];
-    for (const node of p.timed) node.hidden = Number(node.dataset.at) > 0;
-  }
-
   function reveal(nodes, panel) {
     for (const node of nodes) {
       node.hidden = false;
@@ -267,11 +347,8 @@
     }
   }
 
-  /**
-   * Plays a conversation the way the app shows one: typed, sent, read, answered. A primed one
-   * starts from its first frame, with the question sent and the first reading drawn.
-   */
-  async function play(panel, { primed = false } = {}) {
+  /** Plays a conversation the way the app shows one: typed, sent, read, answered. */
+  async function play(panel) {
     if (reduced.matches) {
       finish(panel);
       return;
@@ -281,34 +358,27 @@
     playing = true;
     follow = true;
     setControl("Show answer");
-    if (!primed) clear(panel);
+    clear(panel);
     panel.setAttribute("aria-busy", "true");
     const p = parts(panel);
     try {
-      let first = 0;
-      if (primed) {
-        first = 1;
-        await after(450, id);
-      } else {
-        await after(250, id);
-        for (let end = 1; end <= p.prompt.length; end += 1) {
-          setComposer(p.prompt.slice(0, end));
-          await after(18, id);
-        }
-        await after(280, id);
-        setComposer("");
-        p.said.hidden = false;
-        p.said.classList.add("is-new");
-        await after(320, id);
-
-        p.activity.hidden = false;
-        p.text.setAttribute("data-running", "");
-        p.text.textContent = "Thinking";
-        reveal(p.timed.filter((node) => Number(node.dataset.at) < 0), panel);
-        await after(520, id);
+      await after(250, id);
+      for (let end = 1; end <= p.prompt.length; end += 1) {
+        setComposer(p.prompt.slice(0, end));
+        await after(18, id);
       }
+      await after(280, id);
+      setComposer("");
+      p.said.hidden = false;
+      p.said.classList.add("is-new");
+      await after(320, id);
+
+      p.activity.hidden = false;
+      p.text.setAttribute("data-running", "");
+      p.text.textContent = "Thinking";
+      reveal(p.timed.filter((node) => Number(node.dataset.at) < 0), panel);
+      await after(520, id);
       for (const [index, phase] of p.phases.entries()) {
-        if (index < first) continue;
         p.text.textContent = phase;
         await after(280, id);
         reveal(p.timed.filter((node) => Number(node.dataset.at) === index), panel);
@@ -331,7 +401,6 @@
   }
 
   function select(index, { focus = false } = {}) {
-    stopWaiting();
     tabs.forEach((tab, i) => {
       const selected = i === index;
       tab.setAttribute("aria-selected", String(selected));
@@ -355,7 +424,6 @@
   });
 
   control.addEventListener("click", () => {
-    stopWaiting();
     if (playing) finish(current());
     else play(current());
   });
@@ -391,28 +459,6 @@
   tablist.hidden = false;
   control.hidden = false;
 
-  // The first conversation opens on its first frame and plays on once the preview is in view.
-  const first = panels[0];
-  if (reduced.matches) {
-    finish(first);
-  } else {
-    prime(first);
-    // Waiting to play counts as playing: Show answer shows the conversation finished.
-    playing = true;
-    setControl("Show answer");
-    if ("IntersectionObserver" in window) {
-      watcher = new IntersectionObserver(
-        (entries) => {
-          if (!entries.some((entry) => entry.isIntersecting)) return;
-          stopWaiting();
-          play(first, { primed: true });
-        },
-        { threshold: 0.25 },
-      );
-      watcher.observe(demo);
-    } else {
-      play(first, { primed: true });
-    }
-  }
-  demo.setAttribute("data-ready", "");
+  // The first conversation, finished, scrolled to its plan and ticket.
+  finish(panels[0]);
 })();

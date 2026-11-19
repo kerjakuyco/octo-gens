@@ -1,4 +1,4 @@
-import { REPO, ISSUES, code, doc, docPage, facts, out, reference, shell, table } from "../site.mjs";
+import { REPO, ISSUES, chip, code, doc, docPage, esc, facts, icon, out, reference, shell, table } from "../site.mjs";
 
 const LAYOUT = [
   "crates/octoneo-core/    Trading core in Rust: exchange client, wallet signing, indicators,",
@@ -8,6 +8,65 @@ const LAYOUT = [
   "docs/                   Architecture, the assistant, the exchange.",
   "scripts/                Smoke test for the built app.",
 ].join("\n");
+
+/**
+ * The head's picture: a window on the repository, with an excerpt of the code that writes the
+ * approval your wallet signs. The excerpt is copied from the file as it is; if the function
+ * changes there, change it here. The tree lists folders and files that exist.
+ */
+const SOURCE_FILE = "crates/octoneo-core/src/exchange/mod.rs";
+
+/** The excerpt, line by line: comments, then code with its string and the one field that matters. */
+const EXCERPT = [
+  ["comment", "/// The message a main wallet signs to approve an API wallet for perpetual"],
+  ["comment", "/// trading only. The field order is fixed by the exchange; `canWithdraw` is always false."],
+  [
+    "code",
+    `<span class="tok-kw">pub fn</span> <span class="tok-fn">approval_message</span>(user: &amp;Address, nonce: <span class="tok-kw">u64</span>, agent: &amp;Address, expires_ms: <span class="tok-kw">i64</span>) -&gt; <span class="tok-kw">String</span> {`,
+  ],
+  ["code", `    <span class="tok-fn">format!</span>(`],
+  [
+    "code",
+    `        <span class="tok-str">"user={user}&amp;<wbr>nonce={nonce}&amp;<wbr>agentName={AGENT_NAME}&amp;<wbr>agentAddress={agent}&amp;<wbr>expired={expires_ms}&amp;<wbr>signatureChainId={APPROVAL_CHAIN_ID}&amp;<wbr>canSpotTrade=false&amp;<wbr>canPerpTrade=true&amp;<wbr><mark>canWithdraw=false</mark>&amp;<wbr>ipWhitelist="</span>`,
+  ],
+  ["code", "    )"],
+  ["code", "}"],
+];
+
+const TREE = [
+  [0, "folder", "crates/octoneo-core/src"],
+  [1, "folder", "assistant"],
+  [1, "folder", "exchange"],
+  [2, "file", "funding.rs"],
+  [2, "file", "mod.rs", true],
+  [2, "file", "signing.rs"],
+  [1, "folder", "llm"],
+  [1, "folder", "web"],
+  [0, "folder", "src-tauri"],
+  [0, "folder", "src"],
+  [0, "folder", "docs"],
+];
+
+const SOURCE = `<figure class="ui-figure ui-code-figure">
+<div class="ui ui-code">
+<div class="ui-bar">
+<span class="ui-bar-start"><span class="code-window-dots" aria-hidden="true"><span></span><span></span><span></span></span><span class="ui-path">${SOURCE_FILE}</span></span>
+<span class="ui-bar-end">${chip("Rust")}${chip("GPL-3.0-only")}</span>
+</div>
+<div class="ui-code-body">
+<ul class="ui-tree" aria-hidden="true">
+${TREE.map(([depth, kind, name, on]) => `<li data-depth="${depth}"${on ? " data-on" : ""}>${icon(kind, 15)}<span>${esc(name)}</span></li>`).join("\n")}
+</ul>
+<pre class="ui-source"><code>${EXCERPT.map(([kind, line]) => {
+  const indent = /^ */.exec(line)[0].length;
+  const html = kind === "comment" ? `<span class="tok-comment">${esc(line)}</span>` : line;
+  return `<span class="ui-line"${indent ? ` data-indent="${indent}"` : ""}>${html}</span>`;
+}).join("\n")}</code></pre>
+</div>
+<p class="ui-terminal"><span class="ui-prompt" aria-hidden="true">$</span> cargo test -p octoneo-core</p>
+</div>
+<figcaption>The approval your wallet signs, from ${out(doc(SOURCE_FILE), SOURCE_FILE)}: ${code("canWithdraw")} is always ${code("false")}, and there is no setting that changes it.</figcaption>
+</figure>`;
 
 export default {
   path: "/open-source/",
@@ -19,6 +78,7 @@ export default {
       path: "/open-source/",
       title: "How OctoNeo is built, and how to contribute",
       lead: `OctoNeo is licensed under GPL-3.0-only. Read the code that signs your orders, build it yourself, and send a pull request. Everything is on ${out(REPO, "GitHub")}.`,
+      visual: SOURCE,
       sections: [
         {
           id: "license",

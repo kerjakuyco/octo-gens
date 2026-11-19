@@ -1,8 +1,66 @@
-import { code, doc, docPage, facts, literal, out, reference, table } from "../site.mjs";
+import { callout, code, doc, docPage, facts, icon, literal, out, reference, table, ui, uiButton } from "../site.mjs";
 
 const APPROVAL = `user=<your wallet>&nonce=<microseconds>&agentName=OctoNeo&agentAddress=<API wallet>
 &expired=<milliseconds>&signatureChainId=56
 &canSpotTrade=false&canPerpTrade=true&canWithdraw=false&ipWhitelist=`;
+
+/**
+ * The head's picture: the deposit and the withdrawal pages side by side, as the app serves them on
+ * testnet against a stand-in for the exchange with a test wallet. The figures are those of the
+ * pictures further down this page.
+ */
+const step = (state, n, title, body = "") =>
+  `<li class="ui-step" data-state="${state}"><span class="ui-step-mark">${state === "done" ? icon("check", 14) : n}</span><div class="ui-step-text"><p class="ui-step-title">${title}</p>${body}</div></li>`;
+
+const wallet = `<p class="ui-step-note">Rabby Wallet <code>0x63DD…7C4e</code></p>`;
+
+const FLOWS = ui({
+  className: "ui-wallet",
+  label:
+    "A sample of the two pages the app serves on your computer, on testnet with a stand-in for the exchange. Deposit to your trading account: the wallet is connected; 250 USDT on BNB Smart Chain Testnet is chosen, with a Deposit 250 USDT button; then allow the amount, send the deposit and wait for the network. Withdraw to your wallet: the wallet is connected; 40 USDT is chosen, with an exchange fee of 0.11 USDT, going to the same wallet, and a Withdraw 40 USDT button; then sign the withdrawal and confirm it is you.",
+  caption: "The deposit and withdrawal pages, served by the app on your computer and opened in the browser where your wallet is. Testnet, with a stand-in for the exchange and a test wallet: sample figures.",
+  body: `<div class="ui-bar">
+<span class="ui-bar-start"><span class="ui-address"><span class="ui-address-host">127.0.0.1</span><span class="ui-muted">served by OctoNeo on this computer</span></span></span>
+<span class="ui-bar-end"><span class="ui-net"><strong>Testnet</strong> test funds</span></span>
+</div>
+<div class="ui-flows">
+<section class="ui-flow">
+<p class="ui-flow-title">Deposit to your trading account</p>
+<p class="ui-flow-lead">You confirm every transaction in your wallet.</p>
+<ol class="ui-steps">
+${step("done", 1, "Connect your wallet", wallet)}
+${step("now", 2, "Choose what to deposit", `<div class="ui-form">
+<p class="ui-options"><span data-on>BNB Smart Chain Testnet</span><span>Sepolia</span></p>
+<p class="ui-amount"><strong class="num">250</strong><span>USDT</span></p>
+<p class="ui-step-note">In your wallet: <span class="num">1,234.56</span> USDT</p>
+${uiButton("Deposit 250 USDT", "primary")}
+</div>`)}
+${step("next", 3, "Allow the amount")}
+${step("next", 4, "Send the deposit")}
+${step("next", 5, "Wait for the network")}
+</ol>
+</section>
+<section class="ui-flow">
+<p class="ui-flow-title">Withdraw to your wallet</p>
+<p class="ui-flow-lead">Your wallet signs twice.</p>
+<ol class="ui-steps">
+${step("done", 1, "Connect your wallet", wallet)}
+${step("now", 2, "Choose what to withdraw", `<div class="ui-form">
+<p class="ui-options"><span data-on>BNB Smart Chain Testnet</span><span>Sepolia</span></p>
+<p class="ui-amount"><strong class="num">40</strong><span>USDT</span></p>
+<dl class="ui-facts ui-facts-plain">
+<div><dt>Exchange fee</dt><dd class="num">0.11 USDT</dd></div>
+<div><dt>Goes to</dt><dd><code>0x63DD…7C4e</code></dd></div>
+<div><dt>Daily limit</dt><dd class="num">9,000 of 10,000 USD left</dd></div>
+</dl>
+${uiButton("Withdraw 40 USDT", "primary")}
+</div>`)}
+${step("next", 3, "Sign the withdrawal")}
+${step("next", 4, "Confirm it is you")}
+</ol>
+</section>
+</div>`,
+});
 
 export default {
   path: "/wallet/",
@@ -14,12 +72,7 @@ export default {
       path: "/wallet/",
       title: "Wallet, deposits and withdrawals",
       lead: "OctoNeo trades through a separate key that your own wallet approves for perpetual futures only. That key cannot withdraw, and the app never sees your wallet’s own key. Deposits and withdrawals start in the app and are confirmed by your wallet, every time. Withdrawals need a wallet that signs across networks, such as Rabby; MetaMask cannot.",
-      picture: ctx.figure("wallet-connect", {
-        alt: "The approval page OctoNeo opens in the browser: what your wallet approves, a trading key that can place and cancel perpetual futures orders on testnet, cannot trade spot and cannot withdraw or move your funds, valid for 30 days, then the steps to connect, switch network and sign.",
-        caption: "The approval page, served by the app on your computer and opened in the browser where your wallet is. Testnet, with a stand-in for the exchange.",
-        kind: "column",
-        eager: true,
-      }),
+      visual: FLOWS,
       sections: [
         {
           id: "key",
@@ -42,6 +95,11 @@ ${reference("The message your wallet signs", literal(APPROVAL, "The approval you
           })}
 <h3>Approving in a browser wallet</h3>
 <p>A desktop app cannot talk to a wallet extension, because extensions live in the browser. So the app serves one small page on your computer and opens it in your browser.</p>
+${ctx.figure("wallet-connect", {
+  alt: "The approval page OctoNeo opens in the browser: what your wallet approves, a trading key that can place and cancel perpetual futures orders on testnet, cannot trade spot and cannot withdraw or move your funds, valid for 30 days, then the steps to connect, switch network and sign.",
+  caption: "The approval page, served by the app on your computer and opened in the browser where your wallet is. Testnet, with a stand-in for the exchange.",
+  kind: "column",
+})}
 ${reference("The four steps of an approval, and what crosses the page", `<ol class="steps-list">
 <li>The app creates a new API wallet key and keeps it in memory.</li>
 <li>It serves the approval page on ${code("127.0.0.1")}, on a random port, behind a random path, for ten minutes.</li>
@@ -68,7 +126,7 @@ ${reference("The four steps of an approval, and what crosses the page", `<ol cla
           id: "deposit",
           title: "Deposit from your wallet",
           lead: "Deposit and Withdraw are in Settings under Wallet, and on the Account page. Each opens a page the app serves on your computer, in the browser where your wallet is, like the approval does. You never have to visit the exchange’s site.",
-          body: `<div class="callout" role="note"><p><strong>Not yet tried on the live exchange, on either network:</strong> orders, deposits sent from a wallet and withdrawals. Orders and withdrawals have been checked against a stand-in that follows the exchange’s API documentation, and deposits by simulating them on their chains without sending them. Practice on testnet, then start small.</p></div>
+          body: `${callout(`<p><strong>Not yet tried on the live exchange, on either network:</strong> orders, deposits sent from a wallet and withdrawals. Orders and withdrawals have been checked against a stand-in that follows the exchange’s API documentation, and deposits by simulating them on their chains without sending them. Practice on testnet, then start small.</p>`)}
 ${table({
             head: ["Direction", "What your wallet does", "What the app does"],
             stack: true,

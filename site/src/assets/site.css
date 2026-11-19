@@ -1,79 +1,66 @@
 /*
- * The OctoNeo site.
+ * The OctoNeo site: the frame every page shares, and the home page. Dark only.
  *
- * The palette is the app's own: neutral greys carry the structure. Blue is for the one action on a
- * page and for links. Green and red mean long and short, gains and losses, and appear only inside
- * the preview of the app. Amber is for something to read before acting, as in the app.
- * Type is the system's own face; no font files are loaded.
+ * Near-black and monochrome: white type, a few greys, hairline borders, and no light effects.
+ * Colour appears only where it means something: green and red for up and down, gains and losses,
+ * inside the drawings of the app; amber for testnet and for what to read before acting; and the
+ * brand blue once, on the small "New" chip in the home page's hero.
+ * Type is the system's own face; no font files are loaded. Headings are large, at weight 500, with
+ * tight tracking. Buttons are full pills, cards have generous radii, and almost nothing moves.
+ *
+ * pages.css, loaded after this file, styles the feature pages against the tokens below.
  */
 
+/* Design tokens. pages.css styles against these names: keep them. */
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
 
-  --paper: #ffffff;
-  --rail: #f9f9f9;
-  --well: #f4f4f4;
-  --well-strong: #ececec;
-  --rule: #e5e5e5;
-  --rule-strong: #cdcdcd;
-  --ink: #0d0d0d;
-  --muted: #5d5d5d;
-  --faint: #8f8f8f;
-
-  --brand: #2a63dd;
-  --brand-hover: #2152c4;
-  --on-brand: #ffffff;
-  --link: #2a63dd;
-  --focus: #2563eb;
-
-  /* The app's own buttons, used inside the preview. */
-  --primary: #0d0d0d;
-  --primary-hover: #2f2f2f;
-  --on-primary: #ffffff;
-
-  --up: #06733b;
-  --up-soft: rgba(6, 115, 59, 0.1);
-  --down: #c5221f;
-  --down-soft: rgba(197, 34, 31, 0.09);
-  --warn: #8a5a00;
-  --warn-soft: rgba(214, 150, 20, 0.14);
+  --bg: #0a0a0a;
+  /* Cards, the panels of the bento grid, app windows. */
+  --panel: #141414;
+  /* Raised rows inside panels, and the dark pill button. */
+  --panel-2: #1c1c1c;
+  /* The dark pill under the pointer. */
+  --panel-3: #262626;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.14);
+  --text: #fafafa;
+  /* Body copy: 7.9:1 on --bg, 7.3:1 on --panel. */
+  --text-2: #a3a3a3;
+  /* Small print and captions: 5.0:1 on --bg, 4.7:1 on --panel. Not on --panel-2, and no darker. */
+  --text-3: #808080;
+  /* The "New" chip in the home page's hero, and nothing large. */
+  --brand: #7aa8ff;
+  --up: #42d392;
+  --down: #ff7a7a;
+  --warn: #ffc457;
+  --radius-1: 10px;
+  --radius-2: 16px;
+  --radius-3: 20px;
+  --pill: 999px;
+  /* The content width; .wrap adds the gutters on each side. */
+  --wrap: 1200px;
+  --gutter: 24px;
+  /* Running text stops at about 75 characters a line. */
+  --measure: 36rem;
+  /* The header lies over the top of every page: the first thing on a page starts below this. */
+  --header-h: 64px;
+  /* Where sticky things stop under the header. */
+  --toc-top: calc(var(--header-h) + 24px);
 
   --font: system-ui, -apple-system, Roboto, "Noto Sans", sans-serif;
   --mono: ui-monospace, monospace;
-
-  --gutter: 32px;
-  --measure: 46rem;
-  /* Running text stops at about 75 characters a line; tables and pictures keep the column's width. */
-  --text: 36rem;
 }
 
-@media (prefers-color-scheme: dark) {
+@media (max-width: 800px) {
   :root {
-    --paper: #212121;
-    --rail: #181818;
-    --well: #2f2f2f;
-    --well-strong: #3a3a3a;
-    --rule: rgba(255, 255, 255, 0.1);
-    --rule-strong: rgba(255, 255, 255, 0.22);
-    --ink: #ececec;
-    --muted: #b4b4b4;
-    --faint: #8e8e8e;
+    --header-h: 56px;
+  }
+}
 
-    --brand: #2a63dd;
-    --brand-hover: #3a73ec;
-    --link: #7aa7ff;
-    --focus: #7aa7ff;
-
-    --primary: #ffffff;
-    --primary-hover: #dcdcdc;
-    --on-primary: #0d0d0d;
-
-    --up: #3ecf8e;
-    --up-soft: rgba(62, 207, 142, 0.14);
-    --down: #ff8a80;
-    --down-soft: rgba(255, 138, 128, 0.14);
-    --warn: #f2b84b;
-    --warn-soft: rgba(242, 184, 75, 0.12);
+@media (max-width: 640px) {
+  :root {
+    --gutter: 16px;
   }
 }
 
@@ -90,39 +77,47 @@
 }
 
 html {
+  background: var(--bg);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  scroll-padding-top: 24px;
+  scrollbar-color: var(--panel-3) var(--bg);
 }
 
 body {
   margin: 0;
-  background: var(--paper);
-  color: var(--ink);
+  overflow-x: clip;
+  background: var(--bg);
+  color: var(--text);
   font-family: var(--font);
   font-size: 1.0625rem;
   line-height: 1.6;
   font-kerning: normal;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
 h1,
 h2,
 h3,
+h4,
 p,
 ul,
 ol,
 dl,
 dd,
 figure,
-pre {
+pre,
+blockquote {
   margin: 0;
 }
 
 h1,
 h2,
-h3 {
+h3,
+h4 {
+  font-weight: 500;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
@@ -150,18 +145,25 @@ button {
 }
 
 a {
-  color: var(--link);
+  color: var(--text);
   text-decoration-line: underline;
   text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
   text-underline-offset: 3px;
 }
 
 a:hover {
-  text-decoration-thickness: 2px;
+  text-decoration-color: currentColor;
 }
 
+::selection {
+  background: color-mix(in srgb, var(--text) 26%, transparent);
+  color: var(--text);
+}
+
+/* Focus is a white ring, clear on every dark surface; on a white pill it sits off the edge. */
 :focus-visible {
-  outline: 2px solid var(--focus);
+  outline: 2px solid var(--text);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -170,10 +172,15 @@ main:focus {
   outline: none;
 }
 
+/* A link to a part of a page lands below the header. */
+[id] {
+  scroll-margin-top: calc(var(--header-h) + 16px);
+}
+
 code {
   padding: 0.1em 0.35em;
-  border-radius: 5px;
-  background: var(--well);
+  border-radius: 6px;
+  background: var(--panel-2);
   font-family: var(--mono);
   font-size: 0.875em;
   overflow-wrap: anywhere;
@@ -200,129 +207,39 @@ strong {
   vertical-align: middle;
 }
 
+/* The page's column: --wrap wide, with a gutter each side. */
 .wrap {
   width: 100%;
-  max-width: calc(1136px + 2 * var(--gutter));
+  max-width: calc(var(--wrap) + 2 * var(--gutter));
   margin-inline: auto;
   padding-inline: var(--gutter);
+}
+
+/* Read by assistive technology, not drawn. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .skip-link {
   position: absolute;
   top: -100px;
   left: 16px;
-  z-index: 10;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: var(--ink);
-  color: var(--paper);
-  font-weight: 600;
+  z-index: 60;
+  padding: 10px 16px;
+  border-radius: var(--pill);
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 500;
   text-decoration: none;
 }
 
 .skip-link:focus {
   top: 12px;
-}
-
-/* ----------------------------------------------------------------- header */
-
-.site-header {
-  border-bottom: 1px solid var(--rule);
-  background: var(--paper);
-}
-
-.header-bar {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  min-height: 64px;
-}
-
-.brand {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 10px;
-  color: var(--ink);
-  font-size: 1.0625rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  text-decoration: none;
-}
-
-.site-nav {
-  margin-right: auto;
-}
-
-.site-nav ul {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.site-nav a {
-  display: block;
-  padding: 6px 10px;
-  border-radius: 8px;
-  color: var(--muted);
-  font-size: 0.9375rem;
-  text-decoration: none;
-  white-space: nowrap;
-  transition:
-    background-color 0.12s,
-    color 0.12s;
-}
-
-.site-nav a:hover {
-  background: var(--well);
-  color: var(--ink);
-}
-
-/* The page you are on is marked by weight and a bar, not by a tint alone. */
-.site-nav a[aria-current="page"] {
-  border-radius: 0;
-  color: var(--ink);
-  font-weight: 600;
-  box-shadow: inset 0 -2px 0 var(--ink);
-}
-
-.nav-github {
-  margin-left: 10px;
-  padding-left: 10px;
-  border-left: 1px solid var(--rule);
-}
-
-.menu-button {
-  display: none;
-  align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 0 12px 0 10px;
-  border: 1px solid var(--faint);
-  border-radius: 10px;
-  background: var(--paper);
-  font-size: 0.9375rem;
-  cursor: pointer;
-}
-
-.menu-close {
-  display: none;
-}
-
-.menu-button[aria-expanded="true"] .menu-open {
-  display: none;
-}
-
-.menu-button[aria-expanded="true"] .menu-close {
-  display: inline;
-}
-
-.menu-open,
-.menu-close {
-  line-height: 0;
 }
 
 /* ---------------------------------------------------------------- buttons */
@@ -337,71 +254,799 @@ strong {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   min-height: 44px;
-  padding: 0 20px;
+  padding: 0 22px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--pill);
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
+  letter-spacing: -0.01em;
   text-decoration: none;
   white-space: nowrap;
   transition:
-    background-color 0.12s,
-    border-color 0.12s;
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
+.button:hover {
+  text-decoration: none;
+}
+
+.button:focus-visible {
+  border-radius: var(--pill);
+  outline-offset: 3px;
+}
+
+/* A small chevron after the label sits close to it. */
+.button .icon:last-child {
+  margin-right: -6px;
+}
+
+/* The primary action: a white pill. */
 .button-brand {
-  background: var(--brand);
-  color: var(--on-brand);
+  background: var(--text);
+  color: var(--bg);
 }
 
 .button-brand:hover {
-  background: var(--brand-hover);
+  background: color-mix(in srgb, var(--text) 84%, var(--bg));
+  color: var(--bg);
 }
 
-/* The border is the only edge a quiet button has, so it keeps 3:1 against the page in both themes. */
+/* The secondary action: a dark pill. */
 .button-quiet {
-  border-color: var(--faint);
-  background: transparent;
-  color: var(--ink);
+  border-color: var(--line);
+  background: var(--panel-2);
+  color: var(--text);
 }
 
 .button-quiet:hover {
-  background: var(--well);
-}
-
-.button-quiet[aria-current="page"] {
-  border-color: var(--ink);
+  border-color: var(--line-2);
+  background: var(--panel-3);
+  color: var(--text);
 }
 
 .button-small {
   min-height: 36px;
-  padding: 0 14px;
+  padding: 0 16px;
   font-size: 0.9375rem;
+}
+
+/* --------------------------------------------------------- shared pieces */
+
+/* Something to read before acting. Its words say what it is, opening in bold; the dot (or the alert
+   sign) and the hairline only mark its kind: amber for what has not been tried on the live
+   exchange, the default, and red (data-tone="risk") for the risk of trading. */
+.callout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+  padding: 16px 20px 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--warn) 28%, transparent);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--warn) 5%, var(--bg));
+  color: var(--text-2);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.callout-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: calc(0.8em - 4px);
+  border-radius: 50%;
+  background: var(--warn);
+}
+
+.callout:is([data-tone="risk"], [data-tone="down"]) {
+  border-color: color-mix(in srgb, var(--down) 28%, transparent);
+  background: color-mix(in srgb, var(--down) 5%, var(--bg));
+}
+
+.callout:is([data-tone="risk"], [data-tone="down"]) .callout-dot {
+  background: var(--down);
+}
+
+.callout-body > * + * {
+  margin-top: 8px;
+}
+
+.callout p {
+  color: var(--text-2);
+}
+
+.callout strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* A link to read more, with an arrow after it. */
+.more a {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.more a::after {
+  content: "→";
+  content: "→" / "";
+  color: var(--text-2);
+}
+
+.more a:hover {
+  text-decoration: underline;
+  text-decoration-color: currentColor;
+}
+
+.more a:hover::after {
+  color: var(--text);
+}
+
+/* ----------------------------------------------------------------- header */
+
+/* A flat bar over the top of every page. It is transparent over the page's first screen; once the
+   page has moved, it turns into a dark, translucent bar with a hairline under it. It takes no room
+   in the page: whatever comes first on a page starts below --header-h. */
+.site-header {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 50;
+}
+
+/* The bar's backdrop is a layer of its own. On the header itself, the blur would make the header
+   the box the phone's sheet is placed in, and the sheet could no longer cover the screen. */
+.site-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+
+.site-header[data-scrolled]::before {
+  border-bottom-color: var(--line);
+  background: color-mix(in srgb, var(--bg) 76%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+.header-bar {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  max-width: calc(var(--wrap) + 2 * var(--gutter));
+  height: var(--header-h);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.brand {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.brand:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.brand:focus-visible {
+  border-radius: 8px;
+  outline-offset: 4px;
+}
+
+.brand-mark {
+  width: 27px;
+  height: 26px;
+}
+
+.site-nav {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+}
+
+.nav-list {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-link,
+.nav-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--pill);
+  background: none;
+  color: var(--text-2);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.nav-link:hover,
+.nav-trigger:hover,
+.nav-trigger[aria-expanded="true"] {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-link:focus-visible,
+.nav-trigger:focus-visible {
+  border-radius: var(--pill);
+}
+
+/* The page you are on, or the group it belongs to. */
+.nav-link[aria-current="page"],
+.nav-trigger[data-current] {
+  color: var(--text);
+}
+
+.nav-chevron {
+  margin-right: -4px;
+  color: var(--text-3);
+}
+
+.nav-trigger:hover .nav-chevron,
+.nav-trigger[aria-expanded="true"] .nav-chevron {
+  color: var(--text-2);
+}
+
+.nav-trigger[aria-expanded="true"] .nav-chevron {
+  transform: rotate(180deg);
+}
+
+/* GitHub and Download are pills on the bar; the sheet on a phone has its own. (Two classes, to
+   win over .button.) */
+.nav-github,
+.site-nav .nav-download {
+  display: none;
+}
+
+.header-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Product's panel: what each page is about, one line each, under the bar. */
+.nav-group {
+  position: relative;
+}
+
+.js .nav-panel {
+  position: absolute;
+  top: calc(100% + 14px);
+  left: -6px;
+  z-index: 3;
+  width: 25rem;
+  padding: 6px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-2);
+  background: var(--panel);
+  box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.75);
+}
+
+.js .nav-group:not([data-open]) .nav-panel {
+  display: none;
+}
+
+.nav-group-title {
+  display: none;
+}
+
+.nav-items {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-item {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px 11px;
+  border-radius: var(--radius-1);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-item:hover,
+.nav-item:focus-visible,
+.nav-item[aria-current="page"] {
+  background: var(--panel-2);
+  text-decoration: none;
+}
+
+.nav-item:focus-visible {
+  border-radius: var(--radius-1);
+  outline-offset: -2px;
+}
+
+.nav-item-label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.nav-item-line {
+  color: var(--text-3);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+/* On the raised row the line takes the lighter grey, to keep its contrast. */
+.nav-item:hover .nav-item-line,
+.nav-item:focus-visible .nav-item-line,
+.nav-item[aria-current="page"] .nav-item-line {
+  color: var(--text-2);
+}
+
+.menu-button {
+  position: relative;
+  z-index: 2;
+  display: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.menu-button:hover {
+  border-color: var(--line-2);
+  background: var(--panel-3);
+}
+
+.menu-button:focus-visible {
+  border-radius: 50%;
+}
+
+.menu-open,
+.menu-close {
+  line-height: 0;
+}
+
+.menu-close,
+.menu-button[aria-expanded="true"] .menu-open {
+  display: none;
+}
+
+.menu-button[aria-expanded="true"] .menu-close {
+  display: inline;
+}
+
+/* Without the script, Product is not a panel but a row of plain links, like the rest. */
+html:not(.js) .nav-group,
+html:not(.js) .nav-panel,
+html:not(.js) .nav-items {
+  display: contents;
+}
+
+html:not(.js) .nav-trigger,
+html:not(.js) .nav-item-line {
+  display: none;
+}
+
+html:not(.js) .nav-item {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--pill);
+  background: none;
+  color: var(--text-2);
+}
+
+html:not(.js) .nav-item:hover,
+html:not(.js) .nav-item[aria-current="page"] {
+  color: var(--text);
+}
+
+html:not(.js) .nav-item-label {
+  font-weight: 400;
+}
+
+/* Without the script, a bar too narrow for every link puts them on a row of their own, under the
+   name, and scrolls away with the page. */
+@media (max-width: 1099px) {
+  html:not(.js) .site-header {
+    position: static;
+  }
+
+  html:not(.js) .header-bar {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    height: auto;
+    padding-block: 12px;
+  }
+
+  html:not(.js) .site-nav {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  html:not(.js) .nav-list {
+    flex-wrap: wrap;
+    margin-left: -12px;
+  }
+}
+
+/* On a phone the bar keeps the name and a round menu button; the menu is a sheet over the whole
+   screen, with the same links, large targets and Download at the bottom. */
+@media (max-width: 800px) {
+  .header-bar {
+    gap: 16px;
+  }
+
+  .js .header-actions {
+    display: none;
+  }
+
+  .js .menu-button {
+    display: grid;
+  }
+
+  .js .site-nav {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    padding: calc(var(--header-h) + 8px) max(var(--gutter), env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
+      max(var(--gutter), env(safe-area-inset-left));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--bg);
+  }
+
+  .js .site-nav:not([data-open]) {
+    display: none;
+  }
+
+  .js .nav-list {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .js .nav-list > li {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .js .nav-trigger {
+    display: none;
+  }
+
+  .js .nav-panel,
+  .js .nav-group:not([data-open]) .nav-panel {
+    position: static;
+    display: block;
+    width: auto;
+    padding: 4px 0 12px;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .js .nav-group-title {
+    display: block;
+    padding: 12px 0 6px;
+    color: var(--text-3);
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  .js .nav-item {
+    min-height: 60px;
+    align-content: center;
+    margin-inline: -12px;
+    padding: 8px 12px;
+  }
+
+  .js .nav-item-label {
+    font-size: 1.125rem;
+  }
+
+  .js .nav-item-line {
+    font-size: 0.875rem;
+  }
+
+  .js .nav-link {
+    display: flex;
+    width: 100%;
+    height: 56px;
+    padding: 0;
+    border-radius: 0;
+    color: var(--text);
+    font-size: 1.125rem;
+  }
+
+  .js .nav-link:focus-visible {
+    border-radius: 4px;
+    outline-offset: -2px;
+  }
+
+  .js .nav-github {
+    display: block;
+  }
+
+  .js .site-nav .nav-download {
+    display: flex;
+    flex: none;
+    width: 100%;
+    min-height: 48px;
+    margin-top: 28px;
+  }
+
+  /* While the sheet is open, the page under it stays still. */
+  html[data-menu-open] {
+    overflow: hidden;
+  }
+}
+
+/* ----------------------------------------------------------------- footer */
+
+.site-footer {
+  padding: 72px 0 40px;
+  border-top: 1px solid var(--line);
+  font-size: 0.9375rem;
+}
+
+.footer-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 48px 64px;
+}
+
+.footer-brand p {
+  max-width: 30ch;
+  margin-top: 16px;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
+.footer-nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 32px;
+}
+
+.footer-nav h2 {
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.footer-nav ul {
+  display: grid;
+  justify-items: start;
+  margin-top: 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.footer-nav a {
+  display: inline-block;
+  padding-block: 6px;
+  color: var(--text-2);
+  text-decoration: none;
+}
+
+.footer-nav a:hover {
+  color: var(--text);
+}
+
+.footer-legal {
+  display: grid;
+  gap: 10px;
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  color: var(--text-3);
+  font-size: 0.8125rem;
+  line-height: 1.65;
+}
+
+.footer-legal p {
+  max-width: 96ch;
+}
+
+.footer-legal strong {
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.footer-legal a {
+  color: inherit;
+}
+
+@media (max-width: 999px) {
+  .footer-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .site-footer {
+    padding-top: 56px;
+  }
+
+  .footer-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px 24px;
+  }
+
+  .footer-legal {
+    margin-top: 48px;
+  }
+}
+
+/* On a touch screen, every control in the frame is at least 44 pixels high. */
+@media (pointer: coarse) {
+  .header-actions .button,
+  .nav-link,
+  .nav-trigger {
+    min-height: 44px;
+  }
+
+  .menu-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .footer-nav a {
+    padding-block: 10px;
+  }
+}
+
+/* =============================================================== home page */
+
+/* The home page's bands follow one another 128 pixels apart on a wide screen. */
+.home-band {
+  padding-top: 128px;
+}
+
+.home-title {
+  font-size: clamp(2rem, 1.2rem + 2.4vw, 3rem);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.home-lead {
+  max-width: var(--measure);
+  color: var(--text-2);
+  font-size: 1.125rem;
+  line-height: 1.6;
 }
 
 /* ------------------------------------------------------------------- hero */
 
 .hero {
-  padding: 48px 0 56px;
-  border-bottom: 1px solid var(--rule);
-  background: var(--rail);
+  padding-top: calc(var(--header-h) + 88px);
 }
 
-.hero-grid {
+/* Without the script a narrow header stays in the page, so the hero need not leave room for it. */
+@media (max-width: 1099px) {
+  html:not(.js) .hero {
+    padding-top: 56px;
+  }
+}
+
+.hero-inner {
   display: grid;
-  grid-template-columns: minmax(0, 480px) minmax(0, 1fr);
+  justify-items: center;
+  text-align: center;
+}
+
+/* The release, in a pill above the headline. Its "New" is the one place the brand blue appears. */
+.announce {
+  display: inline-flex;
   align-items: center;
-  gap: 56px;
+  gap: 10px;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 5px 5px 5px 6px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--pill);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.875rem;
+  line-height: 1.3;
+  text-decoration: none;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+
+.announce:hover {
+  border-color: color-mix(in srgb, var(--text) 24%, transparent);
+  background: var(--panel-2);
+}
+
+.announce:focus-visible {
+  border-radius: var(--pill);
+}
+
+.announce-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: var(--pill);
+  background: color-mix(in srgb, var(--brand) 16%, transparent);
+  color: var(--brand);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.announce-text {
+  min-width: 0;
+}
+
+.announce-go {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 24px;
+  margin-right: 4px;
+  color: var(--text-2);
+}
+
+.announce:hover .announce-go {
+  color: var(--text);
 }
 
 .hero-title {
-  font-size: 2.875rem;
-  font-weight: 700;
-  line-height: 1.06;
-  letter-spacing: -0.02em;
+  margin-top: 28px;
+  font-size: clamp(2.125rem, 0.6rem + 5.6vw, 4.25rem);
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
 }
 
 .hero-title span {
@@ -409,68 +1054,742 @@ strong {
 }
 
 .hero-lead {
-  max-width: var(--text);
+  max-width: 43rem;
+  margin-top: 24px;
+  color: var(--text-2);
+  font-size: clamp(1.0625rem, 0.98rem + 0.3vw, 1.1875rem);
+  line-height: 1.6;
+}
+
+.hero-actions {
+  justify-content: center;
+  margin-top: 36px;
+}
+
+.hero-meta {
+  max-width: 57rem;
   margin-top: 20px;
-  color: var(--muted);
-  font-size: 1.125rem;
+  color: var(--text-3);
+  font-size: 0.875rem;
   line-height: 1.55;
 }
 
-.hero-copy .actions {
-  margin-top: 28px;
+/* -------------------------------------------------------------- the bento */
+
+/* Six panels of the app, drawn in HTML, straight under the hero: three a row on a wide screen, the
+   first row weighted to the conversation, the second even. Every panel in a row is the same height,
+   and what does not fit is cut at the panel's foot, as a window would cut it. */
+.bento-band {
+  padding-top: 88px;
 }
 
-/* Platforms, license and privacy in one plain line under the buttons. */
-.hero-meta {
-  max-width: var(--text);
-  margin-top: 20px;
-  color: var(--muted);
+.bento {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: 388px;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.b-assistant {
+  grid-column: span 6;
+}
+
+.b-markets,
+.b-safety {
+  grid-column: span 3;
+}
+
+.b-wallet,
+.b-models,
+.b-news {
+  grid-column: span 4;
+}
+
+.b-card {
+  position: relative;
+  container-type: inline-size;
+  display: grid;
+  grid-template:
+    "ui ui" minmax(0, 1fr)
+    "label link" auto / minmax(0, 1fr) auto;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-3);
+  background: var(--panel);
+  transition: border-color 0.15s;
+}
+
+.b-card:hover {
+  border-color: var(--line-2);
+}
+
+.b-ui {
+  grid-area: ui;
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 22px 22px 0;
+  color: var(--text);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.b-label {
+  grid-area: label;
+  align-self: center;
+  padding: 12px 12px 20px 22px;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* "Explore" names its page for assistive technology, and covers the whole panel for the pointer. */
+.b-link {
+  grid-area: link;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 22px 20px 0;
+  color: var(--text-2);
   font-size: 0.9375rem;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.b-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.b-card:hover .b-link {
+  color: var(--text);
+}
+
+/* The whole panel takes the focus ring. */
+@supports selector(:has(a)) {
+  .b-link:focus-visible {
+    outline: none;
+  }
+
+  .b-card:has(.b-link:focus-visible) {
+    border-color: var(--line-2);
+    outline: 2px solid var(--text);
+    outline-offset: 3px;
+  }
+
+  .b-card:has(.b-link:focus-visible) .b-link {
+    color: var(--text);
+  }
+}
+
+.bento-caption {
+  max-width: 76rem;
+  margin-top: 16px;
+  color: var(--text-3);
+  font-size: 0.8125rem;
   line-height: 1.5;
 }
 
-.hero-demo {
+/* A panel as wide as the page keeps its drawing to a column, centred. */
+.b-ui-assistant,
+.b-ui-news {
+  grid-template-columns: minmax(0, 620px);
+  justify-content: center;
+}
+
+/* What the panels draw: the app's own pieces, smaller. */
+.b-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   min-width: 0;
 }
 
-/* -------------------------------------------- the preview of the app's chat */
-
-.demo {
-  display: grid;
-  gap: 12px;
+.b-symbol {
+  font-weight: 600;
 }
 
-/* The suggestions are the tabs of the conversations, so they come before them in the page, and the
-   grid draws them under the message box, where the app has them. */
-.d-window {
-  container-type: inline-size;
+.b-muted {
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+.b-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--pill);
+  background: var(--panel-3);
+  color: var(--text-2);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.b-chip[data-tone="up"] {
+  background: color-mix(in srgb, var(--up) 14%, transparent);
+  color: var(--up);
+}
+
+.b-chip[data-tone="down"] {
+  background: color-mix(in srgb, var(--down) 14%, transparent);
+  color: var(--down);
+}
+
+.b-chip[data-tone="warn"] {
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  color: var(--warn);
+}
+
+.b-facts {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
-  height: clamp(540px, calc(100vh - 170px), 700px);
-  height: clamp(540px, calc(100svh - 170px), 700px);
-  overflow: hidden;
-  padding-bottom: 14px;
-  border: 1px solid var(--rule);
-  border-radius: 16px;
-  background: var(--paper);
+  gap: 6px;
+}
+
+.b-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.b-facts dt {
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.b-facts dd {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.b-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: var(--pill);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.b-button-primary {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.b-button-ghost {
+  color: var(--text-2);
+}
+
+.b-button-outline {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  color: var(--text);
+  font-size: 0.75rem;
+}
+
+.b-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.b-reply {
   font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.b-reply strong {
+  font-weight: 600;
+}
+
+/* Assistant: the question, what was read, the plan and the answer. */
+.b-bubble {
+  justify-self: end;
+  max-width: 85%;
+  padding: 8px 14px;
+  border-radius: 16px 16px 4px 16px;
+  background: var(--panel-3);
+  font-size: 0.875rem;
+}
+
+.b-activity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-3);
+  font-size: 0.75rem;
+}
+
+.b-activity span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.b-plan,
+.b-ticket {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-2);
+}
+
+.b-levels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.b-levels > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+/* On the raised rows the labels take the lighter grey, to keep their contrast. */
+.b-levels dt {
+  color: var(--text-2);
+  font-size: 0.6875rem;
+}
+
+.b-levels dd {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.b-plan .b-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+}
+
+@container (max-width: 460px) {
+  .b-plan .b-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The conversation plays in once, the first time it is in view (site.js says when). Until the
+   script has armed it, it is held back for a moment; if the script never comes, it shows anyway. */
+@media (prefers-reduced-motion: no-preference) {
+  .js .b-ui-assistant:not([data-armed]) > * {
+    opacity: 0;
+    animation: b-show 0s 2s forwards;
+  }
+
+  .b-ui-assistant[data-armed]:not([data-play]) > * {
+    opacity: 0;
+  }
+
+  .b-ui-assistant[data-play] > * {
+    animation: b-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  .b-ui-assistant[data-play] > :nth-child(1) {
+    animation-delay: 0.15s;
+  }
+
+  .b-ui-assistant[data-play] > :nth-child(2) {
+    animation-delay: 0.8s;
+  }
+
+  .b-ui-assistant[data-play] > :nth-child(3) {
+    animation-delay: 1.45s;
+  }
+
+  .b-ui-assistant[data-play] > :nth-child(4) {
+    animation-delay: 2.1s;
+  }
+}
+
+@keyframes b-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes b-show {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Markets: the price, its line and the book around the spread. */
+.b-quote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.b-pair {
+  width: 100%;
+}
+
+.b-price {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.b-chart {
+  display: block;
+  width: 100%;
+  height: 56px;
+  overflow: visible;
+}
+
+.b-chart-line {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.b-chart-area {
+  fill: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.b-book {
+  display: grid;
+  gap: 2px;
+  font-size: 0.75rem;
+}
+
+.b-book-head,
+.b-book-row,
+.b-book-mid {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 8px;
+}
+
+.b-book-head {
+  color: var(--text-3);
+}
+
+.b-depth {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.b-book-row > span {
+  position: relative;
+}
+
+.b-ask .b-depth rect {
+  fill: color-mix(in srgb, var(--down) 13%, transparent);
+}
+
+.b-bid .b-depth rect {
+  fill: color-mix(in srgb, var(--up) 13%, transparent);
+}
+
+.b-ask .b-book-price {
+  color: var(--down);
+}
+
+.b-bid .b-book-price {
+  color: var(--up);
+}
+
+.b-book-mid {
+  align-items: baseline;
+  padding-block: 5px;
+}
+
+.b-book-mid .num:first-child {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.b-book-mid .num:last-child {
+  color: var(--text-3);
+}
+
+/* Safety: the drafted ticket, with its network and a picture of its button. */
+.b-ticket-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.b-effect {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.b-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+/* Wallet: one step of a deposit. */
+.b-field {
+  display: grid;
+  gap: 6px;
+}
+
+.b-field-label {
+  color: var(--text-3);
+  font-size: 0.75rem;
+}
+
+.b-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.b-option {
+  padding: 4px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  color: var(--text-2);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.b-option[data-selected] {
+  border-color: color-mix(in srgb, var(--text) 70%, transparent);
+  color: var(--text);
+}
+
+.b-amount {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.b-amount-value {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.b-amount-unit {
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.b-steps {
+  display: grid;
+  gap: 8px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: b-step;
+}
+
+.b-steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-2);
+  counter-increment: b-step;
+}
+
+.b-steps li::before {
+  content: counter(b-step);
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+  color: var(--text-2);
+  font-size: 0.6875rem;
+}
+
+/* Models: Settings, Models, as the app lists them. */
+.b-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.b-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 54px;
+  border-top: 1px solid var(--line);
+}
+
+.b-row-main {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.b-row-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.b-row-sub {
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* News: the news card, headlines with their newsroom and age. */
+.b-news-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.b-news-head .icon {
+  color: var(--text-2);
+}
+
+.b-news-list {
+  display: grid;
+  margin: -4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.b-news-list li {
+  display: grid;
+  gap: 2px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.b-news-title {
+  font-size: 0.875rem;
+}
+
+.b-news-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-3);
+  font-size: 0.75rem;
+}
+
+/* ------------------------------------------- from question to order: split */
+
+.split-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  align-items: center;
+  gap: 48px 72px;
+}
+
+.split-copy .home-lead {
+  margin-top: 20px;
+}
+
+.split-copy .actions {
+  margin-top: 32px;
+}
+
+.split-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.split-facts > div {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.split-facts dt {
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.split-facts dd {
+  color: var(--text-3);
+  font-size: 0.8125rem;
   line-height: 1.45;
 }
 
-.d-bar {
-  grid-row: 1;
+/* ------------------------------------------------- the preview of the chat */
+
+.demo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
 }
 
-.d-panels {
-  grid-row: 2;
-}
-
-.d-composer {
-  grid-row: 3;
-}
-
-.d-suggestions {
-  grid-row: 4;
+.d-window {
+  container-type: inline-size;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 620px;
+  overflow: hidden;
+  padding-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-3);
+  background: var(--panel);
+  font-size: 0.875rem;
+  line-height: 1.45;
 }
 
 .d-bar {
@@ -478,8 +1797,13 @@ strong {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 52px;
-  padding: 0 12px 0 18px;
+  min-height: 56px;
+  padding: 0 14px 0 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.d-panels {
+  min-height: 0;
 }
 
 .d-bar-start {
@@ -493,13 +1817,14 @@ strong {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: 500;
   white-space: nowrap;
 }
 
-.d-model .icon {
-  color: var(--muted);
+.d-model .icon,
+.d-pill .icon {
+  color: var(--text-3);
 }
 
 .d-bar-end {
@@ -513,32 +1838,27 @@ strong {
   gap: 6px;
   height: 32px;
   padding: 0 12px;
-  border: 1px solid var(--rule);
-  border-radius: 999px;
+  border: 1px solid var(--line);
+  border-radius: var(--pill);
+  color: var(--text-2);
   font-size: 0.8125rem;
   white-space: nowrap;
 }
 
-.d-pill .icon {
-  color: var(--muted);
-}
-
+/* Testnet, as the app marks it: amber. */
 .d-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--faint);
-}
-
-.d-panels {
-  min-height: 0;
+  background: var(--warn);
 }
 
 /* No overscroll containment: once the conversation is at its end, the wheel or a swipe scrolls the page. */
 .d-panel {
   height: 100%;
   overflow-y: auto;
-  padding: 8px 20px 24px;
+  padding: 20px 24px 24px;
+  scrollbar-color: var(--panel-3) transparent;
   scrollbar-width: thin;
 }
 
@@ -547,23 +1867,10 @@ strong {
   border-radius: 0;
 }
 
-/* Until the script has set the first conversation up to play, it is not drawn, so it does not
-   flash finished. If the script never arrives, it appears after two seconds anyway. */
-.js .demo:not([data-ready]) .d-panel {
-  visibility: hidden;
-  animation: d-show 0s 2s forwards;
-}
-
-@keyframes d-show {
-  to {
-    visibility: visible;
-  }
-}
-
 .d-turn {
   display: grid;
   gap: 14px;
-  max-width: 640px;
+  max-width: 660px;
   margin: 0 auto;
 }
 
@@ -575,8 +1882,8 @@ strong {
 .d-bubble {
   max-width: 85%;
   padding: 9px 16px;
-  border-radius: 18px;
-  background: var(--well);
+  border-radius: 18px 18px 6px 18px;
+  background: var(--panel-3);
   font-size: 0.9375rem;
   line-height: 1.5;
 }
@@ -596,7 +1903,7 @@ strong {
   max-width: 100%;
   padding: 2px 0;
   border-radius: 6px;
-  color: var(--muted);
+  color: var(--text-2);
   font-size: 0.8125rem;
   line-height: 1.45;
   list-style: none;
@@ -608,27 +1915,26 @@ strong {
 }
 
 .d-activity summary:hover {
-  color: var(--ink);
+  color: var(--text);
 }
 
 .d-activity-chevron {
-  color: var(--faint);
-  transition: transform 0.12s;
+  color: var(--text-3);
 }
 
 .d-activity[open] .d-activity-chevron {
   transform: rotate(90deg);
 }
 
-/* While the assistant works, a dot breathes before the line. The line itself stays at full contrast. */
+/* While the assistant works, a dot breathes before the line. */
 .d-activity-text[data-running]::before {
   content: "";
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   margin-right: 8px;
   border-radius: 50%;
-  background: currentColor;
+  background: var(--text-2);
   animation: d-pulse 1.6s ease-in-out infinite;
 }
 
@@ -637,8 +1943,9 @@ strong {
   gap: 8px;
   margin: 8px 0 0;
   padding: 12px 14px;
-  border-radius: 14px;
-  background: var(--well);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  background: var(--bg);
   font-size: 0.8125rem;
   line-height: 1.45;
   list-style: none;
@@ -656,7 +1963,7 @@ strong {
   place-items: center;
   width: 16px;
   height: 19px;
-  color: var(--muted);
+  color: var(--text-3);
 }
 
 .d-step-body {
@@ -687,7 +1994,7 @@ strong {
 .d-step-preview {
   display: -webkit-box;
   overflow: hidden;
-  color: var(--muted);
+  color: var(--text-3);
   font-family: var(--mono);
   font-size: 0.75rem;
   overflow-wrap: anywhere;
@@ -697,7 +2004,7 @@ strong {
 }
 
 .d-muted {
-  color: var(--muted);
+  color: var(--text-3);
 }
 
 .d-cards {
@@ -712,9 +2019,8 @@ strong {
   gap: 12px;
   min-width: 0;
   padding: 14px 16px;
-  border: 1px solid var(--rule);
-  border-radius: 14px;
-  background: var(--paper);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-2);
   font-size: 0.84375rem;
   line-height: 1.45;
 }
@@ -724,7 +2030,7 @@ strong {
 }
 
 .is-new {
-  animation: d-fade 0.18s ease-out;
+  animation: d-fade 0.22s ease-out;
 }
 
 .d-card-head {
@@ -748,16 +2054,16 @@ strong {
   display: inline-flex;
   align-items: center;
   height: 22px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: var(--well);
-  color: var(--muted);
+  padding: 0 9px;
+  border-radius: var(--pill);
+  background: var(--panel-3);
+  color: var(--text-2);
   font-size: 0.75rem;
   white-space: nowrap;
 }
 
 .d-chip[data-tone="up"] {
-  background: var(--up-soft);
+  background: color-mix(in srgb, var(--up) 14%, transparent);
   color: var(--up);
 }
 
@@ -773,7 +2079,7 @@ strong {
   align-items: center;
   gap: 12px;
   min-height: 40px;
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--line);
 }
 
 .d-row:first-child {
@@ -826,7 +2132,7 @@ strong {
 }
 
 .d-fact dt {
-  color: var(--muted);
+  color: var(--text-3);
   white-space: nowrap;
 }
 
@@ -835,7 +2141,7 @@ strong {
   text-align: right;
 }
 
-/* The three figures a card leads with. */
+/* The three figures a card leads with, on raised rows. */
 .d-levels {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -847,11 +2153,12 @@ strong {
   align-items: flex-start;
   gap: 2px;
   padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--well);
+  border-radius: var(--radius-1);
+  background: var(--panel-2);
 }
 
 .d-levels .d-fact dt {
+  color: var(--text-2);
   font-size: 0.75rem;
 }
 
@@ -869,15 +2176,15 @@ strong {
 }
 
 .d-rsi-rail {
-  fill: var(--well-strong);
+  fill: var(--panel-3);
 }
 
 .d-rsi-band {
-  fill: var(--rule-strong);
+  fill: color-mix(in srgb, var(--text) 22%, transparent);
 }
 
 .d-rsi-dot {
-  fill: var(--ink);
+  fill: var(--text);
 }
 
 .d-share {
@@ -901,7 +2208,7 @@ strong {
 }
 
 .d-share-gap {
-  fill: var(--paper);
+  fill: var(--panel);
 }
 
 .d-share-legend {
@@ -911,7 +2218,7 @@ strong {
 }
 
 .d-card-empty {
-  color: var(--muted);
+  color: var(--text-3);
 }
 
 .d-news-head {
@@ -954,11 +2261,13 @@ strong {
 }
 
 .d-md li::marker {
-  color: var(--muted);
+  color: var(--text-3);
 }
 
+/* The ticket is the one thing in the window that asks you to act. */
 .d-ticket {
-  max-width: 520px;
+  max-width: 540px;
+  border-color: color-mix(in srgb, var(--text) 26%, transparent);
 }
 
 .d-ticket-title {
@@ -974,7 +2283,7 @@ strong {
 }
 
 .d-ticket-why {
-  color: var(--muted);
+  color: var(--text-2);
 }
 
 .d-ticket-actions {
@@ -985,35 +2294,40 @@ strong {
 .d-btn {
   display: inline-flex;
   align-items: center;
-  height: 36px;
-  padding: 0 14px;
+  height: 38px;
+  padding: 0 16px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--pill);
   background: none;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition:
     background-color 0.12s,
     color 0.12s;
 }
 
+.d-btn:focus-visible {
+  border-radius: var(--pill);
+}
+
+/* The app's own primary button: white, as in the app. */
 .d-btn-primary {
-  background: var(--primary);
-  color: var(--on-primary);
+  background: var(--text);
+  color: var(--bg);
 }
 
 .d-btn-primary:hover {
-  background: var(--primary-hover);
+  background: color-mix(in srgb, var(--text) 84%, var(--bg));
 }
 
 .d-btn-ghost {
-  color: var(--muted);
+  color: var(--text-2);
 }
 
 .d-btn-ghost:hover {
-  background: var(--well);
-  color: var(--ink);
+  background: var(--panel-2);
+  color: var(--text);
 }
 
 .d-note {
@@ -1021,14 +2335,16 @@ strong {
   align-items: flex-start;
   gap: 8px;
   padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--well);
+  border-radius: var(--radius-1);
+  background: var(--panel-2);
+  color: var(--text);
   font-size: 0.8125rem;
 }
 
 .d-note .icon {
+  flex: none;
   margin-top: 1px;
-  color: var(--muted);
+  color: var(--up);
 }
 
 .d-ticket[data-state="dismissed"] .d-ticket-effect,
@@ -1038,7 +2354,7 @@ strong {
 }
 
 .d-dismissed {
-  color: var(--muted);
+  color: var(--text-3);
   font-size: 0.8125rem;
 }
 
@@ -1047,24 +2363,25 @@ strong {
   align-items: center;
   gap: 8px;
   min-height: 52px;
-  margin: 0 16px;
-  padding: 8px 8px 8px 18px;
+  margin: 0 18px;
+  padding: 8px 8px 8px 20px;
+  border: 1px solid var(--line-2);
   border-radius: 26px;
-  background: var(--well);
+  background: var(--bg);
 }
 
 .d-composer-text {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
-  color: var(--muted);
+  color: var(--text-3);
   font-size: 0.9375rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .d-composer-text[data-typing] {
-  color: var(--ink);
+  color: var(--text);
 }
 
 .d-send {
@@ -1073,32 +2390,31 @@ strong {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--primary);
-  color: var(--on-primary);
-  opacity: 0.25;
-  transition: opacity 0.12s;
+  background: var(--panel-3);
+  color: var(--text-3);
 }
 
 .d-composer[data-ready] .d-send {
-  opacity: 1;
+  background: var(--text);
+  color: var(--bg);
 }
 
+/* The prompts, as tabs under the window. */
 .d-suggestions {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 16px 0;
+  gap: 4px;
 }
 
 .d-suggestion {
-  min-height: 34px;
+  min-height: 36px;
   padding: 0 14px;
-  border: 1px solid var(--rule);
-  border-radius: 999px;
+  border: 0;
+  border-radius: var(--pill);
   background: none;
-  color: var(--muted);
-  font-size: 0.875rem;
+  color: var(--text-2);
+  font-size: 0.9375rem;
   cursor: pointer;
   transition:
     background-color 0.12s,
@@ -1106,15 +2422,16 @@ strong {
 }
 
 .d-suggestion:hover {
-  background: var(--well);
-  color: var(--ink);
+  color: var(--text);
+}
+
+.d-suggestion:focus-visible {
+  border-radius: var(--pill);
 }
 
 .d-suggestion[aria-selected="true"] {
-  border-color: var(--ink);
-  background: var(--paper);
-  color: var(--ink);
-  font-weight: 600;
+  background: var(--panel-2);
+  color: var(--text);
 }
 
 .demo-caption {
@@ -1122,37 +2439,44 @@ strong {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  padding-inline: 4px;
 }
 
 .demo-note {
   max-width: 62ch;
-  color: var(--muted);
+  color: var(--text-3);
   font-size: 0.8125rem;
   line-height: 1.5;
 }
 
 .demo-note strong {
-  color: var(--ink);
+  color: var(--text);
 }
 
 .demo-replay {
   flex: none;
   min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--faint);
-  border-radius: 8px;
-  background: var(--paper);
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--pill);
+  background: var(--panel-2);
+  color: var(--text);
   font-size: 0.8125rem;
   cursor: pointer;
 }
 
 .demo-replay:hover {
-  background: var(--well);
+  border-color: var(--line-2);
+  background: var(--panel-3);
+}
+
+.demo-replay:focus-visible {
+  border-radius: var(--pill);
 }
 
 @keyframes d-pulse {
   50% {
-    opacity: 0.45;
+    opacity: 0.35;
   }
 }
 
@@ -1193,1154 +2517,265 @@ strong {
   .d-levels .d-fact dd {
     font-size: 0.875rem;
   }
+
+  /* The window's bar keeps the model, the Sample chip and the network on one line. */
+  .d-bar {
+    gap: 8px;
+    padding: 0 10px 0 14px;
+  }
+
+  .d-bar-start {
+    gap: 8px;
+  }
+
+  .d-bar .icon {
+    display: none;
+  }
+
+  .d-pill {
+    padding: 0 10px;
+  }
 }
 
-/* ------------------------------------------------------------------ bands */
+/* ------------------------------------------------------------- the figures */
 
-.band {
-  padding: 88px 0;
-}
-
-.band-rail {
-  border-block: 1px solid var(--rule);
-  background: var(--rail);
-}
-
-.band-head {
-  max-width: var(--measure);
-  margin-bottom: 40px;
-}
-
-.band-head h2,
-.closing h2 {
-  font-size: 2rem;
-  font-weight: 600;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-}
-
-.band-head p,
-.closing p {
-  max-width: var(--text);
-  margin-top: 14px;
-  color: var(--muted);
-  font-size: 1.125rem;
-  line-height: 1.55;
-}
-
-.more {
-  margin-top: 24px;
-  font-weight: 600;
-}
-
-/* The steps from a question to an order: a real sequence, so it is numbered, in line with each step. */
-.flow {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 32px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: flow;
-}
-
-.flow li {
-  padding-top: 16px;
-  border-top: 1px solid var(--rule-strong);
-  counter-increment: flow;
-}
-
-.flow h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: -0.015em;
-}
-
-.flow h3::before {
-  content: counter(flow) ". ";
-  font-variant-numeric: tabular-nums;
-}
-
-.flow p {
-  margin-top: 8px;
-  color: var(--muted);
-}
-
-.index {
+/* Three facts, large, between hairlines. */
+.figures {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 32px;
-  margin: 40px 0 0;
-  padding: 0;
-  list-style: none;
+  margin: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
-.index a {
-  font-size: 1.0625rem;
-  font-weight: 600;
-}
-
-.index p {
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 0.9375rem;
-  line-height: 1.55;
-}
-
-/* What runs on your computer, and what it talks to. */
-.topology {
+.figures > div {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  overflow: hidden;
-  border: 1px solid var(--rule);
-  border-radius: 16px;
+  align-content: start;
+  gap: 14px;
+  padding: 40px 32px 44px;
+  border-left: 1px solid var(--line);
 }
 
-.topology-side {
-  padding: 28px 32px 32px;
+.figures > div:first-child {
+  padding-left: 0;
+  border-left: 0;
 }
 
-.topology-local {
-  border-right: 1px solid var(--rule);
-  background: var(--rail);
+.figures dt {
+  font-size: clamp(2.5rem, 1.6rem + 2.4vw, 3.5rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
 }
 
-.topology h3 {
-  margin-bottom: 18px;
+.figures dd {
+  max-width: 26ch;
+  color: var(--text-2);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------- the trust row */
+
+/* The three columns share their rows, so headings, text and links line up across them. */
+.trust-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto 1fr auto;
+  gap: 14px 48px;
+}
+
+.trust-item {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  gap: 14px;
+}
+
+.trust-item h2 {
+  font-size: 1.375rem;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+}
+
+.trust-item p {
+  color: var(--text-2);
   font-size: 1rem;
-  font-weight: 600;
-}
-
-.topology dl {
-  display: grid;
-  gap: 16px;
-}
-
-.topology dl > div {
-  position: relative;
-}
-
-.topology dt {
-  font-weight: 600;
-}
-
-.topology dd {
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 0.9375rem;
-  line-height: 1.5;
-}
-
-/* Each connection runs straight from the edge of your computer. */
-.topology-remote dl > div::before {
-  content: "";
-  position: absolute;
-  top: 0.8em;
-  left: -32px;
-  width: 22px;
-  border-top: 1px solid var(--rule-strong);
-}
-
-.topology-remote dl > div::after {
-  content: "";
-  position: absolute;
-  top: calc(0.8em - 3.5px);
-  left: -36px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--brand);
-}
-
-.topology figcaption {
-  grid-column: 1 / -1;
-  padding: 18px 32px;
-  border-top: 1px solid var(--rule);
-  color: var(--muted);
-  font-size: 0.9375rem;
-  line-height: 1.55;
-}
-
-.closing {
-  border-top: 1px solid var(--rule);
-}
-
-.closing-grid {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px 48px;
-}
-
-.closing-grid > div:first-child {
-  max-width: 40rem;
-}
-
-/* ---------------------------------------------------------- feature pages */
-
-.page-head {
-  padding: 56px 0 0;
-}
-
-/* Never larger than the home page's title, and no jump at any width. */
-.page-head h1 {
-  max-width: 22em;
-  font-size: clamp(1.875rem, 1.4rem + 1.6vw, 2.5rem);
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-}
-
-.page-lead {
-  max-width: var(--text);
-  margin-top: 18px;
-  color: var(--muted);
-  font-size: 1.1875rem;
-  line-height: 1.55;
-}
-
-.page-picture {
-  margin-top: 40px;
-}
-
-/* The text keeps the page's left edge; the index of sections sits to its right. */
-.doc {
-  display: grid;
-  grid-template-columns: minmax(0, 760px) minmax(0, 13rem);
-  justify-content: space-between;
-  gap: 64px;
-  padding-top: 64px;
-  padding-bottom: 104px;
-}
-
-.toc {
-  position: sticky;
-  top: 24px;
-  grid-column: 2;
-  grid-row: 1;
-  align-self: start;
-  max-height: calc(100vh - 48px);
-  overflow: auto;
-  padding-left: 20px;
-  border-left: 1px solid var(--rule);
-}
-
-.doc-body {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.toc-title {
-  margin-bottom: 10px;
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.toc ol {
-  display: grid;
-  gap: 2px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.toc a {
-  display: block;
-  margin-left: -10px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  color: var(--muted);
-  font-size: 0.9375rem;
-  line-height: 1.4;
-  text-decoration: none;
-}
-
-.toc a:hover {
-  background: var(--well);
-  color: var(--ink);
-}
-
-/* The section being read is marked by a bar as well as a tint. */
-.toc a[aria-current="location"] {
-  border-radius: 0 8px 8px 0;
-  background: var(--well);
-  color: var(--ink);
-  box-shadow: inset 2px 0 0 var(--ink);
-}
-
-.doc-body {
-  min-width: 0;
-}
-
-.table-wrap + .facts,
-.facts + .table-wrap {
-  margin-top: 32px;
-}
-
-/* The table above already ends on a rule. */
-.table-wrap + .facts {
-  border-top: 0;
-}
-
-.doc-section + .doc-section {
-  margin-top: 80px;
-}
-
-.doc-section > * + * {
-  margin-top: 18px;
-}
-
-.doc-section h2 {
-  font-size: 1.75rem;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-}
-
-.doc-section > h3 {
-  margin-top: 40px;
-  font-size: 1.1875rem;
-  font-weight: 600;
-  letter-spacing: -0.012em;
-}
-
-.doc-section > h3 + * {
-  margin-top: 12px;
-}
-
-.section-lead {
-  color: var(--muted);
-  font-size: 1.125rem;
-  line-height: 1.55;
-}
-
-.doc-section > p,
-.doc-section > ul,
-.doc-section > ol,
-.section-lead,
-.callout {
-  max-width: var(--text);
-}
-
-.doc-section > .shot,
-.doc-section > .shot + *,
-.doc-section > .tab-figures,
-.doc-section > .panel-figures {
-  margin-top: 32px;
-}
-
-/* Pictures take one of two widths: the text column's, 760, or the page's, 1136. */
-.shot-column .pic,
-.shot-inset .pic {
-  max-width: min(100%, 760px);
-}
-
-/* Label and value pairs. */
-.facts {
-  display: grid;
-  border-top: 1px solid var(--rule);
-}
-
-.fact {
-  display: grid;
-  grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
-  gap: 4px 24px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--rule);
-}
-
-.fact dt {
-  font-weight: 600;
-}
-
-.release-facts .fact {
-  grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
-  padding: 9px 0;
-}
-
-/* A list of rules or limits. */
-.checks {
-  display: grid;
-  gap: 12px;
-  padding: 0;
-  list-style: none;
-}
-
-.checks li {
-  position: relative;
-  padding-left: 26px;
-}
-
-.checks li::before {
-  content: "";
-  position: absolute;
-  top: 0.8em;
-  left: 2px;
-  width: 12px;
-  border-top: 2px solid var(--ink);
-}
-
-/* Numbered steps, drawn like the steps of the app's wallet page. */
-.steps-list {
-  display: grid;
-  padding: 0;
-  list-style: none;
-  counter-reset: step;
-}
-
-.steps-list li {
-  position: relative;
-  padding: 0 0 22px 46px;
-  counter-increment: step;
-}
-
-.steps-list li:last-child {
-  padding-bottom: 0;
-}
-
-.steps-list li::before {
-  content: counter(step);
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--rule-strong);
-  border-radius: 50%;
-  background: var(--paper);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.steps-list li:not(:last-child)::after {
-  content: "";
-  position: absolute;
-  top: 32px;
-  bottom: 4px;
-  left: 14px;
-  border-left: 1px solid var(--rule-strong);
-}
-
-/* Code and literal text. */
-.code {
-  padding: 16px 18px;
-  border-radius: 12px;
-  background: var(--well);
-  font-family: var(--mono);
-  font-size: 0.8125rem;
-  line-height: 1.65;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.code code {
-  padding: 0;
-  background: none;
-  font-size: inherit;
-}
-
-.code-pre {
-  overflow-x: auto;
-  white-space: pre;
-  overflow-wrap: normal;
-}
-
-.code .comment {
-  color: var(--muted);
-}
-
-/* Tables. */
-.table-wrap {
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-}
-
-.table th,
-.table td {
-  padding: 12px 20px 12px 0;
-  border-bottom: 1px solid var(--rule);
-  text-align: left;
-  vertical-align: top;
-}
-
-.table th:last-child,
-.table td:last-child {
-  padding-right: 0;
-}
-
-.table thead th {
-  padding-top: 0;
-  border-bottom-color: var(--rule-strong);
-  color: var(--muted);
-  font-size: 0.875rem;
-  font-weight: 400;
-  white-space: nowrap;
-}
-
-.table tbody th {
-  min-width: 9rem;
-  font-weight: 600;
-}
-
-.table .num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.table .nowrap {
-  white-space: nowrap;
-}
-
-.table code {
-  white-space: normal;
-}
-
-.table.compact {
-  font-size: 0.875rem;
-}
-
-.table.compact th,
-.table.compact td {
-  min-width: 7.5rem;
-}
-
-.table.split td {
-  width: 50%;
-}
-
-/* Pictures of the app. */
-.shot {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: start;
-  gap: 12px;
-}
-
-/* The frame takes the picture's shape and natural width from a rule the build writes for it. */
-.pic {
-  display: block;
-  max-width: 100%;
-}
-
-.pic img {
-  width: 100%;
-  height: 100%;
-  border-radius: 12px;
-  background: var(--well);
-  box-shadow: 0 0 0 1px var(--rule);
-}
-
-.shot figcaption {
-  max-width: 62ch;
-  color: var(--muted);
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-.panel-figures {
-  display: grid;
-  grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
-  align-items: start;
-  gap: 32px;
-}
-
-.panel-tabs-text > * + * {
-  margin-top: 16px;
-}
-
-.tab-figures {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-  gap: 28px 24px;
-}
-
-.shot-tab figcaption {
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.callout {
-  max-width: var(--text);
-  padding: 16px 20px;
-  border-left: 3px solid var(--warn);
-  border-radius: 0 10px 10px 0;
-  background: var(--warn-soft);
-  font-size: 1rem;
-}
-
-.release {
-  display: flex;
-  gap: 28px;
-  align-items: flex-start;
-  max-width: var(--measure);
-  padding: 28px;
-  border: 1px solid var(--rule);
-  border-radius: 16px;
-  background: var(--rail);
-}
-
-.release-icon {
-  flex: none;
-  width: 88px;
-  height: 88px;
-}
-
-.release-body {
-  display: grid;
-  flex: 1 1 auto;
-  gap: 22px;
-  min-width: 0;
-}
-
-/* The three layers of the app. */
-.layers {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 15rem);
-  gap: 20px 32px;
-}
-
-.layers-stack {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.layers-stack li {
-  padding: 16px 20px;
-  border: 1px solid var(--rule);
-  background: var(--paper);
-}
-
-.layers-stack li + li {
-  margin-top: -1px;
-}
-
-.layers-stack li:first-child {
-  border-radius: 12px 12px 0 0;
-}
-
-.layers-stack li:last-child {
-  border-radius: 0 0 12px 12px;
-  background: var(--rail);
-}
-
-.layers-stack li > * + * {
-  margin-top: 4px;
-}
-
-.layer-name {
-  font-weight: 600;
-}
-
-.layer-name span {
-  margin-left: 6px;
-  color: var(--muted);
-  font-weight: 400;
-}
-
-.layers-stack li > p:last-child {
-  color: var(--muted);
-  font-size: 0.9375rem;
-}
-
-.layers-out {
-  align-self: end;
-  padding-left: 20px;
-  border-left: 2px solid var(--ink);
-}
-
-.layers-out-title {
-  font-weight: 600;
-}
-
-.layers-out ul {
-  display: grid;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 0;
-  list-style: none;
-  color: var(--muted);
-  font-size: 0.9375rem;
-  line-height: 1.45;
-}
-
-.layers figcaption {
-  grid-column: 1 / -1;
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
-/* Reference a reader can open when they need it: request budgets, error codes, full lists. */
-.reference {
-  border-block: 1px solid var(--rule);
-}
-
-.reference + .reference {
-  margin-top: 0;
-  border-top: 0;
-}
-
-.reference > summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 48px;
-  padding: 12px 0;
-  font-weight: 600;
-  line-height: 1.4;
-  cursor: pointer;
-  list-style: none;
-}
-
-.reference > summary::-webkit-details-marker {
-  display: none;
-}
-
-.reference > summary:hover .reference-title {
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-}
-
-.reference > summary .icon {
-  color: var(--muted);
-  transition: transform 0.12s;
-}
-
-.reference[open] > summary .icon {
-  transform: rotate(90deg);
-}
-
-.reference-body {
-  padding: 4px 0 28px;
-}
-
-.reference-body > * + * {
-  margin-top: 16px;
-}
-
-.reference-body > p,
-.reference-body > ul,
-.reference-body > ol {
-  max-width: var(--text);
-}
-
-/* The page's index, folded above the text where there is no room for it beside the text. */
-.toc-inline {
-  display: none;
-}
-
-.toc-inline ol {
-  display: grid;
-  margin: 0;
-  padding: 0 0 12px;
-  list-style: none;
-}
-
-.toc-inline a {
-  display: block;
-  padding: 9px 0;
-  text-decoration: none;
-}
-
-.toc-inline a:hover {
-  text-decoration: underline;
-}
-
-/* Where to go next, and the one action, at the end of a feature page. */
-.doc-end {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px 32px;
-  margin-top: 88px;
-  padding-top: 32px;
-  border-top: 1px solid var(--rule);
-}
-
-.doc-next {
-  display: grid;
-  gap: 2px;
-  font-size: 1.125rem;
-  line-height: 1.4;
-}
-
-.doc-next-label {
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
-.doc-next a {
-  font-weight: 600;
-}
-
-/* A table with a column per provider is turned around on a phone: a block per provider. */
-.table-across {
-  display: none;
-}
-
-/* ----------------------------------------------------------------- 404 */
-
-.notfound {
-  padding-top: 72px;
-  padding-bottom: 104px;
-}
-
-.notfound-icon {
-  width: 72px;
-  height: 72px;
-  margin-bottom: 28px;
-}
-
-.notfound h1 {
-  font-size: clamp(1.875rem, 1.4rem + 1.6vw, 2.5rem);
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-}
-
-.index-tight {
-  gap: 24px 32px;
-}
-
-/* ----------------------------------------------------------------- footer */
-
-.site-footer {
-  padding: 48px 0 40px;
-  border-top: 1px solid var(--rule);
-  background: var(--rail);
-  font-size: 0.9375rem;
-}
-
-.footer-top {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 40px 64px;
-}
-
-.footer-brand p {
-  max-width: 36ch;
-  margin-top: 12px;
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.footer-nav {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(10rem, auto));
-  gap: 32px 56px;
-}
-
-.footer-nav h2 {
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-/* Each link is a 44-pixel target; the padding is the space between them. */
-.footer-nav ul {
-  display: grid;
-  padding: 0;
-  list-style: none;
-}
-
-.footer-nav a {
-  display: inline-block;
-  padding-block: 10px;
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.footer-nav a:hover {
-  color: var(--ink);
-  text-decoration: underline;
-}
-
-/* The rule sits on the text's own box, so it starts and ends where the text does. */
-.footer-legal {
-  display: grid;
-  gap: 10px;
-  margin-top: 30px;
-  padding-top: 24px;
-  border-top: 1px solid var(--rule);
-  color: var(--muted);
-  font-size: 0.8125rem;
   line-height: 1.6;
 }
 
-.footer-legal p {
-  max-width: 88ch;
+.trust-item .more {
+  margin-top: 4px;
 }
 
-.footer-legal strong {
-  color: var(--ink);
+.trust .callout {
+  margin-top: 56px;
 }
 
-.footer-legal a {
-  color: inherit;
+/* -------------------------------------------------------------- get started */
+
+.start {
+  padding-bottom: 136px;
 }
 
-/* ------------------------------------------------------------- narrower */
+.start-head {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  text-align: center;
+}
 
-@media (max-width: 1179px) {
-  .hero-grid {
-    grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
-    gap: 40px;
+.start-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 48px;
+}
+
+.start-card {
+  display: flex;
+  flex-direction: column;
+  padding: 36px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-3);
+  background: var(--panel);
+}
+
+.start-card h3 {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.start-card > p {
+  margin-top: 8px;
+  color: var(--text-2);
+  font-size: 1rem;
+}
+
+.checklist {
+  display: grid;
+  gap: 12px;
+  margin: 28px 0 40px;
+  padding: 0;
+  list-style: none;
+}
+
+.checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--text-2);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.checklist-mark {
+  margin-top: 1px;
+  color: var(--text);
+}
+
+.start-card .button {
+  width: 100%;
+  margin-top: auto;
+}
+
+/* ---------------------------------------------------------------- narrower */
+
+@media (max-width: 1099px) {
+  .home-band {
+    padding-top: 112px;
   }
 
-  .hero-title {
-    font-size: 2.5rem;
+  .bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 376px;
+  }
+
+  .b-assistant,
+  .b-news {
+    grid-column: span 2;
+  }
+
+  .b-markets,
+  .b-safety,
+  .b-wallet,
+  .b-models {
+    grid-column: span 1;
+  }
+
+  .split-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .split-copy {
+    max-width: 40rem;
   }
 }
 
-/* The header's links fit on one line down to about 965 pixels; below 1000 they fold into a menu. */
 @media (max-width: 999px) {
-  .header-bar {
-    flex-wrap: wrap;
-    gap: 10px;
-    padding-block: 12px;
-  }
-
-  .brand {
-    margin-right: auto;
-  }
-
-  .site-nav {
-    flex-basis: 100%;
-    order: 3;
-    margin: 0;
-  }
-
-  .site-nav ul {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 4px 0 8px;
-  }
-
-  .site-nav a {
-    padding: 11px 12px;
-    font-size: 1rem;
-  }
-
-  .site-nav a[aria-current="page"] {
-    box-shadow: inset 3px 0 0 var(--ink);
-  }
-
-  .nav-github {
-    margin: 6px 0 0;
-    padding: 6px 0 0;
-    border-top: 1px solid var(--rule);
-    border-left: 0;
-  }
-
-  .js .menu-button {
-    display: inline-flex;
-    order: 1;
-  }
-
-  .header-download {
-    order: 2;
-  }
-
-  .js .site-nav:not([data-open]) {
-    display: none;
-  }
-}
-
-@media (max-width: 1040px) {
-  .hero-grid {
+  .trust-grid {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    max-width: 40rem;
     gap: 40px;
   }
 
-  .hero-title {
-    font-size: clamp(2rem, 1rem + 2.9vw, 2.5rem);
-  }
-
-  .hero-copy {
-    max-width: 44rem;
-  }
-
-  .hero-demo {
-    max-width: 760px;
-  }
-
-  .flow {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 36px 32px;
-  }
-
-  .doc {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    padding-top: 48px;
-  }
-
-  .doc-body {
-    grid-column: 1;
-  }
-
-  .toc {
-    display: none;
-  }
-
-  .toc-inline {
-    display: block;
-    margin-bottom: 56px;
-  }
-
-  .index {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .trust-item {
+    grid-row: auto;
+    grid-template-rows: none;
   }
 }
 
-@media (max-width: 760px) {
-  .panel-figures,
-  .layers {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 800px) {
+  .home-band {
+    padding-top: 96px;
   }
 
-  .layers-out {
-    align-self: start;
+  .figures > div {
+    padding: 32px 24px 36px;
+  }
+}
+
+@media (max-width: 720px) {
+  .start-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 640px) {
-  :root {
-    --gutter: 16px;
-  }
-
-  body {
-    font-size: 1rem;
+  .home-band {
+    padding-top: 80px;
   }
 
   .hero {
-    padding: 32px 0 40px;
+    padding-top: calc(var(--header-h) + 48px);
+  }
+
+  .hero-title {
+    margin-top: 24px;
   }
 
   .hero-lead {
-    font-size: 1.0625rem;
+    margin-top: 20px;
   }
 
-  /* Two buttons side by side still fit a 360-pixel screen. */
-  .button {
-    padding: 0 16px;
+  .hero-actions {
+    margin-top: 32px;
   }
 
-  .d-window {
-    height: min(620px, calc(100vh - 96px));
-    height: min(620px, calc(100svh - 96px));
-    min-height: 480px;
+  .hero-actions,
+  .split-copy .actions {
+    display: grid;
+    width: min(100%, 22rem);
   }
 
-  .demo-caption {
-    flex-direction: column;
-    gap: 10px;
+  .start {
+    padding-bottom: 88px;
   }
 
-  .band {
-    padding: 56px 0;
-  }
-
-  .band-head {
-    margin-bottom: 28px;
-  }
-
-  .band-head h2,
-  .closing h2 {
-    font-size: 1.625rem;
-  }
-
-  .band-head p,
-  .closing p {
-    font-size: 1.0625rem;
-  }
-
-  .flow,
-  .index,
-  .tab-figures {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .topology {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .topology-side {
-    padding: 22px 20px 24px;
-  }
-
-  .topology-local {
-    border-right: 0;
-    border-bottom: 1px solid var(--rule);
-  }
-
-  .topology-remote dl > div::before,
-  .topology-remote dl > div::after {
-    display: none;
-  }
-
-  .topology figcaption {
-    padding: 16px 20px;
-  }
-
-  .page-head {
-    padding-top: 36px;
-  }
-
-  .page-lead {
-    font-size: 1.0625rem;
-  }
-
-  .page-picture {
-    margin-top: 28px;
-  }
-
-  .doc {
-    padding-top: 36px;
-    padding-bottom: 72px;
-  }
-
-  .doc-section + .doc-section {
-    margin-top: 60px;
-  }
-
-  .doc-section h2 {
-    font-size: 1.5rem;
-  }
-
-  .fact {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .release {
-    flex-direction: column;
-    padding: 22px 20px;
-  }
-
-  .release-icon {
-    width: 64px;
-    height: 64px;
-  }
-
-  .release-facts .fact {
-    grid-template-columns: minmax(0, 7rem) minmax(0, 1fr);
-  }
-
-  /* A table that has row headers becomes one block per row. */
-  .table.stack thead {
+  /* On a phone the release pill keeps to one line: the words around the version are read, not drawn. */
+  .announce-wide {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -2349,71 +2784,94 @@ strong {
     white-space: nowrap;
   }
 
-  .table.stack,
-  .table.stack tbody,
-  .table.stack tr,
-  .table.stack th,
-  .table.stack td {
-    display: block;
+  .bento-band {
+    padding-top: 64px;
   }
 
-  .table.stack tr {
-    padding: 14px 0;
-    border-bottom: 1px solid var(--rule);
+  .figures {
+    grid-template-columns: minmax(0, 1fr);
+    border-bottom: 0;
   }
 
-  .table.stack tbody th,
-  .table.stack td {
-    padding: 0;
-    border: 0;
+  .figures > div {
+    padding: 28px 0;
+    border-bottom: 1px solid var(--line);
+    border-left: 0;
   }
 
-  .table.stack td {
-    margin-top: 6px;
+  .bento {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: auto;
   }
 
-  .table.stack .num {
-    text-align: left;
+  .b-assistant,
+  .b-markets,
+  .b-safety,
+  .b-wallet,
+  .b-models,
+  .b-news {
+    grid-column: auto;
   }
 
-  .table.stack td::before {
-    content: attr(data-label);
-    display: block;
-    color: var(--muted);
+  .b-ui {
+    padding: 18px 18px 4px;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .b-label {
+    padding: 12px 12px 18px 18px;
+  }
+
+  .b-link {
+    margin: 12px 18px 18px 0;
+  }
+
+  .split-facts {
+    gap: 16px;
+  }
+
+  .d-window {
+    height: clamp(520px, calc(100svh - 120px), 600px);
+    border-radius: var(--radius-2);
+  }
+
+  .d-bar {
+    padding-left: 16px;
+  }
+
+  .d-composer {
+    margin-inline: 12px;
+  }
+
+  .demo-caption {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .d-suggestions {
+    gap: 2px;
+  }
+
+  .d-suggestion {
+    padding: 0 10px;
     font-size: 0.8125rem;
   }
 
-  .table-along {
-    display: none;
-  }
-
-  .table-across {
-    display: block;
-  }
-
-  .doc-end {
-    margin-top: 64px;
-  }
-
-  .footer-top {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .footer-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px 24px;
+  .start-card {
+    padding: 28px 22px 22px;
   }
 }
 
-/* On a touch screen, every control in the header and the preview is at least 44 pixels high. */
+/* On a touch screen, every control on the home page is at least 44 pixels high. */
 @media (pointer: coarse) {
-  .header-download,
-  .menu-button,
   .d-suggestion,
-  .demo-replay {
+  .demo-replay,
+  .d-btn {
     min-height: 44px;
   }
 }
+
 
 @media (prefers-reduced-motion: reduce) {
   *,

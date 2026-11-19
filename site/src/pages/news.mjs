@@ -1,4 +1,45 @@
-import { code, doc, docPage, facts, out, table } from "../site.mjs";
+import { chip, code, doc, docPage, esc, facts, icon, network, out, table, ui } from "../site.mjs";
+
+/**
+ * The head's picture: "Any news on BTC and ETH?" as the app answers it with its built-in mock,
+ * which invents its headlines and newsrooms. The app itself reads the publishers listed below.
+ */
+const HEADLINES = [
+  ["Funding on ETH perpetuals stays positive after the move", "The Brine Report", "38m"],
+  ["ETH slides 1.2% in a day as traders cut leverage", "Kelp Desk", "1h"],
+  ["What BTC holders are watching this week", "The Brine Report", "5h"],
+  ["Funding on BTC perpetuals stays positive after the move", "Kelp Desk", "5h"],
+  ["BTC slides 0.9% in a day as traders cut leverage", "Tidewire", "6h"],
+  ["What ETH holders are watching this week", "Tidewire", "6h"],
+];
+
+const ANSWER = ui({
+  className: "ui-chat",
+  label:
+    "A sample answer in OctoNeo to Any news on BTC and ETH?: a line saying it checked the news, a news card with six headlines from invented newsrooms, each with its newsroom and age, from 38 minutes to 6 hours old, and a short answer naming who reported what.",
+  caption: "Sample headlines from invented newsrooms, from the app’s built-in mock. OctoNeo itself reads eight real publishers.",
+  body: `<div class="ui-bar">
+<span class="ui-bar-start"><span class="ui-model">Lantern 2 Large${icon("chevronDown", 14)}</span>${chip("Sample")}</span>
+<span class="ui-bar-end">${network("Testnet")}</span>
+</div>
+<div class="ui-thread">
+<p class="ui-said"><span>Any news on BTC and ETH?</span></p>
+<p class="ui-activity">Checked the news${icon("chevron", 14)}</p>
+<div class="ui-card ui-news">
+<div class="ui-card-head"><span class="ui-news-head">${icon("news", 16)}<strong>News</strong><span>BTC ETH</span></span></div>
+<ul class="ui-headlines">
+${HEADLINES.map(([title, source, age]) => `<li><span class="ui-headline">${esc(title)}</span><span class="ui-newsroom">${esc(source)}</span><span class="ui-age num">${age}</span></li>`).join("\n")}
+</ul>
+</div>
+<div class="ui-answer">
+<p><strong>The Brine Report has the newest report on BTC and ETH:</strong> funding on ETH perpetuals stays positive after the move.</p>
+<ul>
+<li>6 headlines from the last day, the oldest 6h ago.</li>
+<li>News explains a move. It does not say what comes next, so the stop stays where the chart puts it. This is testnet: prices can differ from mainnet.</li>
+</ul>
+</div>
+</div>`,
+});
 
 export default {
   path: "/news/",
@@ -10,13 +51,7 @@ export default {
       path: "/news/",
       title: "How the assistant reads the news",
       lead: "Ask why a market is moving. The assistant reads the latest headlines, says who reported what and how long ago, and lists the headlines with links. It works with every model, needs no key and no account, and can be turned off.",
-      picture: ctx.figure("news", {
-        alt: "The answer to Any news on BTC and ETH: a news card with six headlines, each with its newsroom and age, and a short written answer.",
-        caption:
-          "“Any news on BTC and ETH?” In this picture the app runs against its built-in mock, which invents its headlines and newsrooms. The app itself reads the publishers listed below.",
-        kind: "column",
-        eager: true,
-      }),
+      visual: ANSWER,
       sections: [
         {
           id: "publishers",

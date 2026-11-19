@@ -1,6 +1,50 @@
-import { ADVISORY, code, doc, docPage, out, reference, table } from "../site.mjs";
+import { ADVISORY, callout, chip, code, doc, docPage, icon, network, out, reference, table, ui, uiButton, uiFacts } from "../site.mjs";
 
 const risks = (rows) => table({ head: ["Risk", "Protection"], stack: true, rows });
+
+/**
+ * The head's picture: a mainnet ticket from the app's built-in mock, waiting for the box that says
+ * you are trading real funds, beside what the app reads again when you place it (from "How a ticket
+ * becomes an order" on the markets page).
+ */
+const TICKET = ui({
+  className: "ui-safety",
+  label:
+    "A sample mainnet ticket in OctoNeo: Long BTC / USDT, marked Mainnet, real funds. It opens a 0.016 BTC long at 3x with isolated margin, with a stop-loss at 61,344.95, and risks about 0.96% of equity. The box I am trading real funds is not checked, so Place live order cannot be pressed. Beside it, what the app reads again when you place it: the position, the mark price within 1% of the draft and the stop-loss inside the estimated liquidation price; then the order is sent once, as a market order, and its stop-loss and take-profit follow as reduce-only orders.",
+  caption: "A mainnet ticket cannot be sent until you check a box saying you are trading real funds. Sample figures from the app’s built-in mock.",
+  body: `<div class="ui-safety-body">
+<div class="ui-card ui-ticket">
+<div class="ui-card-head"><span class="ui-ticket-title">${chip("Long", "up")}<span class="ui-symbol">BTC / USDT</span></span>${network("Mainnet · Real funds")}</div>
+<p class="ui-ticket-effect">Opens a 0.016 BTC long at 3x with isolated margin</p>
+${uiFacts(
+  [
+    ["Quantity", "0.016 BTC"],
+    ["Value", "1,005.25 USDT"],
+    ["Leverage", "3x"],
+    ["Margin", "335.08 USDT"],
+    ["Est. liquidation", "42,199.37"],
+    ["Stop-loss", "61,344.95"],
+    ["Take-profit", "65,793.63"],
+  ],
+  "ui-facts-two",
+)}
+<p class="ui-ticket-why">Risks about 0.96% of equity, 23.73 USDT, if the stop at 61,344.95 is hit.</p>
+<p class="ui-check"><span class="ui-checkbox"></span>I am trading real funds</p>
+<div class="ui-actions">${uiButton("Place live order", "disabled")}${uiButton("Dismiss", "ghost")}</div>
+</div>
+<div class="ui-card ui-confirm">
+<p class="ui-confirm-title">When you place it</p>
+<p class="ui-confirm-lead">Read again before anything is sent</p>
+<ol class="ui-confirm-list">
+<li>${icon("check", 14)}<span>The position, exactly as it was when the ticket was drafted</span></li>
+<li>${icon("check", 14)}<span>The mark price, within 1% of the draft</span></li>
+<li>${icon("check", 14)}<span>The stop-loss, on the losing side and inside the estimated liquidation price</span></li>
+<li>${icon("check", 14)}<span>Then one market order, sent once</span></li>
+<li>${icon("check", 14)}<span>Its stop-loss and take-profit follow, reduce-only</span></li>
+</ol>
+</div>
+</div>`,
+});
 
 export default {
   path: "/safety/",
@@ -12,7 +56,11 @@ export default {
       path: "/safety/",
       title: "Built so the assistant cannot trade without you",
       lead: "OctoNeo holds a key that can trade on your account, so the rules that matter are enforced in code rather than requested in a prompt. They hold whatever the model says.",
-      picture: `<div class="callout" role="note"><p><strong>OctoNeo is early software and not financial advice.</strong> Perpetual futures are leveraged: a position can be liquidated and lose its whole margin quickly. Practice on testnet first, and trade on mainnet only with money you can afford to lose.</p></div>`,
+      visual: TICKET,
+      notice: callout(
+        `<p><strong>OctoNeo is early software and not financial advice.</strong> Perpetual futures are leveraged: a position can be liquidated and lose its whole margin quickly. Practice on testnet first, and trade on mainnet only with money you can afford to lose.</p>`,
+        "risk",
+      ),
       sections: [
         {
           id: "can",
@@ -31,12 +79,7 @@ export default {
               ["Read recent headlines from crypto newsrooms, Yahoo Finance and the Federal Reserve, and the article behind one", "Read a page it was not given: only its news results and links you paste"],
               ["Call read-only tools of a tool server you attached", "Answer without a model: there are no canned replies"],
             ],
-          })}
-${ctx.figure("ticket-mainnet", {
-  alt: "A mainnet ticket marked Real funds, with a box to check, I am trading real funds, before the Place live order button can be pressed.",
-  caption: "A mainnet ticket cannot be sent until you check a box saying you are trading real funds. Sample figures from the built-in mock.",
-  kind: "column",
-})}`,
+          })}`,
         },
         {
           id: "protections",

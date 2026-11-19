@@ -1,4 +1,4 @@
-import { code, doc, docPage, facts, out, table } from "../site.mjs";
+import { chip, code, doc, docPage, facts, icon, out, table, ui, uiButton } from "../site.mjs";
 
 /** How each provider is handled: one row per difference, one column per provider. */
 const PROVIDERS = ["OpenRouter", "Cloudflare AI Gateway", "LM Studio", "Ollama"];
@@ -30,22 +30,55 @@ ${table({
 })}
 </div>`;
 
+/**
+ * The head's picture: Settings, Models, as the app's built-in mock shows it. Lantern 2 Large and
+ * reef:8b are the mock's fictional models. Reasoning effort is sent only to the OpenRouter models
+ * that support it (the comparison below).
+ */
+const provider = (name, detail, buttons, state = "") =>
+  `<li class="ui-row"><div class="ui-row-text"><p class="ui-row-title">${name}${state}</p><p class="ui-row-detail">${detail}</p></div><div class="ui-row-actions">${buttons.join("")}</div></li>`;
+
+const SETTINGS = ui({
+  className: "ui-settings",
+  label:
+    "A sample of Settings, Models in OctoNeo: OpenRouter in use with the fictional model Lantern 2 Large; Cloudflare AI Gateway, in the cloud, not connected; Ollama with the fictional local model reef:8b, ready to use; LM Studio, on this computer, not connected; and reasoning effort set to Auto.",
+  caption: "Settings, Models, drawn from the app’s built-in mock: Lantern 2 Large and reef:8b are fictional models.",
+  body: `<div class="ui-bar">
+<span class="ui-bar-start"><strong class="ui-window-title">Settings</strong></span>
+<span class="ui-bar-end">${chip("Sample")}<span class="ui-close">${icon("close", 18)}</span></span>
+</div>
+<div class="ui-settings-body">
+<ul class="ui-side">
+<li data-on>${icon("model", 18)}Models</li>
+<li>${icon("wallet", 18)}Wallet</li>
+<li>${icon("trade", 18)}Trading</li>
+<li>${icon("plug", 18)}Tools</li>
+<li>${icon("appearance", 18)}Appearance</li>
+<li>${icon("info", 18)}About</li>
+</ul>
+<div class="ui-settings-main">
+<ul class="ui-rows">
+${provider("OpenRouter", "Lantern 2 Large", [uiButton("Change", "outline"), uiButton("Disconnect", "ghost")], chip("In use", "up"))}
+${provider("Cloudflare AI Gateway", "Cloud", [uiButton("Connect", "outline")])}
+${provider("Ollama", "reef:8b", [uiButton("Use", "outline"), uiButton("Change", "outline"), uiButton("Disconnect", "ghost")])}
+${provider("LM Studio", "On this computer", [uiButton("Connect", "outline")])}
+<li class="ui-row"><div class="ui-row-text"><p class="ui-row-title">Reasoning effort</p></div><div class="ui-row-actions"><span class="ui-segments"><span data-on>Auto</span><span>Low</span><span>Medium</span><span>High</span></span></div></li>
+</ul>
+</div>
+</div>`,
+});
+
 export default {
   path: "/models/",
   title: "Models | OctoNeo",
   description:
     "Connect OctoNeo to OpenRouter, Cloudflare AI Gateway, Ollama or LM Studio. The model must support tool calls, and a model on your computer keeps your conversations there.",
-  render: (ctx) =>
+  render: () =>
     docPage({
       path: "/models/",
       title: "Bring your own model",
       lead: "Every message is answered by a language model, so OctoNeo needs one. Connect a model in the cloud, or run one on your own computer and keep your conversations there. The first launch asks you to choose.",
-      picture: ctx.figure("settings-models", {
-        alt: "Settings, Models tab: OpenRouter in use with the model Lantern 2 Large, Cloudflare AI Gateway not connected, an Ollama model ready to use, and LM Studio not connected.",
-        caption: "Settings, Models. Lantern 2 Large is a fictional model from the app’s built-in mock.",
-        kind: "column",
-        eager: true,
-      }),
+      visual: SETTINGS,
       sections: [
         {
           id: "providers",

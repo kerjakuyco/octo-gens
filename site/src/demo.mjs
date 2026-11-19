@@ -1,17 +1,18 @@
 // The home page's preview of the assistant: three of the app's suggestion prompts, drawn the way the
 // app draws them. Every figure and sentence below is what the app's built-in mock answers on testnet
-// with its fictional model, so it is sample data, not live prices. The script in site.js plays a
-// conversation step by step; without it the first one is shown finished.
+// with its fictional model, so it is sample data, not live prices. The page shows the first
+// conversation finished; picking a prompt, or Replay, has the script in site.js play one step by step.
+// The bento grid on the home page draws its Assistant, Markets and Safety cards from the same
+// conversations (`scenario`, `SPARK_BTC`), so the page agrees with itself.
 import { esc, icon } from "./site.mjs";
 
 const SAMPLE_NOTE =
-  "<strong>Preview.</strong> Sample figures from the app’s built-in mock, with a fictional model on testnet. Prices here are not live.";
-const NEWS_NOTE =
-  "<strong>Preview.</strong> Invented headlines from invented newsrooms, from the app’s built-in mock. The app itself reads eight real publishers.";
+  "Sample conversation on testnet, the exchange’s practice network with test funds. The model and the account are fictional; the figures are illustrative, not live prices.";
+const NEWS_NOTE = "Sample headlines from invented newsrooms. OctoNeo itself reads eight real publishers.";
 
 const SPARK_ETH =
   "0.0,20.0 1.9,16.6 3.9,15.2 5.8,16.3 7.7,12.8 9.7,9.2 11.6,10.0 13.5,6.9 15.4,9.3 17.4,7.3 19.3,7.1 21.2,4.7 23.2,6.6 25.1,8.3 27.0,5.0 29.0,2.0 30.9,2.5 32.8,4.7 34.8,7.8 36.7,8.2 38.6,10.6 40.6,8.1 42.5,9.2 44.4,8.0 46.3,3.5 48.3,4.3 50.2,2.9 52.1,4.7 54.1,5.7 56.0,8.3";
-const SPARK_BTC =
+export const SPARK_BTC =
   "0.0,7.0 1.9,11.0 3.9,12.4 5.8,11.0 7.7,14.2 9.7,17.4 11.6,14.7 13.5,16.4 15.4,18.2 17.4,20.0 19.3,18.5 21.2,18.5 23.2,19.0 25.1,18.5 27.0,19.4 29.0,18.4 30.9,15.5 32.8,15.2 34.8,14.5 36.7,13.7 38.6,10.1 40.6,6.8 42.5,3.1 44.4,3.1 46.3,3.1 48.3,2.0 50.2,4.9 52.1,4.6 54.1,6.0 56.0,7.7";
 
 const SCENARIOS = [
@@ -189,6 +190,13 @@ const SCENARIOS = [
   },
 ];
 
+/** One of the conversations, by id: "eth", "btc" or "news". */
+export function scenario(id) {
+  const found = SCENARIOS.find((s) => s.id === id);
+  if (!found) throw new Error(`demo: no conversation ${id}`);
+  return found;
+}
+
 const at = (value) => ` data-at="${value}"`;
 
 function fact(term, value, tone = "") {
@@ -288,7 +296,7 @@ ${t.facts.map(([term, value]) => fact(term, value)).join("\n")}
 <button type="button" class="d-btn d-btn-primary" data-ticket="place">Place order</button>
 <button type="button" class="d-btn d-btn-ghost" data-ticket="dismiss">Dismiss</button>
 </div>
-<p class="d-note" data-ticket-note hidden>${icon("check", 16)}<span>Nothing was sent: this is a preview. In OctoNeo, confirming a ticket is the only way an order reaches the exchange, and the app reads your position and the mark price again before it sends anything.</span></p>
+<p class="d-note" data-ticket-note hidden>${icon("check", 16)}<span>Nothing was sent: this is a sample. In OctoNeo, placing a ticket is the only way an order reaches the exchange, and the app checks your position and the price again before it sends anything.</span></p>
 <p class="d-dismissed" data-ticket-dismissed hidden>Dismissed</p>
 </div>`;
 }
@@ -331,22 +339,25 @@ export function demo() {
     (s, index) =>
       `<button type="button" class="d-suggestion" role="tab" id="d-tab-${s.id}" aria-controls="d-panel-${s.id}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${esc(s.prompt)}</button>`,
   ).join("\n");
+  // The prompts are the tabs of the conversations. They sit under the window, in the order they are
+  // seen, so Tab reaches the conversation first; without the script they are not drawn and the
+  // first conversation is shown on its own.
   return `<div class="demo" data-demo>
 <div class="d-window">
 <div class="d-bar" aria-hidden="true">
-<span class="d-bar-start"><span class="d-model">Lantern 2 Large ${icon("chevronDown", 16)}</span><span class="d-chip">Preview</span></span>
+<span class="d-bar-start"><span class="d-model">Lantern 2 Large ${icon("chevronDown", 16)}</span><span class="d-chip">Sample</span></span>
 <span class="d-bar-end">
 <span class="d-pill"><span class="d-dot"></span>Testnet ${icon("chevronDown", 14)}</span>
 <span class="d-pill d-balance">${icon("wallet", 16)}<span class="num">10,000.00 USDT</span></span>
 </span>
 </div>
-<div class="d-suggestions" role="tablist" aria-label="Suggestions" hidden>
-${tabs}
-</div>
 <div class="d-panels">
 ${SCENARIOS.map(panel).join("\n")}
 </div>
 <div class="d-composer" aria-hidden="true"><span class="d-composer-text">Ask anything</span><span class="d-send">${icon("send", 18)}</span></div>
+</div>
+<div class="d-suggestions" role="tablist" aria-label="Prompts" hidden>
+${tabs}
 </div>
 <div class="demo-caption">
 <p class="demo-note" data-demo-note>${SCENARIOS[0].note}</p>

@@ -1,4 +1,4 @@
-import { code, doc, docPage, facts, literal, reference, table } from "../site.mjs";
+import { chip, code, doc, docPage, facts, icon, literal, network, reference, table, ui, uiButton, uiFacts } from "../site.mjs";
 
 const DESK = `<desk>
 time_utc: 2026-11-18 16:53
@@ -13,6 +13,67 @@ tool_servers: none
 web_search: on
 </desk>`;
 
+/**
+ * The head's picture: "Long ETH, 1% risk" as the app answers it on testnet with its built-in mock.
+ * Every figure and sentence is the mock's, the same as in the home page's preview (demo.mjs).
+ */
+const CONVERSATION = ui({
+  className: "ui-chat",
+  label:
+    "A sample conversation in OctoNeo on testnet. The message Long ETH, 1% risk; a line saying the assistant checked the ETH price, the 4h chart and the account and drafted a ticket; a plan card for a 3x long with entry 1,778.89, stop-loss 1,764.66 and take-profit 1,807.36, 7.026 ETH risking 99.99 USDT; a short answer; and the ticket, with Place order and Dismiss.",
+  caption:
+    "Sample conversation on testnet, the exchange’s practice network with test funds. The model and the account are fictional; the figures are illustrative, not live prices.",
+  body: `<div class="ui-bar">
+<span class="ui-bar-start"><span class="ui-model">Lantern 2 Large${icon("chevronDown", 14)}</span>${chip("Sample")}</span>
+<span class="ui-bar-end">${network("Testnet")}<span class="ui-chip ui-balance">${icon("wallet", 14)}<span class="num">10,000.00 USDT</span></span></span>
+</div>
+<div class="ui-thread">
+<p class="ui-said"><span>Long ETH, 1% risk</span></p>
+<p class="ui-activity">Checked ETH price, 4h chart, account and 1 more, drafted a ticket${icon("chevron", 14)}</p>
+<div class="ui-card ui-plan">
+<div class="ui-card-head"><span class="ui-symbol">ETH <span>Plan</span></span>${chip("Long 3x", "up")}</div>
+<div class="ui-levels">
+<div><span>Entry</span><strong class="num">1,778.89</strong></div>
+<div><span>Stop-loss</span><strong class="num down">1,764.66</strong></div>
+<div><span>Take-profit</span><strong class="num up">1,807.36</strong></div>
+</div>
+${uiFacts(
+  [
+    ["Size", "7.026 ETH"],
+    ["Value", "12,498.51 USDT"],
+    ["Margin", "4,166.17 USDT"],
+    ["Loss at stop", "99.99 USDT (1%)"],
+    ["Est. liquidation", "1,194.82"],
+    ["Reward to risk", "2.0 : 1"],
+  ],
+  "ui-facts-two",
+)}
+</div>
+<div class="ui-answer">
+<p><strong>A 7.026 ETH long risks about 1% of equity.</strong></p>
+<p>The ticket is ready. Nothing is sent until you place it. This is testnet: practice funds.</p>
+</div>
+<div class="ui-card ui-ticket">
+<div class="ui-card-head"><span class="ui-ticket-title">${chip("Long", "up")}<span class="ui-symbol">ETH / USDT</span></span>${chip("Testnet")}</div>
+<p class="ui-ticket-effect">Opens a 7.026 ETH long at 3x with isolated margin</p>
+${uiFacts(
+  [
+    ["Quantity", "7.026 ETH"],
+    ["Value", "12,498.51 USDT"],
+    ["Leverage", "3x"],
+    ["Margin", "4,166.17 USDT"],
+    ["Est. liquidation", "1,194.82"],
+    ["Stop-loss", "1,764.66"],
+    ["Take-profit", "1,807.36"],
+  ],
+  "ui-facts-two",
+)}
+<p class="ui-ticket-why">Risks about 1% of equity, 99.99 USDT, if the stop at 1,764.66 is hit.</p>
+<div class="ui-actions">${uiButton("Place order", "primary")}${uiButton("Dismiss", "ghost")}</div>
+</div>
+</div>`,
+});
+
 export default {
   path: "/assistant/",
   title: "The assistant | OctoNeo",
@@ -23,12 +84,7 @@ export default {
       path: "/assistant/",
       title: "An assistant that shows what it read",
       lead: "Every message is answered by a language model that calls tools. It plans its own research, shows what it read as cards under the answer, and drafts tickets for you to confirm. There are no canned replies and no typed commands.",
-      picture: ctx.figure("turn-btc", {
-        alt: "The answer to BTC outlook: a line saying it checked the BTC price, the 4h chart and the order book, three cards with those readings, and a short written answer.",
-        caption: "“BTC outlook” on testnet: what the assistant checked, the cards it read, then its answer. Sample data from the app’s built-in mock.",
-        kind: "column",
-        eager: true,
-      }),
+      visual: CONVERSATION,
       sections: [
         {
           id: "ask",
@@ -70,6 +126,11 @@ ${facts([
           id: "cards",
           title: "Cards show what it read",
           body: `<p>A card is made only from a result the assistant actually read, and once per subject in a turn, so the answer can say what a reading means instead of repeating it. Cards come in seven kinds: quotes, a technical reading, the order book, market movers, a position plan, news and your account.</p>
+${ctx.figure("turn-btc", {
+  alt: "The answer to BTC outlook: a line saying it checked the BTC price, the 4h chart and the order book, three cards with those readings, and a short written answer.",
+  caption: "“BTC outlook” on testnet: what the assistant checked, the cards it read, then its answer. Sample data from the app’s built-in mock.",
+  kind: "column",
+})}
 <p>Cards are stored with the answer. A conversation you reopen shows what the model saw at the time, not today’s prices. The account card is the exception: account figures are not copied into the journal, so it shows your live account, and only under the newest answer.</p>
 <p>The line above the cards says what was checked. Open it to see each step: the tool, what it was asked and the start of what came back, and, once the answer is done, the model and the tokens it used.</p>`,
         },
@@ -77,12 +138,7 @@ ${facts([
           id: "tickets",
           title: "Tickets, not orders",
           lead: `The only tool that touches trading is ${code("propose_order")}, and it drafts a ticket. The answer says the ticket is ready, never that an order was placed.`,
-          body: `${ctx.figure("plan-ticket", {
-            alt: "A position plan card for a 3x ETH long with entry, stop-loss and take-profit, the assistant's short answer, and a ticket with Place order and Dismiss buttons.",
-            caption: "“Long ETH, 1% risk” on testnet: the plan the assistant computed, its answer, and the ticket waiting for you. Sample figures from the built-in mock.",
-            kind: "column",
-          })}
-<h3>How it sizes a position</h3>
+          body: `<h3>How it sizes a position</h3>
 ${facts([
   ["Stop first", "An order that opens or adds to a position needs a stop-loss at the level that proves the idea wrong. If you gave none, the assistant picks one from a fresh technical reading and says where."],
   ["Risk, not conviction", "It is told to size a position from the loss at the stop: at most 1% of equity unless you say otherwise. The app enforces the stop and your leverage limit, not the risk."],

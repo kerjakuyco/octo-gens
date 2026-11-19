@@ -23,13 +23,13 @@ const DIST = OUT_FLAG ? resolve(OUT_FLAG.slice("--out=".length)) : join(ROOT, "d
 
 /**
  * Rendered widths, in CSS pixels, for each kind of picture; they follow the layout in site.css.
- * The page is 1136 wide, the text column 760; the gutters are 32 a side, 16 on a phone.
+ * The page is 1200 wide, the text column 760; the gutters are 24 a side, 16 on a phone.
  * `inset` is a wide picture shown in the text column.
  */
 const SIZES = {
-  wide: "(min-width: 1200px) 1136px, (min-width: 641px) calc(100vw - 64px), calc(100vw - 32px)",
-  column: "(min-width: 824px) 760px, (min-width: 641px) calc(100vw - 64px), calc(100vw - 32px)",
-  inset: "(min-width: 824px) 760px, (min-width: 641px) calc(100vw - 64px), calc(100vw - 32px)",
+  wide: "(min-width: 1248px) 1200px, (min-width: 641px) calc(100vw - 48px), calc(100vw - 32px)",
+  column: "(min-width: 808px) 760px, (min-width: 641px) calc(100vw - 48px), calc(100vw - 32px)",
+  inset: "(min-width: 808px) 760px, (min-width: 641px) calc(100vw - 48px), calc(100vw - 32px)",
   panel: "(min-width: 432px) 400px, calc(100vw - 32px)",
   tab: "(min-width: 1100px) 368px, (min-width: 641px) calc(50vw - 44px), calc(100vw - 32px)",
 };
@@ -167,26 +167,30 @@ export async function build({ quiet = false } = {}) {
     return found.url;
   };
 
-  /** A screenshot in both themes: src/assets/shots/<name>-<light|dark>-<pixel width>.webp. */
+  /**
+   * A screenshot: src/assets/shots/<name>-dark-<pixel width>.webp. The site is dark only, so it shows
+   * the app's dark theme to every visitor. Only the pictures a page shows are published (see below).
+   */
+  const shown = new Set();
   function picture(name, { alt, kind, eager = false }) {
     const sizes = SIZES[kind];
     if (!sizes) throw new Error(`${name}: unknown picture kind ${kind}`);
     if (!alt) throw new Error(`${name}: a picture needs alt text`);
     const shot = shots.get(name);
-    if (!shot) throw new Error(`no light and dark pictures named ${name}`);
+    if (!shot) throw new Error(`no pictures named ${name}`);
+    shown.add(name);
     const srcset = (list) => list.map((v) => `${v.url} ${v.size.width}w`).join(", ");
     const { width, height } = shot.box;
     const loading = eager ? 'fetchpriority="high"' : 'loading="lazy"';
     // The first source that matches is used, so the phone crop comes before the wide picture.
     const phone = shots.get(`${name}-phone`);
-    const phoneSources = phone
-      ? `<source media="${PHONE.media} and (prefers-color-scheme: dark)" srcset="${srcset(phone.dark)}" sizes="${PHONE.sizes}" width="${phone.box.width}" height="${phone.box.height}">
-<source media="${PHONE.media}" srcset="${srcset(phone.light)}" sizes="${PHONE.sizes}" width="${phone.box.width}" height="${phone.box.height}">
+    if (phone) shown.add(`${name}-phone`);
+    const phoneSource = phone
+      ? `<source media="${PHONE.media}" srcset="${srcset(phone.dark)}" sizes="${PHONE.sizes}" width="${phone.box.width}" height="${phone.box.height}">
 `
       : "";
     return `<picture class="pic pic-${name}">
-${phoneSources}<source media="(prefers-color-scheme: dark)" srcset="${srcset(shot.dark)}" sizes="${sizes}" width="${width}" height="${height}">
-<img src="${shot.light[0].url}" srcset="${srcset(shot.light)}" sizes="${sizes}" width="${width}" height="${height}" alt="${alt.replace(/"/g, "&quot;")}" ${loading} decoding="async">
+${phoneSource}<img src="${shot.dark[0].url}" srcset="${srcset(shot.dark)}" sizes="${sizes}" width="${width}" height="${height}" alt="${alt.replace(/"/g, "&quot;")}" ${loading} decoding="async">
 </picture>`;
   }
 
@@ -208,6 +212,15 @@ ${options.caption ? `<figcaption>${options.caption}</figcaption>` : ""}
     const html = layout(page, page.render(ctx), ctx);
     write(join(DIST, ...output.split("/")), html);
     pages.push({ ...page, output, bytes: Buffer.byteLength(html) });
+  }
+
+  // The light pictures, and the pictures no page shows, stay in src/assets/shots (the screenshot tool
+  // takes them all) but are not published.
+  for (const [name, shot] of shots) {
+    for (const entry of [...shot.light, ...(shown.has(name) ? [] : shot.dark)]) {
+      rmSync(join(DIST, ...entry.url.split("/").filter(Boolean)));
+      assets.delete([...assets].find(([, value]) => value === entry)[0]);
+    }
   }
 
   // Headers. The one inline script is allowed by its hash; nothing is loaded from anywhere else.
