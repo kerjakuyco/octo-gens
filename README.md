@@ -4,7 +4,7 @@ Website: [octoneo.xyz](https://octoneo.xyz). Download the [latest release](https
 
 OctoNeo is a desktop AI trading assistant for perpetual futures on a decentralised exchange. You chat with it the way you chat with any AI assistant. It reads live market data, sizes positions from the risk you accept, and drafts order tickets. You trade from your own web3 wallet and confirm every order. It runs on Windows, macOS and Linux.
 
-![The assistant answering "BTC outlook", with the price, the 4h reading and the order book it read shown as cards above its answer](docs/images/assistant-dark.png)
+![The assistant answering "BTC outlook", with the price, the 4h reading and the order book it read shown as cards above its answer, and the message box below with Commands and Market](docs/images/assistant-dark.png)
 
 - **Just ask, or use a command.** "BTC outlook", "Top movers", "Long ETH, 1% risk". Or type `/` for commands that trade, research and analyse: pick the market, the risk and the leverage, and the command writes the message. The assistant plans its own research and shows what it read as cards under the answer: prices, a technical reading, the order book, a position plan.
 - **Bring your own model.** OpenRouter, Cloudflare AI Gateway, or a model on your own computer with Ollama or LM Studio.
@@ -42,7 +42,7 @@ Every message is answered by a language model, so the app needs one. Open **Sett
 | Ollama | On your computer | [Ollama](https://ollama.com) running, with a model that supports tools, for example `ollama pull qwen3:8b`. |
 | LM Studio | On your computer | [LM Studio](https://lmstudio.ai) with its local server started and a model trained for tool use. The app loads the model for you. |
 
-![Connecting a model in Settings](docs/images/models-light.png)
+![Settings, Models: the model in use, OpenRouter and Cloudflare AI Gateway in the cloud, and Ollama and LM Studio on your computer](docs/images/models-light.png)
 
 The app checks a model before it keeps it: the key or token must be accepted, and the model must be able to call tools, because that is how the assistant reads the market and drafts tickets. A model on your computer keeps your conversations on your computer. It works in a smaller context than a cloud model, so pick the largest one your machine runs comfortably.
 
@@ -55,7 +55,7 @@ OctoNeo trades through an **API wallet**: a separate key that your own wallet ap
 | Approve in a browser wallet | The app creates a key on your computer and opens a page it serves locally. Your wallet (MetaMask, Rabby and others) signs one approval for that key, for 7 to 180 days. | Most people |
 | Paste an API wallet key | You create an API wallet on the exchange's own API wallet page, which the app opens for you, and paste its key together with your wallet address. | Hardware wallets, or keys you manage yourself |
 
-![Connecting a wallet by approving a trade-only key in the browser](docs/images/wallet-light.png)
+![Settings, Wallets: the testnet wallet waiting for your browser wallet to approve a trade-only key, at the page the app opened](docs/images/wallet-light.png)
 
 Things to know:
 
@@ -83,7 +83,7 @@ Funds move between your own wallet and your trading account. **Deposit** and **W
 
 ## Market data
 
-![The screener of every market the exchange lists](docs/images/markets-dark.png)
+![The screener of every market the exchange lists, under the day's top gainer, top loser, highest funding and most traded](docs/images/markets-dark.png)
 
 | Where | What it shows |
 | --- | --- |
@@ -110,7 +110,7 @@ A market's page opens from **Markets**, from a market named in an answer, or fro
 | Call read-only tools of a tool server you attached | Answer without a model: there are no canned replies |
 | Work out a grid bot as a dry run, draft it for you to start, and read how your bots are doing | Start, stop or change a grid bot |
 
-![Headlines the assistant read, with who reported each one and how long ago](docs/images/news-light.png)
+![Headlines the assistant read about BTC and ETH, with who reported each one and how long ago, and its answer](docs/images/news-light.png)
 
 Conversations are kept in the sidebar, where you can filter them by title. Open one to read it again with what the assistant read at the time, or delete it.
 
@@ -127,6 +127,8 @@ Type `/` in the message box, or press **Commands** under it, for what the assist
 | Analysis | `/technicals`, `/levels`, `/book`, `/compare` | The market, the timeframe, a second market to compare |
 | Account | `/portfolio`, `/journal`, `/bots` | Nothing: they read your account, your journal and your grid bots |
 
+![The message box with its commands open, as / opens them: Open a long, Open a short, Plan a trade, Close a position, Reduce a position and Grid bot under Trade, then Market outlook under Research, each with what it does](docs/images/commands-dark.png)
+
 - **Name a market with `$`.** Type `$` and the first letters of a market, or press **Market**, to pick it from a list with its price and its move today. In a command, it sets the command's market.
 - **What a command needs.** One that reads your account needs a connected wallet, the news needs web search, and `/journal` needs a trade in your journal. The box says what is missing, with a button to fix it.
 - **Next steps.** Under an answer, suggestions pick up where it left off: trade the market it read, or read what it has not yet. A trade suggestion fills the box for you to look over; it is never sent by itself.
@@ -134,7 +136,7 @@ Type `/` in the message box, or press **Commands** under it, for what the assist
 
 ## How orders work
 
-![A ticket the assistant drafted, waiting to be placed](docs/images/ticket-light.png)
+![The position plan the assistant worked out, its answer, and the ticket it drafted, waiting for Place order](docs/images/ticket-light.png)
 
 - **Tickets.** Every order starts as a ticket: what it does to your position, its value, the margin it needs and an estimated liquidation price. It is checked against your live account before you see it, and sent only when you confirm. A mainnet ticket also asks you to tick an acknowledgement.
 - **Two ways to draft one.** Ask the assistant, or use **Trade** on a market's page, which needs no model.
@@ -161,6 +163,8 @@ A grid bot splits a price range into levels and keeps an order waiting at each o
 | Margin and leverage | How much of your balance the bot uses, at a leverage up to your limit |
 | Start price | Optional: the bot waits until the price reaches it, then places its orders |
 | Stop below, stop above | Optional: prices outside the range at which the bot stops, and can close its position |
+
+![A new grid bot on BTC: Neutral, Long or Short, the price range with suggested ranges, and beside it the price levels, buys below the price and sells above it](docs/images/grid-light.png)
 
 - **Look first, then start.** **Grid bots** works the bot out as a dry run before anything is sent: each order's size and value, the profit per completed trade, the estimated liquidation price, and anything worth knowing first. On mainnet you tick an acknowledgement before it starts.
 - **From the chat.** Ask for a grid, or use `/grid`. The assistant reads the market's levels, works the bot out as a dry run and drafts it in the conversation, where you start it or discard it. Starting checks the draft against the live price again. `/bots` asks how your bots are doing.
