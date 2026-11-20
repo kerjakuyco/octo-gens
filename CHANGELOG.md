@@ -16,7 +16,7 @@ A News page lays out the newsrooms' stories like a magazine, and a story opens r
 
 ### Changed
 
-- **The order form, redesigned.** Pick **Buy / Long** or **Sell / Short**, set the size in the coin or in USDT, or as 25, 50, 75 or 100% of your available margin (of the position, for an order that only reduces it), choose leverage on a slider with presets, and add a take-profit and a stop-loss in one place. A summary shows the notional value, the initial margin and the estimated entry and liquidation prices before you confirm the order.
+- **The order form, redesigned.** Pick **Buy / Long** or **Sell / Short**, set the size in the coin or in USDT, or pick 10, 25, 50 or 75% of your buying power or Max (25 to 100% of the position, for an order that only reduces it), choose leverage on a slider with presets, and add a take-profit and a stop-loss in one place. A summary shows the notional value, the initial margin and the estimated entry and liquidation prices before you confirm the order.
 - **Settings, regrouped.** `Cmd+,` (`Ctrl+,` on Windows and Linux) opens Settings, now in groups: Assistant (Models, Tools), Exchange (Wallets, Risk & Trading) and App (General, About & Updates). General holds the theme, with a preview of each, and the chart's defaults.
 - **A new app icon.** The white octopus now sits on near-black, the colour of the website, in place of blue.
 
