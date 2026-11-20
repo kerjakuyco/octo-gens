@@ -120,11 +120,11 @@ ${reference("The main packages, what each is used for, and its license", table({
 <ul>
 <li>The exchange, mainnet and testnet</li>
 <li>A model provider: OpenRouter, Cloudflare AI Gateway, Ollama or LM Studio</li>
-<li>News publishers and the pages the assistant reads, while web search is on</li>
+<li>News publishers, the pictures of their stories and the pages the assistant reads, while web search is on</li>
 <li>MCP tool servers you attach</li>
 </ul>
 </div>
-<figcaption>The interface and the shell talk over Tauri’s IPC. The web view runs under a content security policy that allows no network connections except IPC.</figcaption>
+<figcaption>The interface and the shell talk over Tauri’s IPC. The web view runs under a content security policy that allows no network connections except IPC. A news article opens in a second web view, kept apart from the app, which cannot call its commands.</figcaption>
 </figure>
 <h3>An order</h3>
 <p>Orders follow one path whoever asks for them, the trader’s form or the assistant.</p>
@@ -157,7 +157,7 @@ ${reference("The four steps of a chat turn, from your message to the journal", `
               [code("indicators"), "Deterministic technical readings, so the model never does arithmetic."],
               [code("llm"), "The model providers, behind one connection the agent loop uses."],
               [code("assistant"), "The system prompt, the tool definitions, and the agent loop."],
-              [code("web"), "News and web pages for the assistant, and the guard that decides which addresses may be read at all."],
+              [code("web"), "News and web pages: the feeds, the pages the assistant reads, the News page’s stories and their pictures, and the guard that decides which addresses may be read at all."],
               [code("mcp"), "Model Context Protocol client for tool servers."],
               [code("store"), "Preferences, the run journal, and the store for secrets."],
               [code("studio"), "The one object that owns the desk’s state and offers every action."],
@@ -230,6 +230,7 @@ ${shell([
             head: ["Version", "What changed"],
             stack: true,
             rows: [
+              ["0.7.0", "A News page that lays out the newsrooms’ stories like a magazine, and opens a story inside the app. The order form and Settings were redesigned, the app says when a newer version is out, and the icon is now white on near-black."],
               ["0.6.0", "A page for each market in place of the market panel: chart overlays, readings on trend, volatility and trading flow, and your position and orders in that market. The sidebar was redesigned, and conversations can be filtered by title."],
               ["0.5.0", "The app is now called OctoNeo. A chat-first interface, four ways to connect a model, a screener, the order book, funding and technical readings, the news, and deposits and withdrawals in the app. Every message is answered by a model."],
               ["0.4.0", "Perpetual futures on a decentralized exchange from your own web3 wallet, on mainnet and testnet: a trade-only key, an Account page, leverage and margin held to your limits, stop-loss and take-profit."],

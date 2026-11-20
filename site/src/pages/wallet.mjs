@@ -84,7 +84,7 @@ ${reference("The message your wallet signs", literal(APPROVAL, "The approval you
         {
           id: "connect",
           title: "Two ways to connect",
-          lead: "Open Settings, then Wallet, and choose one.",
+          lead: "Open Settings, then Wallets, and choose one.",
           body: `${table({
             head: ["Way", "What happens", "Good for"],
             stack: true,
@@ -125,7 +125,7 @@ ${reference("The four steps of an approval, and what crosses the page", `<ol cla
         {
           id: "deposit",
           title: "Deposit from your wallet",
-          lead: "Deposit and Withdraw are in Settings under Wallet, and on the Account page. Each opens a page the app serves on your computer, in the browser where your wallet is, like the approval does. You never have to visit the exchange’s site.",
+          lead: "Deposit and Withdraw are in Settings under Wallets, and on the Account page. Each opens a page the app serves on your computer, in the browser where your wallet is, like the approval does. You never have to visit the exchange’s site.",
           body: `${table({
             head: ["Direction", "What your wallet does", "What the app does"],
             stack: true,

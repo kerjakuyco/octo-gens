@@ -312,7 +312,14 @@ ${ctx.figure("tab-watchlist", { alt: "The Watchlist tab: markets with price, 24h
           id: "orders",
           title: "How a ticket becomes an order",
           lead: "Every order starts as a ticket: what it does to your position, its value, the margin it needs and an estimated liquidation price. Ask the assistant for one, or use Trade on a market’s page, which needs no model.",
-          body: `<h3>Checked before you see it</h3>
+          body: `<h3>The order form</h3>
+<p><strong>Trade</strong> opens the order form. Pick Buy / Long or Sell / Short, and set the size in the coin or in USDT, or as a share of your available margin. Leverage is set on a slider with presets, up to your limit, and the stop-loss and take-profit sit side by side in one section. Reduce-only makes an order that can only trim or close the position. Before you go on, a summary shows the estimated entry at the mark price, the notional value, the initial margin and the estimated liquidation price. Review turns the form into a ticket, which you place or go back to edit.</p>
+${ctx.figure("order-form", {
+  alt: "The order form for BTC-USDT Perp on testnet, a market order with isolated margin. Buy / Long is chosen. The order value is 500 USDT, about 0.0079 BTC at the mark price, with shares of the available margin from 10% to Max below it. Leverage is 3x on a slider, with presets up to the 10x limit. The stop-loss is 61,661.75 and the take-profit 65,436.96, set with the quick offsets, which would lose 10.00 or make 20.00 USDT: reward to risk 1 to 2.0. Reduce-only is off. The summary gives the estimated entry at the mark, 62,920.15, a notional value of 500.00 USDT, an initial margin of 166.67 USDT and an estimated liquidation price of 44,044.10, above the button Review Long BTC, 500.00 USDT.",
+  caption: "The order form, a long of 500 USDT at 3x with a stop-loss and a take-profit from its quick offsets. Sample figures from the app’s built-in mock.",
+  kind: "column",
+})}
+<h3>Checked before you see it</h3>
 ${reference("Seven checks, and what happens when one fails", table({
   head: ["Check", "If it fails"],
   stack: true,

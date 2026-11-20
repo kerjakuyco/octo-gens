@@ -13,7 +13,7 @@ const COPY = {
   hero: {
     // The pill above the headline: the release, and what it brought. On a phone the words in
     // `wide` are read but not drawn, so the pill keeps to one line.
-    news: { chip: "New", text: [["wide", "Version "], ["", `${VERSION}: a full-width market page`]] },
+    news: { chip: "New", text: [["wide", "Version "], ["", `${VERSION}: a News page`], ["wide", " laid out like a magazine"]] },
     title: ["Ask about any market.", "Confirm every order."],
     lead: "OctoNeo is an open-source AI assistant for perpetual futures, leveraged contracts that never expire, on a decentralized exchange. It reads the market, sizes trades to your risk and drafts orders.",
     primary: "Download OctoNeo",
@@ -119,7 +119,7 @@ const BOOK = {
 };
 const DEPOSIT = { networks: ["BNB Smart Chain Testnet", "Sepolia"], asset: "USDT", amount: "250", steps: ["Allow the amount", "Send the deposit", "Wait for the network"] };
 const MODELS = [
-  ["OpenRouter", "Cloud · Lantern 2 Large", "In use"],
+  ["OpenRouter", "Cloud · Lantern 2 Large", "Active"],
   ["Cloudflare AI Gateway", "Cloud", "Connect"],
   ["Ollama", "On this computer · reef:8b", "Use"],
   ["LM Studio", "On this computer", "Connect"],
@@ -219,8 +219,8 @@ ${BOOK.bids.map((r) => bookRow(r, "bid")).join("\n")}
       ui: `<div class="b-ticket">
 <div class="b-head"><span class="b-ticket-title">${chip(eth.ticket.action, "up")}<span class="b-symbol">${eth.ticket.pair}</span></span>${chip("Testnet", "warn")}</div>
 <p class="b-effect">${eth.ticket.effect}</p>
-${facts([["Quantity", ticketFact("Quantity")], ["Leverage", ticketFact("Leverage")], ["Stop-loss", ticketFact("Stop-loss")], ["Take-profit", ticketFact("Take-profit")]])}
-<div class="b-buttons">${drawnButton("Place order", "primary")}${drawnButton("Dismiss", "ghost")}</div>
+${facts([["Order size", ticketFact("Order size")], ["Leverage", ticketFact("Leverage")], ["Stop-loss", ticketFact("Stop-loss")], ["Take-profit", ticketFact("Take-profit")]])}
+<div class="b-buttons">${drawnButton("Place order", "primary")}${drawnButton("Discard", "ghost")}</div>
 </div>`,
     }),
     panel({
@@ -240,12 +240,12 @@ ${drawnButton(`Deposit ${DEPOSIT.amount} ${DEPOSIT.asset}`, "primary")}
       label: "Models",
       href: "/models/",
       explore: "models",
-      area: "Settings, Models: OpenRouter in use with the fictional model Lantern 2 Large, Cloudflare AI Gateway in the cloud, Ollama on this computer, and LM Studio on this computer. Your own key, or a model on your own computer.",
+      area: "Settings, Models: OpenRouter active with the fictional model Lantern 2 Large, Cloudflare AI Gateway in the cloud, Ollama on this computer, and LM Studio on this computer. Your own key, or a model on your own computer.",
       ui: `<p class="b-title">Models</p>
 <ul class="b-list">
 ${MODELS.map(
   ([name, where, action]) =>
-    `<li><span class="b-row-main"><span class="b-row-name">${name}${action === "In use" ? chip("In use", "up") : ""}</span><span class="b-row-sub">${esc(where)}</span></span>${action === "In use" ? drawnButton("Change", "outline") : drawnButton(action, "outline")}</li>`,
+    `<li><span class="b-row-main"><span class="b-row-name">${name}${action === "Active" ? chip("Active", "up") : ""}</span><span class="b-row-sub">${esc(where)}</span></span>${action === "Active" ? drawnButton("Change", "outline") : drawnButton(action, "outline")}</li>`,
 ).join("\n")}
 </ul>`,
     }),

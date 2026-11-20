@@ -1,7 +1,7 @@
 // Takes the app pictures the site shows, from the interface running in a browser against its built-in mock.
 //
-//   cd ..                                   # the repository root
-//   pnpm build && pnpm exec vite preview --port 4322 --strictPort
+//   cd ..                                   # the repository root; a folder of its own leaves dist/ alone
+//   pnpm exec vite build --outDir /tmp/octoneo-ui && pnpm exec vite preview --outDir /tmp/octoneo-ui --port 4322 --strictPort
 //   cd site
 //   CHROME=/path/to/chrome node tools/screenshots.mjs [name ...]
 //
@@ -65,17 +65,50 @@ const column = (selectors, pad = 16) => `(() => {
   return box && { ...box, x: 8, width: 760 };
 })()`;
 
-/** A settings dialog down to its last line of content, not its full fixed height. */
-const settings = `(() => {
-  const dialog = document.querySelector(".dialog").getBoundingClientRect();
-  let bottom = 0;
-  for (const node of document.querySelectorAll(".dialog *")) {
-    if (node.children.length && !/^(INPUT|BUTTON|SELECT|SVG)$/i.test(node.tagName)) continue;
-    const b = node.getBoundingClientRect();
-    if (b.width > 0 && b.height > 0 && getComputedStyle(node).visibility !== "hidden") bottom = Math.max(bottom, b.bottom);
-  }
-  return { x: Math.round(dialog.left), y: Math.round(dialog.top), width: Math.round(dialog.width), height: Math.round(Math.min(dialog.bottom, bottom + 32) - dialog.top) };
+/**
+ * A dialog drawn at the height of its content instead of its fixed height, so a short section of
+ * Settings ends at the dialog's own edge and a long one is not cut. The window must be tall enough.
+ */
+const fitDialog = async (page) => {
+  await page.evaluate(`(() => {
+    // A modal dialog is placed with inset 0, so "auto" would stretch it to the window.
+    const dialog = document.querySelector(".dialog[open]");
+    dialog.style.height = "fit-content";
+    dialog.style.maxHeight = "none";
+  })()`);
+  await sleep(300);
+};
+
+/** A new installation limits leverage to 3x; the mock starts higher. */
+const limitLeverage = async (page) => {
+  await page.click('.dialog[open] input[inputmode="numeric"]');
+  await page.evaluate(`document.querySelector('.dialog[open] input[inputmode="numeric"]').select()`);
+  await page.type("3");
+  await page.evaluate(`document.querySelector('.dialog[open] input[inputmode="numeric"]').blur()`);
+  await sleep(300);
+};
+
+/** The open dialog, whole. The closed ones are in the page too. */
+const dialogBox = `(() => {
+  const b = document.querySelector(".dialog[open]").getBoundingClientRect();
+  return { x: Math.round(b.left), y: Math.round(b.top), width: Math.round(b.width), height: Math.round(b.height) };
 })()`;
+
+/**
+ * Makes the window end a little below `selector`, so the picture ends between stories instead of
+ * through one. The page's layout does not follow the window's height, so a round or two settles it.
+ */
+async function fitBelow(page, view, selector, gap = 28) {
+  let height = view.height;
+  for (let round = 0; round < 6; round += 1) {
+    const fit = await page.evaluate(`Math.ceil(document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect().bottom + ${gap})`);
+    if (Math.abs(fit - height) <= 1) break;
+    height = fit;
+    await page.send("Emulation.setDeviceMetricsOverride", { width: view.width, height, deviceScaleFactor: view.scale, mobile: false });
+    await sleep(400);
+  }
+  await sleep(600);
+}
 
 /**
  * A market's page: ETH, opened from its position under Account the way a trader would, so Back
@@ -124,6 +157,24 @@ const SHOTS = [
     { name, query, scales: [1, 2], window: WINDOW, prepare: async (page) => page.evaluate(hideCut(WINDOW.height)) },
     { name: `${name}-phone`, query, window: PHONE, prepare: async (page) => page.evaluate(hideCut(PHONE.height)) },
   ]),
+  // The News page: the masthead, the filters and the lead stories, down to the end of the stories
+  // beside the lead. On a phone the stories beside it go under it, so that picture ends with the lead.
+  // The mock's newsrooms, stories and pictures are invented.
+  {
+    name: "news-page",
+    query: "page=news",
+    scales: [1, 2],
+    window: WINDOW,
+    prepare: async (page, view) => fitBelow(page, view, ".front-top"),
+    clip: viewport,
+  },
+  {
+    name: "news-page-phone",
+    query: "page=news",
+    window: PHONE,
+    prepare: async (page, view) => fitBelow(page, view, ".story-lead"),
+    clip: viewport,
+  },
   // A market's page, down to the end of its chart.
   {
     name: "market",
@@ -213,23 +264,45 @@ const SHOTS = [
       return { x: Math.round(card.left + 1), y: Math.round(card.top + 1), width: Math.round(card.width - 2), height: TAB_HEIGHT };
     })()`,
   })),
-  // Settings.
-  { name: "settings-models", query: "settings=models", clip: settings },
-  { name: "settings-wallet", query: "settings=wallet", clip: settings },
+  // The order form on a market's page: a long of 500 USDT, with the stop-loss and take-profit its
+  // quick offsets give, 2% under and 4% over the mark price.
   {
-    name: "settings-trading",
-    query: "settings=trading",
-    clip: settings,
-    // A new installation limits leverage to 3x; the mock starts higher.
+    name: "order-form",
+    query: "page=market&seed=conversation&dialog=trade",
+    height: 1000,
     prepare: async (page) => {
-      await page.click('.dialog input[inputmode="numeric"]');
-      await page.evaluate(`document.querySelector('.dialog input[inputmode="numeric"]').select()`);
-      await page.type("3");
-      await page.evaluate(`document.querySelector('.dialog input[inputmode="numeric"]').blur()`);
-      await sleep(300);
+      await fitDialog(page);
+      await page.click('.trade-form input[name="amount"]');
+      await page.type("500");
+      await page.evaluate(`(() => {
+        document.querySelector('.trade-form input[name="amount"]').blur();
+        const [stop, target] = document.querySelectorAll(".trade-offsets");
+        stop.querySelectorAll("button")[1].click();
+        target.querySelectorAll("button")[1].click();
+      })()`);
+      await sleep(400);
     },
+    clip: dialogBox,
   },
-  { name: "settings-tools", query: "settings=tools&mcp=1", clip: settings },
+  // Settings, each section in the whole dialog. The sections the site shows have a phone picture
+  // too: Settings in a narrow window, which puts its sections in a row across the top.
+  ...[
+    { name: "settings-models", query: "settings=models" },
+    { name: "settings-wallet", query: "settings=wallet" },
+    { name: "settings-trading", query: "settings=trading", prepare: limitLeverage, phone: true },
+    { name: "settings-tools", query: "settings=tools&mcp=1", phone: true },
+  ].flatMap(({ name, query, prepare, phone }) => {
+    const shot = {
+      query,
+      height: 1000,
+      clip: dialogBox,
+      prepare: async (page) => {
+        await fitDialog(page);
+        if (prepare) await prepare(page);
+      },
+    };
+    return [{ name, ...shot }, ...(phone ? [{ name: `${name}-phone`, ...shot, width: 520 }] : [])];
+  }),
 ];
 
 const page = await launch();

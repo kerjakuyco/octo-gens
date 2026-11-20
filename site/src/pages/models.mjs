@@ -31,39 +31,55 @@ ${table({
 </div>`;
 
 /**
- * The head's picture: Settings, Models, as the app's built-in mock shows it. Lantern 2 Large and
- * reef:8b are the mock's fictional models. Reasoning effort is sent only to the OpenRouter models
- * that support it (the comparison below).
+ * The head's picture: Settings open on Models, as the app's built-in mock shows it: the sections in
+ * their three groups down the side, the model in use, then the providers in the cloud and on this
+ * computer. Lantern 2 Large and reef:8b are the mock's fictional models; the mock's model supports
+ * reasoning, whose effort is sent only to the OpenRouter models that do (the comparison below).
  */
 const provider = (name, detail, buttons, state = "") =>
   `<li class="ui-row"><div class="ui-row-text"><p class="ui-row-title">${name}${state}</p><p class="ui-row-detail">${detail}</p></div><div class="ui-row-actions">${buttons.join("")}</div></li>`;
 
+/** The sections of Settings, in the app's groups: [group, [[icon, name, open]]]. */
+const SECTIONS = [
+  ["Assistant", [["model", "Models", true], ["plug", "Tools"]]],
+  ["Exchange", [["wallet", "Wallets"], ["trade", "Risk &amp; Trading"]]],
+  ["App", [["appearance", "General"], ["info", "About &amp; Updates"]]],
+];
+
 const SETTINGS = ui({
   className: "ui-settings",
   label:
-    "A sample of Settings, Models in OctoNeo: OpenRouter in use with the fictional model Lantern 2 Large; Cloudflare AI Gateway, in the cloud, not connected; Ollama with the fictional local model reef:8b, ready to use; LM Studio, on this computer, not connected; and reasoning effort set to Auto.",
+    "A sample of Settings in OctoNeo, open on Models. Down the side, its sections in three groups: Assistant, with Models and Tools; Exchange, with Wallets and Risk & Trading; and App, with General and About & Updates. The active model is the fictional Lantern 2 Large, from OpenRouter, with reasoning. Under Cloud providers, OpenRouter is active and Cloudflare AI Gateway is not connected; under Local servers, Ollama is ready with the fictional local model reef:8b, and LM Studio is not connected.",
   caption: "Settings, Models, drawn from the app’s built-in mock: Lantern 2 Large and reef:8b are fictional models.",
-  body: `<div class="ui-bar">
-<span class="ui-bar-start"><strong class="ui-window-title">Settings</strong></span>
+  body: `<div class="ui-settings-body">
+<div class="ui-side">
+<p class="ui-side-title">Settings</p>
+${SECTIONS.map(
+  ([group, items]) => `<p class="ui-side-group">${group}</p>
+<ul>${items.map(([glyph, name, on]) => `<li${on ? " data-on" : ""}>${icon(glyph, 16)}${name}</li>`).join("")}</ul>`,
+).join("\n")}
+</div>
+<div class="ui-settings-main">
+<div class="ui-settings-head">
+<div><p class="ui-settings-title">Models</p><p class="ui-settings-desc">Connect cloud or local AI providers and tune reasoning depth.</p></div>
 <span class="ui-bar-end">${chip("Sample")}<span class="ui-close">${icon("close", 18)}</span></span>
 </div>
-<div class="ui-settings-body">
-<ul class="ui-side">
-<li data-on>${icon("model", 18)}Models</li>
-<li>${icon("wallet", 18)}Wallet</li>
-<li>${icon("trade", 18)}Trading</li>
-<li>${icon("plug", 18)}Tools</li>
-<li>${icon("appearance", 18)}Appearance</li>
-<li>${icon("info", 18)}About</li>
-</ul>
-<div class="ui-settings-main">
+<div class="ui-settings-panel">
+<div class="ui-active">
+<div><p class="ui-active-label">Active model</p><p class="ui-active-value"><span class="ui-dot" data-tone="up"></span><strong>Lantern 2 Large</strong>${chip("OpenRouter")}${chip("Reasoning")}</p></div>
+${uiButton("Switch model", "outline")}
+</div>
+<p class="ui-group-head">Cloud providers</p>
 <ul class="ui-rows">
-${provider("OpenRouter", "Lantern 2 Large", [uiButton("Change", "outline"), uiButton("Disconnect", "ghost")], chip("In use", "up"))}
+${provider("OpenRouter", "Lantern 2 Large", [uiButton("Change", "outline"), uiButton("Disconnect", "ghost")], chip("Active", "up"))}
 ${provider("Cloudflare AI Gateway", "Cloud", [uiButton("Connect", "outline")])}
-${provider("Ollama", "reef:8b", [uiButton("Use", "outline"), uiButton("Change", "outline"), uiButton("Disconnect", "ghost")])}
-${provider("LM Studio", "On this computer", [uiButton("Connect", "outline")])}
-<li class="ui-row"><div class="ui-row-text"><p class="ui-row-title">Reasoning effort</p></div><div class="ui-row-actions"><span class="ui-segments"><span data-on>Auto</span><span>Low</span><span>Medium</span><span>High</span></span></div></li>
 </ul>
+<p class="ui-group-head">Local servers</p>
+<ul class="ui-rows">
+${provider("Ollama", "reef:8b", [uiButton("Use", "outline"), uiButton("Change", "outline"), uiButton("Disconnect", "ghost")], chip("Ready"))}
+${provider("LM Studio", "On this computer", [uiButton("Connect", "outline")])}
+</ul>
+</div>
 </div>
 </div>`,
 });

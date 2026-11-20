@@ -54,7 +54,7 @@ const PRODUCT = [
   ["/markets/", "Every market, the chart, the order book and orders."],
   ["/wallet/", "A trade-only key that cannot withdraw."],
   ["/models/", "OpenRouter, Cloudflare AI Gateway, Ollama or LM Studio."],
-  ["/news/", "Eight publishers, searched on your computer."],
+  ["/news/", "Stories from eight publishers, read in the app."],
 ];
 const PROJECT = ["/safety/", "/open-source/"];
 

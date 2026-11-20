@@ -5,7 +5,7 @@ export const RELEASES = `${REPO}/releases`;
 export const ISSUES = `${REPO}/issues`;
 export const ADVISORY = `${REPO}/security/advisories/new`;
 export const TRADINGVIEW = "https://www.tradingview.com";
-export const VERSION = "0.6.0";
+export const VERSION = "0.7.0";
 
 /** A file in the repository, on GitHub. */
 export const doc = (path, anchor = "") => `${REPO}/blob/main/${path}${anchor ? `#${anchor}` : ""}`;

@@ -109,16 +109,27 @@ The Worker's name in the dashboard must be `octoneo`, the name in `wrangler.json
 
 ## Pictures
 
-The screenshots in `src/assets/shots/` are of the app's interface running in a browser against its built-in mock: a fictional account and a fictional model, nothing real. Each is saved in light and dark as `<name>-<light|dark>-<pixel width>.webp`, and the build turns the dark ones into `<picture>` elements: the site is dark only. It publishes only the pictures a page shows; the light copies and the pictures no page uses stay in the folder for later. Pictures sit in the text column of the feature pages, 760 pixels wide at most. A picture named `<name>-phone` replaces `<name>` on screens up to 640 pixels wide, where a whole window would shrink its text past reading: it is the same page in a narrow window, which the app lays out for its width. To take them again, after a change to the interface:
+The screenshots in `src/assets/shots/` are of the app's interface running in a browser against its built-in mock: a fictional account and a fictional model, nothing real. The News page's newsrooms, stories and pictures are the mock's too: invented stories from invented newsrooms, with abstract pictures the mock draws. Each is saved in light and dark as `<name>-<light|dark>-<pixel width>.webp`, and the build turns the dark ones into `<picture>` elements: the site is dark only. It publishes only the pictures a page shows; the light copies and the pictures no page uses stay in the folder for later. Pictures sit in the text column of the feature pages, 760 pixels wide at most. A picture named `<name>-phone` replaces `<name>` on screens up to 640 pixels wide, where a whole window or dialog would shrink its text past reading: it is the same page in a narrow window, which the app lays out for its width. Settings and the order form are taken whole, each dialog at the height of its content.
+
+| Page | Pictures |
+| --- | --- |
+| Assistant | `turn-btc`, `settings-tools` |
+| Markets | `markets`, `market`, `structure`, `tab-book`, `tab-funding`, `tab-technicals`, `tab-watchlist`, `order-form`, `account` |
+| News | `news-page`, `settings-tools` |
+| Wallet | `wallet-connect`, `wallet-deposit`, `wallet-withdraw` |
+| Safety | `settings-trading` |
+| Kept for later | `news`, `plan-ticket`, `ticket-mainnet`, `settings-models`, `settings-wallet` |
+
+To take them again, after a change to the interface, build the interface into a folder of its own, so the `dist/` the desktop app is built from stays as it is:
 
 ```sh
 cd ..                                            # the repository root
-pnpm build && pnpm exec vite preview --port 4322 --strictPort
+pnpm exec vite build --outDir /tmp/octoneo-ui && pnpm exec vite preview --outDir /tmp/octoneo-ui --port 4322 --strictPort
 cd site                                          # in another terminal
 CHROME=/path/to/chrome node tools/screenshots.mjs        # or name the pictures to retake
 ```
 
-`APP_URL` points the tool at another address, and `CDP_PORT` moves Chrome's debugging port from 9801.
+`APP_URL` points the tool at another address, and `CDP_PORT` moves Chrome's debugging port from 9801. A picture taken at a new width is saved beside the old one, so delete the old copies: the build would otherwise offer both.
 
 The three pictures of the wallet page (`wallet-*.webp`) are of the page the app opens in your browser, taken against a stand-in for the exchange with a test wallet; `cargo run -p octoneo-core --example wallet_page -- connect` serves that page. They are taken 2200 pixels wide; the 1520 and 760 copies are made from them with `cwebp -q 80 -m 6 -sharp_yuv -resize <width> 0`.
 

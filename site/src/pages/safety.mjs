@@ -4,33 +4,33 @@ const risks = (rows) => table({ head: ["Risk", "Protection"], stack: true, rows 
 
 /**
  * The head's picture: a mainnet ticket from the app's built-in mock, waiting for the box that says
- * you are trading real funds, beside what the app reads again when you place it (from "How a ticket
- * becomes an order" on the markets page).
+ * the order executes with real funds, beside what the app reads again when you place it (from "How
+ * a ticket becomes an order" on the markets page).
  */
 const TICKET = ui({
   className: "ui-safety",
   label:
-    "A sample mainnet ticket in OctoNeo: Long BTC / USDT, marked Mainnet, real funds. It opens a 0.016 BTC long at 3x with isolated margin, with a stop-loss at 61,344.95, and risks about 0.96% of equity. The box I am trading real funds is not checked, so Place live order cannot be pressed. Beside it, what the app reads again when you place it: the position, the mark price within 1% of the draft and the stop-loss inside the estimated liquidation price; then the order is sent once, as a market order, and its stop-loss and take-profit follow as reduce-only orders.",
-  caption: "A mainnet ticket cannot be sent until you check a box saying you are trading real funds. Sample figures from the app’s built-in mock.",
+    "A sample mainnet ticket in OctoNeo: Long BTC-USDT, a market order, marked Mainnet, live funds. It opens a 0.016 BTC long at 3x with isolated margin, with a stop-loss at 61,344.95, and risks about 0.96% of equity. The box I understand this order executes with real funds on Mainnet is not checked, so Place live order cannot be pressed. Beside it, what the app reads again when you place it: the position, the mark price within 1% of the draft and the stop-loss inside the estimated liquidation price; then the order is sent once, as a market order, and its stop-loss and take-profit follow as reduce-only orders.",
+  caption: "A mainnet ticket cannot be sent until you check a box saying you understand it executes with real funds. Sample figures from the app’s built-in mock.",
   body: `<div class="ui-safety-body">
 <div class="ui-card ui-ticket">
-<div class="ui-card-head"><span class="ui-ticket-title">${chip("Long", "up")}<span class="ui-symbol">BTC / USDT</span></span>${network("Mainnet · Real funds")}</div>
+<div class="ui-card-head"><span class="ui-ticket-title">${chip("Long", "up")}<span class="ui-symbol">BTC-USDT</span>${chip("Market")}</span>${network("Mainnet · Live funds")}</div>
 <p class="ui-ticket-effect">Opens a 0.016 BTC long at 3x with isolated margin</p>
 ${uiFacts(
   [
-    ["Quantity", "0.016 BTC"],
-    ["Value", "1,005.25 USDT"],
+    ["Order size", "0.016 BTC"],
+    ["Notional", "1,005.25 USDT"],
     ["Leverage", "3x"],
-    ["Margin", "335.08 USDT"],
-    ["Est. liquidation", "42,199.37"],
+    ["Initial margin", "335.08 USDT"],
+    ["Est. liq. price", "42,199.37"],
     ["Stop-loss", "61,344.95"],
     ["Take-profit", "65,793.63"],
   ],
   "ui-facts-two",
 )}
 <p class="ui-ticket-why">Risks about 0.96% of equity, 23.73 USDT, if the stop at 61,344.95 is hit.</p>
-<p class="ui-check"><span class="ui-checkbox"></span>I am trading real funds</p>
-<div class="ui-actions">${uiButton("Place live order", "disabled")}${uiButton("Dismiss", "ghost")}</div>
+<p class="ui-check"><span class="ui-checkbox"></span>I understand this order executes with real funds on Mainnet.</p>
+<div class="ui-actions">${uiButton("Place live order", "disabled")}${uiButton("Discard", "ghost")}</div>
 </div>
 <div class="ui-card ui-confirm">
 <p class="ui-confirm-title">When you place it</p>
@@ -89,8 +89,8 @@ ${risks([
   ["A ticket is confirmed after the market has moved", "The position and the mark price are read again at confirmation. If the position changed, the price moved more than 1%, or the stop-loss no longer protects the position, nothing is sent."],
 ])}
 ${ctx.figure("settings-trading", {
-  alt: "Settings, Trading tab: max leverage 3x, isolated margin for new positions, and a switch, off, that lets the assistant draft mainnet tickets, with the note that you still confirm every order.",
-  caption: "Settings, Trading, as a new installation has it: leverage limited to 3x, and mainnet tickets from the assistant off.",
+  alt: "Settings open on Risk & Trading: max leverage 3x, with quick limits from 2x to 20x; isolated margin for new positions; and Draft mainnet tickets switched off, marked Testnet only, with the note that you still confirm every order.",
+  caption: "Settings, Risk &amp; Trading, as a new installation has it: leverage limited to 3x, and mainnet tickets from the assistant off.",
   kind: "column",
 })}
 <h3>Keys and funds</h3>
@@ -105,8 +105,9 @@ ${reference("Eight risks to your keys and funds, and what guards against each", 
   ["A mistyped or revoked provider key is stored", "A new OpenRouter key is shown to OpenRouter, and a Cloudflare token is proved with one short chat, before either is kept. A key that is turned away replaces nothing."],
 ]))}
 <h3>The model and the web</h3>
-${reference("Seven risks from the model, web pages and tool servers, and what guards against each", risks([
+${reference("Eight risks from the model, web pages and tool servers, and what guards against each", risks([
   ["A hostile page or tool output hijacks the app", "The interface has no network access and can only call the app’s own commands. The model is told to treat tool output as data, and the rules above hold even if it is fooled."],
+  ["An article opened on the News page reaches into the app", `It opens in a separate browser view inside the window. That view cannot call the app’s commands: Tauri refuses commands from remote pages, the interface’s permissions name only its own web view, and every command checks which web view asked. It moves only to public ${code("https")} pages, refuses downloads and other schemes, and keeps no cookies or storage once closed. Story pictures are fetched by the app’s core, only ones a feed offered, and only real images.`],
   ["A news article tells the model what to do", "What the assistant reads on the web reaches the model marked as data. Whatever it is talked into, it can still only draft a ticket you must confirm."],
   ["A page makes the model send your figures somewhere", "The assistant reads only a page a news search showed it, or one you gave it a link to. A link it made up, or one it changed, is never requested, so nothing of yours can leave inside an address."],
   ["The assistant is pointed at something on your own network", `Only public ${code("https")} pages are read. Addresses on your computer or on a private network are refused by name, by number, after a redirect, and when the connection is made.`],
@@ -118,7 +119,7 @@ ${reference("Seven risks from the model, web pages and tool servers, and what gu
         {
           id: "data",
           title: "Your data stays on your computer",
-          lead: "There is no telemetry. The interface has no network access of its own: requests go from the app’s core directly to the exchange, to the model provider you chose, to any tool server you attached and, while web search is on, to news publishers, the articles the assistant opens from news results and pages you link. Nowhere else.",
+          lead: "There is no telemetry. The interface has no network access of its own: requests go from the app’s core directly to the exchange, to the model provider you chose, to any tool server you attached and, while web search is on, to news publishers and the sites that serve their pictures, the articles the assistant opens from news results and pages you link. Beyond those, the app asks GitHub for its latest release when it starts, and an article you open on the News page loads in a separate browser view inside the window, as it would in your browser. Nowhere else.",
           body: `${table({
             head: ["What", "Where"],
             stack: true,
@@ -126,12 +127,15 @@ ${reference("Seven risks from the model, web pages and tool servers, and what gu
               ["Conversations, activity, preferences", `Windows ${code("%LOCALAPPDATA%\\Octo Gens\\")}<br>macOS ${code("~/Library/Application Support/Octo Gens/")}<br>Linux ${code("~/.local/share/octo-gens/")}`],
               ["API wallet keys, OpenRouter key, Cloudflare API token", `Your system keychain, under ${code("org.octogens.desktop")}`],
               ["Positions, balances, orders", "On the exchange. The app reads them and keeps no copy between launches."],
+              ["Story pictures on the News page", "In memory: the last 64, up to 32 MB. Nothing is kept between launches."],
+              ["An article you open", "Its cookies and storage, in memory and only while it is open."],
             ],
           })}
 <p>The folder and the keychain entry keep the name the app had before it was called OctoNeo, so an existing installation keeps its wallet, settings and conversations.</p>
 <ul class="checks">
 <li>With a cloud model, your messages and what the assistant reads for them, including the account summary, go to that provider. With Ollama or LM Studio they stay on your computer.</li>
-<li>With web search on, the app downloads the public feeds of eight publishers and the articles the assistant reads. What you type is not sent to them, except the ticker of a share, a fund or a commodity, which goes to Yahoo Finance.</li>
+<li>With web search on, the app downloads the public feeds of eight publishers, the pictures of the stories on the News page, and the articles the assistant reads. What you type is not sent to them, except the ticker of a share, a fund or a commodity, which goes to Yahoo Finance.</li>
+<li>An article you open on the News page is loaded by the in-app browser view with the publisher’s own scripts and ads, and keeps no cookies once you close it.</li>
 <li>The journal keeps your conversations, which can include account figures the assistant quoted. Deleting a conversation removes it from the journal.</li>
 </ul>
 ${reference("Environment variables, meant for tests", table({
@@ -151,7 +155,7 @@ ${reference("Environment variables, meant for tests", table({
 <li><strong>Anyone who can run programs as you can use the key.</strong> Software running under your user account can ask the keychain for it, or drive the app. The key cannot withdraw, but it can trade.</li>
 <li><strong>The journal is not encrypted.</strong> It keeps your conversations and what the assistant quoted, which can include account figures, and anything you paste into a message. It never contains the keys the app holds.</li>
 <li><strong>A cloud model sees what you ask it.</strong> Your messages, the tool results it gathers and the account summary in each message go to the provider you chose: OpenRouter, or Cloudflare and the provider behind your gateway.</li>
-<li><strong>News publishers see that you read them.</strong> They see your network address, as any site you visit does.</li>
+<li><strong>News publishers see that you read them.</strong> When the app downloads their feeds, the pictures of their stories and the articles the assistant reads, they see your network address, as any site you visit does. An article you open on the News page loads as the publisher made it, with its own scripts, trackers and ads, as in a browser.</li>
 <li><strong>The news can be wrong.</strong> A headline is one newsroom’s report. The assistant is told to say who reported it and when, and not to trade on it, but it cannot check it.</li>
 <li><strong>A local server’s address is yours to choose.</strong> If you point Ollama or LM Studio at another machine, your conversations go to that machine.</li>
 <li><strong>A deposit cannot be taken back.</strong> Once your wallet has sent it, neither the app nor the exchange can undo it, so check the network and the amount in your wallet’s prompt.</li>
@@ -172,7 +176,7 @@ ${reference("Environment variables, meant for tests", table({
 <li>Keep the leverage limit low.</li>
 <li>Attach only tool servers you trust. A local command runs with your user’s permissions.</li>
 <li>Give a Cloudflare API token only the Workers AI Read permission. The app needs nothing more.</li>
-<li>Keep the app up to date. Fixes are released for the latest version only.</li>
+<li>Keep the app up to date: it tells you when a newer release is out. Fixes are released for the latest version only.</li>
 </ul>`,
         },
         {

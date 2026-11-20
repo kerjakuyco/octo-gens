@@ -156,6 +156,7 @@ ${steps([
 </ol>
 ${facts([
   ["Message box", `${code("Ctrl+K")} on Windows and Linux, ${code("Cmd+K")} on macOS`],
+  ["Settings", `${code("Ctrl+,")} on Windows and Linux, ${code("Cmd+,")} on macOS`],
   ["Stop an answer", code("Esc")],
 ])}`,
         },
@@ -172,7 +173,7 @@ ${facts([
         {
           id: "updates",
           title: "Updates and help",
-          body: `<p>Fixes are released for the latest version only, so keep the app up to date. The ${out(doc("CHANGELOG.md"), "changelog")} lists what changed in each version. To report a bug or suggest an idea, open an ${out(ISSUES, "issue on GitHub")}; to report a security problem, follow the ${out(doc("SECURITY.md"), "security policy")} instead.</p>
+          body: `<p>OctoNeo checks GitHub for a newer release when it starts. When one is out, a note in the sidebar and Settings, About &amp; Updates show its release notes and link to the download, and you can skip a version you do not want. Fixes are released for the latest version only, so keep the app up to date. The ${out(doc("CHANGELOG.md"), "changelog")} lists what changed in each version. To report a bug or suggest an idea, open an ${out(ISSUES, "issue on GitHub")}; to report a security problem, follow the ${out(doc("SECURITY.md"), "security policy")} instead.</p>
 <p>The source is at ${out(REPO, "github.com/kerjakuyco/octo-neo")}.</p>`,
         },
       ],

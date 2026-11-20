@@ -2229,6 +2229,12 @@ html:not(.js) .nav-item-label {
   gap: 10px;
 }
 
+/* On the narrowest screens the network goes under the side, the market and the order type. */
+.d-ticket .d-card-head {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
 .d-ticket-effect {
   font-size: 0.9375rem;
   font-weight: 600;

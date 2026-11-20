@@ -20,7 +20,7 @@ web_search: on
 const CONVERSATION = ui({
   className: "ui-chat",
   label:
-    "A sample conversation in OctoNeo on testnet. The message Long ETH, 1% risk; a line saying the assistant checked the ETH price, the 4h chart and the account and drafted a ticket; a plan card for a 3x long with entry 1,778.89, stop-loss 1,764.66 and take-profit 1,807.36, 7.026 ETH risking 99.99 USDT; a short answer; and the ticket, with Place order and Dismiss.",
+    "A sample conversation in OctoNeo on testnet. The message Long ETH, 1% risk; a line saying the assistant checked the ETH price, the 4h chart and the account and drafted a ticket; a plan card for a 3x long with entry 1,778.89, stop-loss 1,764.66 and take-profit 1,807.36, 7.026 ETH risking 99.99 USDT; a short answer; and the ticket, a market order, with Place order and Discard.",
   caption:
     "Sample conversation on testnet, the exchange’s practice network with test funds. The model and the account are fictional; the figures are illustrative, not live prices.",
   body: `<div class="ui-bar">
@@ -54,22 +54,22 @@ ${uiFacts(
 <p>The ticket is ready. Nothing is sent until you place it. This is testnet: practice funds.</p>
 </div>
 <div class="ui-card ui-ticket">
-<div class="ui-card-head"><span class="ui-ticket-title">${chip("Long", "up")}<span class="ui-symbol">ETH / USDT</span></span>${chip("Testnet")}</div>
+<div class="ui-card-head"><span class="ui-ticket-title">${chip("Long", "up")}<span class="ui-symbol">ETH-USDT</span>${chip("Market")}</span>${chip("Testnet")}</div>
 <p class="ui-ticket-effect">Opens a 7.026 ETH long at 3x with isolated margin</p>
 ${uiFacts(
   [
-    ["Quantity", "7.026 ETH"],
-    ["Value", "12,498.51 USDT"],
+    ["Order size", "7.026 ETH"],
+    ["Notional", "12,498.51 USDT"],
     ["Leverage", "3x"],
-    ["Margin", "4,166.17 USDT"],
-    ["Est. liquidation", "1,194.82"],
+    ["Initial margin", "4,166.17 USDT"],
+    ["Est. liq. price", "1,194.82"],
     ["Stop-loss", "1,764.66"],
     ["Take-profit", "1,807.36"],
   ],
   "ui-facts-two",
 )}
 <p class="ui-ticket-why">Risks about 1% of equity, 99.99 USDT, if the stop at 1,764.66 is hit.</p>
-<div class="ui-actions">${uiButton("Place order", "primary")}${uiButton("Dismiss", "ghost")}</div>
+<div class="ui-actions">${uiButton("Place order", "primary")}${uiButton("Discard", "ghost")}</div>
 </div>
 </div>`,
 });
@@ -149,7 +149,7 @@ ${facts([
 <ul class="checks">
 <li>A ticket from the assistant that opens or adds to a position without a stop-loss.</li>
 <li>A stop-loss beyond the estimated liquidation price, because liquidation would come first.</li>
-<li>Leverage above your limit: 3x on a new installation, and at most 50x if you raise it in Settings under Trading.</li>
+<li>Leverage above your limit: 3x on a new installation, and at most 50x if you raise it in Settings under Risk &amp; Trading.</li>
 <li>A mainnet ticket from the assistant unless you turned that on. Turning it off again discards one that is waiting.</li>
 <li>A second submission. A draft is consumed by its first confirmation, and expires when the network changes.</li>
 </ul>
@@ -191,7 +191,7 @@ ${facts([
   ["Trust", "A local command runs with your user’s permissions. Attach only servers you trust."],
 ], "facts-wide")}
 ${ctx.figure("settings-tools", {
-  alt: "Settings, Tools tab: web search switched on, and one attached tool server named notes with five tools.",
+  alt: "Settings open on Tools: web search switched on, and one attached tool server, notes, a local command with five tools, with Inspect and Remove.",
   caption: "Settings, Tools: web search, and an attached tool server.",
   kind: "column",
 })}`,

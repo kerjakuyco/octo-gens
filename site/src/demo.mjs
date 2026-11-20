@@ -90,14 +90,14 @@ const SCENARIOS = [
     ticket: {
       at: 4,
       action: "Long",
-      pair: "ETH / USDT",
+      pair: "ETH-USDT",
       effect: "Opens a 7.026 ETH long at 3x with isolated margin",
       facts: [
-        ["Quantity", "7.026 ETH"],
-        ["Value", "12,498.51 USDT"],
+        ["Order size", "7.026 ETH"],
+        ["Notional", "12,498.51 USDT"],
         ["Leverage", "3x"],
-        ["Margin", "4,166.17 USDT"],
-        ["Est. liquidation", "1,194.82"],
+        ["Initial margin", "4,166.17 USDT"],
+        ["Est. liq. price", "1,194.82"],
         ["Stop-loss", "1,764.66"],
         ["Take-profit", "1,807.36"],
       ],
@@ -285,8 +285,8 @@ ${c.rows
 }
 
 function ticket(t) {
-  return `<div class="d-card d-ticket" role="group" aria-label="${t.action} ETH ticket" data-state="pending"${at(t.at)}>
-<header class="d-card-head"><span class="d-ticket-title"><span class="d-chip" data-tone="up">${t.action}</span><span class="d-symbol">${t.pair}</span></span><span class="d-chip">Testnet</span></header>
+  return `<div class="d-card d-ticket" role="group" aria-label="${t.action} ETH order" data-state="pending"${at(t.at)}>
+<header class="d-card-head"><span class="d-ticket-title"><span class="d-chip" data-tone="up">${t.action}</span><span class="d-symbol">${t.pair}</span><span class="d-chip">Market</span></span><span class="d-chip">Testnet</span></header>
 <p class="d-ticket-effect">${t.effect}</p>
 <dl class="d-facts d-facts-two">
 ${t.facts.map(([term, value]) => fact(term, value)).join("\n")}
@@ -294,10 +294,10 @@ ${t.facts.map(([term, value]) => fact(term, value)).join("\n")}
 <p class="d-ticket-why">${t.why}</p>
 <div class="d-ticket-actions">
 <button type="button" class="d-btn d-btn-primary" data-ticket="place">Place order</button>
-<button type="button" class="d-btn d-btn-ghost" data-ticket="dismiss">Dismiss</button>
+<button type="button" class="d-btn d-btn-ghost" data-ticket="dismiss">Discard</button>
 </div>
 <p class="d-note" data-ticket-note hidden>${icon("check", 16)}<span>Nothing was sent: this is a sample. In OctoNeo, placing a ticket is the only way an order reaches the exchange, and the app checks your position and the price again before it sends anything.</span></p>
-<p class="d-dismissed" data-ticket-dismissed hidden>Dismissed</p>
+<p class="d-dismissed" data-ticket-dismissed hidden>Order draft expired</p>
 </div>`;
 }
 
