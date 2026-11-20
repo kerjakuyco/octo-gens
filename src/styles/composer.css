@@ -1,0 +1,632 @@
+/* The message box: the field, its commands and their settings, the lists it opens, the send button. */
+
+.composer-wrap {
+  position: relative;
+}
+
+/* ----------------------------------------------------------------- the box */
+
+.composer {
+  display: grid;
+  padding: 6px 8px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--r-composer);
+  background: var(--surface);
+  transition:
+    border-color var(--t-base) var(--ease-out),
+    box-shadow var(--t-slow) var(--ease-out);
+}
+
+/* The box shows focus, since the field inside it has no edge of its own. */
+.composer:focus-within {
+  border-color: var(--faint);
+}
+
+/* A long or a short tints the box with its direction, so the side being drafted is never in doubt. */
+.composer[data-tone="up"] {
+  border-color: color-mix(in srgb, var(--up) 55%, transparent);
+  box-shadow: 0 0 0 4px var(--up-soft);
+}
+
+.composer[data-tone="down"] {
+  border-color: color-mix(in srgb, var(--down) 55%, transparent);
+  box-shadow: 0 0 0 4px var(--down-soft);
+}
+
+.composer textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-height: 200px;
+  padding: 8px 12px 6px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: var(--text-chat);
+  line-height: 1.5;
+  resize: none;
+}
+
+.composer textarea::placeholder {
+  color: var(--muted);
+}
+
+.composer-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.composer-tool {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 11px 0 9px;
+  border-radius: var(--r-pill);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition:
+    background-color var(--t-fast),
+    color var(--t-fast);
+}
+
+.composer-tool:hover,
+.composer-tool[aria-expanded="true"] {
+  background: var(--surface-strong);
+  color: var(--text);
+}
+
+/* Which money a trade command would use, shown while one is in the box. */
+.composer-network {
+  margin-right: 8px;
+  background: var(--surface-strong);
+  animation: chip-in var(--t-base) var(--ease-pop) backwards;
+}
+
+.send {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--on-primary);
+  transition:
+    background-color var(--t-fast),
+    opacity var(--t-base) var(--ease-out),
+    transform var(--t-fast) var(--ease-out);
+}
+
+.send:not(:disabled):hover {
+  background: var(--primary-hover);
+}
+
+.send:not(:disabled):active {
+  transform: scale(0.92);
+}
+
+.send:disabled {
+  opacity: 0.25;
+}
+
+.send > svg {
+  animation: swap var(--t-base) var(--ease-pop);
+}
+
+@keyframes swap {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+/* ------------------------------------------------------------- the command */
+
+/* Opens to the height of what it holds, and closes the same way. */
+.composer-command {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--t-slow) var(--ease-out);
+}
+
+.composer-command[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+.composer-command-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.composer-command-body {
+  display: grid;
+  gap: 8px;
+  padding: 6px 4px 2px;
+  transition: opacity var(--t-base) var(--ease-out);
+}
+
+.composer-command[data-open="false"] .composer-command-body {
+  opacity: 0;
+}
+
+.cmd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* The chips arrive one after another. */
+.cmd-pill,
+.cmd-chip-slot {
+  animation: chip-in var(--t-base) var(--ease-pop) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+.cmd-chip-slot {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.cmd-pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 4px 0 10px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition:
+    background-color var(--t-base),
+    color var(--t-base);
+}
+
+.cmd-pill[data-tone="up"] {
+  background: var(--up-soft);
+  color: var(--up);
+}
+
+.cmd-pill[data-tone="down"] {
+  background: var(--down-soft);
+  color: var(--down);
+}
+
+.cmd-pill-remove {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: inherit;
+  opacity: 0.7;
+  transition:
+    opacity var(--t-fast),
+    background-color var(--t-fast);
+}
+
+.cmd-pill-remove:hover {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  opacity: 1;
+}
+
+.cmd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 220px;
+  height: 30px;
+  padding: 0 8px 0 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color var(--t-fast),
+    border-color var(--t-fast);
+}
+
+.cmd-chip:hover,
+.cmd-chip[aria-expanded="true"] {
+  border-color: var(--border-strong);
+  background: var(--surface-strong);
+}
+
+.cmd-chip > svg:last-child {
+  color: var(--faint);
+  transition: transform var(--t-base) var(--ease-out);
+}
+
+.cmd-chip[aria-expanded="true"] > svg:last-child {
+  transform: rotate(180deg);
+}
+
+.cmd-chip .mark {
+  width: 18px;
+  height: 18px;
+  font-size: 0.5rem;
+}
+
+.cmd-chip > .mark:first-child {
+  margin-left: -5px;
+}
+
+.cmd-chip-prefix {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.cmd-chip-up {
+  color: var(--up);
+}
+
+.cmd-chip-down {
+  color: var(--down);
+}
+
+/* Why the command cannot go yet, or what to know before it does. */
+.cmd-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  animation: rise-in var(--t-base) var(--ease-out) backwards;
+}
+
+.cmd-note > svg {
+  color: var(--faint);
+}
+
+.cmd-note[data-tone="block"] > svg {
+  color: var(--warn);
+}
+
+.cmd-note-text {
+  min-width: 0;
+}
+
+.cmd-note-fix {
+  flex: none;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--text-meta);
+  font-weight: 600;
+  transition: background-color var(--t-fast);
+}
+
+.cmd-note-fix:hover {
+  background: var(--primary-hover);
+}
+
+/* The message the command writes, word for word. */
+.cmd-preview {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.cmd-preview-label {
+  flex: none;
+  color: var(--faint);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ----------------------------------------------------------- lists it opens */
+
+.composer-pop {
+  position: absolute;
+  z-index: 40;
+  right: 0;
+  bottom: calc(100% + 8px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 380px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--popover);
+  box-shadow: var(--shadow);
+  transform-origin: 50% 100%;
+  animation: pop-in var(--t-base) var(--ease-out);
+}
+
+.composer-pop[data-side="bottom"] {
+  top: calc(100% + 8px);
+  bottom: auto;
+  transform-origin: 50% 0;
+  animation-name: drop-in;
+}
+
+.composer-pop[data-state="closing"] {
+  pointer-events: none;
+  animation: pop-out var(--t-fast) var(--ease-in) forwards;
+}
+
+.composer-pop[data-side="bottom"][data-state="closing"] {
+  animation-name: drop-out;
+}
+
+/* The shared entrances rise; a list opening beneath the box drops instead. */
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+
+@keyframes drop-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.composer-pop-keys {
+  display: flex;
+  flex: none;
+  gap: 16px;
+  margin-top: 4px;
+  padding: 8px 10px 4px;
+  border-top: 1px solid var(--border);
+  color: var(--faint);
+  font-size: var(--text-meta);
+}
+
+.composer-pop-keys kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-right: 3px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.6875rem;
+  line-height: 1;
+}
+
+/* A list the field drives: one highlight slides to the option the keys or the pointer are on. */
+.lb {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.lb-glider {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 0;
+  border-radius: var(--r-control);
+  background: var(--surface-strong);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--t-base) var(--ease-out),
+    height var(--t-base) var(--ease-out),
+    opacity var(--t-fast);
+}
+
+.lb-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 4px 10px;
+  border-radius: var(--r-control);
+  font-size: var(--text-ui);
+  cursor: pointer;
+}
+
+.lb-heading {
+  padding: 12px 10px 4px;
+  color: var(--faint);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.lb-glider + .lb-group .lb-heading {
+  padding-top: 6px;
+}
+
+.lb-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 10px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* A command in the list: its icon, its name, how to type it, and what it does. */
+.cmd-option {
+  gap: 12px;
+}
+
+.cmd-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-small);
+  background: var(--bg);
+  color: var(--muted);
+  transition:
+    color var(--t-fast),
+    border-color var(--t-fast);
+}
+
+.cmd-option[aria-selected="true"] .cmd-icon {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.cmd-option[data-tone="up"] .cmd-icon {
+  color: var(--up);
+}
+
+.cmd-option[data-tone="down"] .cmd-icon {
+  color: var(--down);
+}
+
+.cmd-name {
+  flex: none;
+  font-weight: 500;
+}
+
+.cmd-id {
+  flex: none;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 0.78125rem;
+}
+
+.cmd-hint {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-align: right;
+}
+
+.cmd-option[data-blocked="true"] .cmd-name,
+.cmd-option[data-blocked="true"] .cmd-icon,
+.cmd-option[data-blocked="true"] .cmd-id {
+  opacity: 0.5;
+}
+
+.cmd-option[data-blocked="true"] .cmd-hint {
+  color: var(--faint);
+}
+
+/* A market in the list: its mark and name, its price and the day's change, or the position held. */
+.mk-option {
+  font-size: var(--text-sm);
+}
+
+.mk-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.mk-name .muted {
+  font-weight: 400;
+}
+
+.mk-side {
+  flex: none;
+  font-size: var(--text-meta);
+  font-weight: 600;
+}
+
+.mk-price {
+  flex: none;
+}
+
+.mk-change {
+  flex: none;
+  min-width: 64px;
+  font-size: var(--text-meta);
+  text-align: right;
+}
+
+.mk-option > svg:last-child {
+  color: var(--text);
+}
+
+/* A chip's own list of markets, placed against the window beside the chip. */
+.mk-pop {
+  position: fixed;
+  z-index: 60;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(340px, calc(100vw - 16px));
+  max-height: 440px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--popover);
+  box-shadow: var(--shadow);
+  transform-origin: 0 100%;
+  animation: pop-in var(--t-base) var(--ease-out);
+}
+
+.mk-pop[data-side="bottom"] {
+  transform-origin: 0 0;
+  animation-name: drop-in;
+}
+
+.mk-pop[data-state="closing"] {
+  pointer-events: none;
+  animation: pop-out var(--t-fast) var(--ease-in) forwards;
+}
+
+.mk-pop .switcher-search {
+  flex: none;
+}
+
+/* ------------------------------------------------------------------ narrow */
+
+@media (max-width: 620px) {
+  .composer-tool {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .composer-tool-label,
+  .cmd-hint,
+  .composer-pop-keys {
+    display: none;
+  }
+
+  .cmd-chip {
+    max-width: 160px;
+  }
+}

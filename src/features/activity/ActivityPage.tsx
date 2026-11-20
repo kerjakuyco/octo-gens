@@ -16,6 +16,7 @@ import {
   draftFromExecution,
   draftFromPosition,
   formatJournalMarkdown,
+  journalReviewPrompt,
   openJournalComposer,
   saveJournalEntry,
   updateJournalDraft,
@@ -1361,20 +1362,8 @@ export function ActivityPage() {
   }
 
   function askAiCoach() {
-    const pf =
-      metrics.profitFactor !== null && Number.isFinite(metrics.profitFactor)
-        ? metrics.profitFactor.toFixed(2)
-        : "—";
-    const prompt = [
-      `Review my perpetual trading journal performance (${metrics.closedCount} closed trades, ${metrics.openCount} open theses):`,
-      `- Win rate: ${metrics.winRatePct !== null ? `${metrics.winRatePct.toFixed(1)}%` : "—"}, Net realized P&L: ${signedMoney(metrics.netPnlUsd.toFixed(2))} USDT, Profit factor: ${pf}, Discipline score: ${metrics.disciplinePct.toFixed(0)}%`,
-      metrics.bestSetup ? `- Top setup: ${metrics.bestSetup.setup} (${signedMoney(metrics.bestSetup.netPnlUsd.toFixed(2))} USDT)` : "",
-      "Identify my strongest edge, any risk/discipline leaks, and how I should position my current portfolio.",
-    ]
-      .filter(Boolean)
-      .join("\n");
     navigate("chat");
-    void ask(prompt);
+    void ask(journalReviewPrompt(metrics));
   }
 
   const tabs: { id: ActivityTab; label: string; count: number }[] = [

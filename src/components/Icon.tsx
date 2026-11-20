@@ -23,6 +23,14 @@ const SHAPES = {
   alert: <path d="M12 4 21 19.5H3zM12 10v4.5M12 17v.2" />,
   trade: <path d="M4 8.5h15m-4-4 4 4-4 4M20 15.5H5m4 4-4-4 4-4" />,
   chart: <path d="M4 19.5h16M7.5 16V9.5M12 16V5M16.5 16v-4.5" />,
+  grid: (
+    <>
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1.4" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.4" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.4" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.4" />
+    </>
+  ),
   search: (
     <>
       <circle cx="11" cy="11" r="6" />
@@ -117,6 +125,45 @@ const SHAPES = {
     </>
   ),
   download: <path d="M12 4.5V15m-4.5-4.5L12 15l4.5-4.5M5 19.5h14" />,
+  trendUp: <path d="M4 16.5 9.5 11l3.5 3.5 7-7M15 7.5h5v5" />,
+  trendDown: <path d="M4 7.5 9.5 13l3.5-3.5 7 7M15 16.5h5v-5" />,
+  target: (
+    <>
+      <circle cx="12" cy="12" r="7" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5" />
+    </>
+  ),
+  exit: <path d="M13.5 4.5h5v15h-5M10 8l-4 4 4 4M6.5 12H15" />,
+  minus: <path d="M5.5 12h13" />,
+  bolt: <path d="M13 3.5 5.5 13.5H12l-1 7 7.5-10H12z" />,
+  percent: (
+    <>
+      <path d="M18 6 6 18" />
+      <circle cx="7.5" cy="7.5" r="2" />
+      <circle cx="16.5" cy="16.5" r="2" />
+    </>
+  ),
+  levels: <path d="M4 6.5h16M4 17.5h16M4 12h2.5M9.5 12h5M17.5 12H20" />,
+  book: <path d="M12 4.5v15M10.5 7.5h-4M10.5 11h-6M10.5 14.5H8M13.5 9h4.5M13.5 12.5h2.5M13.5 16h6" />,
+  compare: <path d="M8 19.5v-15M16 4.5v15M4.5 8 8 4.5 11.5 8M12.5 16l3.5 3.5 3.5-3.5" />,
+  journal: (
+    <>
+      <path d="M6.5 4.5h11a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-11z" />
+      <path d="M6.5 4.5v15M4.5 8.5h3M4.5 15.5h3M10 9h5M10 12.5h5" />
+    </>
+  ),
+  slash: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="4.5" />
+      <path d="m14 8-4 8" />
+    </>
+  ),
+  dollar: (
+    <path d="M12 4v16M15.8 7.8c-.7-1-2-1.8-3.8-1.8-2.1 0-3.8 1.1-3.8 2.8S9.7 11.4 12 12s3.9 1.3 3.9 3.1-1.7 2.9-3.9 2.9c-1.9 0-3.3-.8-4-2" />
+  ),
+  arrowDown: <path d="M12 5v14m-6-6 6 6 6-6" />,
+  sparkle: <path d="M12 4.5 13.7 10.3 19.5 12 13.7 13.7 12 19.5 10.3 13.7 4.5 12 10.3 10.3z" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof SHAPES;

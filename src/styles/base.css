@@ -156,6 +156,45 @@ svg {
   }
 }
 
+/* Shared entrances and exits. Pair them with the motion tokens in tokens.css. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+@keyframes pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/* A highlight that sweeps across text, for work in progress. Use on text with `background-clip: text`. */
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
 .spinner {
   display: inline-block;
   width: 14px;

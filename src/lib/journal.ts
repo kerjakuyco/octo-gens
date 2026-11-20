@@ -11,6 +11,7 @@
 import { useSyncExternalStore } from "react";
 import { isDesktop } from "../api";
 import type { Network } from "../api/types";
+import { signedMoney } from "./format";
 import type { EnrichedPosition, ExecutionRecord } from "./portfolio";
 
 const STORAGE_KEY = "octoneo.journal.v1";
@@ -634,4 +635,23 @@ export function formatJournalMarkdown(entries: JournalEntry[], metrics: JournalM
   }
 
   return lines.join("\n");
+}
+
+/**
+ * The message that asks the assistant to review the journal's performance: the figures, then what to
+ * look for. The journal reaches a model only in this message, when the trader asks for the review.
+ */
+export function journalReviewPrompt(metrics: JournalMetrics): string {
+  const pf =
+    metrics.profitFactor !== null && Number.isFinite(metrics.profitFactor) ? metrics.profitFactor.toFixed(2) : "—";
+  return [
+    `Review my perpetual trading journal performance (${metrics.closedCount} closed trades, ${metrics.openCount} open theses):`,
+    `- Win rate: ${metrics.winRatePct !== null ? `${metrics.winRatePct.toFixed(1)}%` : "—"}, Net realized P&L: ${signedMoney(metrics.netPnlUsd.toFixed(2))} USDT, Profit factor: ${pf}, Discipline score: ${metrics.disciplinePct.toFixed(0)}%`,
+    metrics.bestSetup
+      ? `- Top setup: ${metrics.bestSetup.setup} (${signedMoney(metrics.bestSetup.netPnlUsd.toFixed(2))} USDT)`
+      : "",
+    "Identify my strongest edge, any risk/discipline leaks, and how I should position my current portfolio.",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }

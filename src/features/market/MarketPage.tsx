@@ -18,7 +18,9 @@ import {
   cancelOrder,
   closePosition,
   openExternal,
+  openGrid,
   openTrade,
+  prefillComposer,
   request,
   setChartTimeframe,
   setMarketTab,
@@ -429,8 +431,24 @@ export function MarketPage() {
                   sub="Size position with a technical stop-loss"
                   onSelect={() => void ask(`Plan a short on ${instrument.base} with 1% risk and a technical stop-loss.`)}
                 />
+                <MenuItem
+                  icon="grid"
+                  label="Plan a grid bot"
+                  sub="Buys low and sells high between support and resistance"
+                  onSelect={() => prefillComposer("grid", { market: instrument.symbol })}
+                />
               </Menu>
             ) : null}
+
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              title={`Build a futures grid bot for ${instrument.base}`}
+              onClick={() => openGrid(symbol)}
+            >
+              <Icon name="grid" size={15} />
+              <span>Grid</span>
+            </button>
 
             <button type="button" className="btn btn-sm btn-primary" onClick={() => openTrade()}>
               Trade

@@ -1,4 +1,4 @@
-/* The conversation: messages, what the assistant did, cards, tickets, the message box. */
+/* The conversation: messages, what the assistant did, cards, tickets. The message box is in composer.css. */
 
 .chat {
   display: flex;
@@ -17,6 +17,7 @@
   justify-items: center;
   gap: 16px;
   padding: 0 24px 28px;
+  animation: rise-in var(--t-slow) var(--ease-out);
 }
 
 .chat-title {
@@ -81,6 +82,7 @@
 }
 
 .chat-foot {
+  position: relative;
   flex: none;
   width: 100%;
   max-width: calc(var(--measure) + 48px);
@@ -88,73 +90,52 @@
   padding: 0 24px 20px;
 }
 
-/* ---------------------------------------------------------------- composer */
-
-.composer {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  padding: 10px 10px 10px 20px;
-  border: 1px solid transparent;
-  border-radius: var(--r-composer);
-  background: var(--surface);
-  transition: border-color 0.12s;
+/* The conversation fades out as it scrolls under the message box, instead of ending on a hard edge. */
+.chat[data-empty="false"] .chat-foot::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(to bottom, transparent, var(--bg));
+  pointer-events: none;
 }
 
-/* The box shows focus, since the field inside it has no edge of its own. */
-.composer:focus-within {
-  border-color: var(--faint);
-}
-
-.composer textarea {
-  flex: 1 1 auto;
-  min-width: 0;
-  max-height: 200px;
-  padding: 6px 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  font-size: var(--text-chat);
-  line-height: 1.5;
-  resize: none;
-}
-
-.composer textarea::placeholder {
-  color: var(--muted);
-}
-
-.send {
+/* Back to the end of the conversation, for a reader who scrolled up. It floats just above the message box. */
+.to-latest {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 0;
+  right: 0;
+  z-index: 1;
   display: grid;
-  flex: none;
   place-items: center;
   width: 36px;
   height: 36px;
+  margin: 0 auto;
   border-radius: 50%;
-  background: var(--primary);
-  color: var(--on-primary);
-  transition:
-    background-color 0.12s,
-    opacity 0.12s;
+  background: var(--popover);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  transition: background-color var(--t-fast);
+  animation: pop-in var(--t-base) var(--ease-pop);
 }
 
-.send:not(:disabled):hover {
-  background: var(--primary-hover);
+.to-latest:hover {
+  background: var(--surface);
 }
 
-.send:disabled {
-  opacity: 0.25;
+.to-latest:active {
+  transform: scale(0.94);
 }
 
-.send > svg {
-  animation: swap 0.14s ease-out;
+.to-latest[data-state="closing"] {
+  pointer-events: none;
+  animation: pop-out var(--t-fast) var(--ease-in) forwards;
 }
 
-@keyframes swap {
-  from {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-}
+/* ------------------------------------------------------------- suggestions */
 
 .suggestions {
   display: flex;
@@ -164,20 +145,131 @@
   padding-top: 16px;
 }
 
+/* Under an answer they line up with it and stand back a little. */
+.suggestions[data-variant="follow"] {
+  justify-content: flex-start;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+/* Each chip rises in a moment after the one before it. `backwards` hides it until its turn comes. */
 .suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
   height: 36px;
-  padding: 0 14px;
+  padding: 0 14px 0 12px;
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
   color: var(--muted);
+  font-size: var(--text-ui);
+  white-space: nowrap;
   transition:
-    background-color 0.12s,
-    color 0.12s;
+    background-color var(--t-fast),
+    border-color var(--t-fast),
+    color var(--t-fast),
+    transform var(--t-fast) var(--ease-out);
+  animation: rise-in var(--t-slow) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
 }
 
-.suggestion:hover {
+.suggestions[data-variant="follow"] .suggestion {
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px 0 10px;
+  font-size: var(--text-sm);
+  animation-delay: calc(120ms + var(--i, 0) * 40ms);
+}
+
+.suggestion > svg {
+  flex: none;
+  color: var(--faint);
+  transition: color var(--t-fast);
+}
+
+.suggestion[data-tone="up"] > svg {
+  color: var(--up);
+}
+
+.suggestion[data-tone="down"] > svg {
+  color: var(--down);
+}
+
+.suggestion-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A chip that fills in a command shows which one: it goes into the message box to look over, it is not sent. */
+.suggestion-command {
+  flex: none;
+  margin-right: -4px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 0.71875rem;
+  line-height: 1.45;
+  transition:
+    background-color var(--t-fast),
+    color var(--t-fast);
+}
+
+.suggestion:not(:disabled):hover {
+  border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
+}
+
+.suggestion:not([data-tone]):not(:disabled):hover > svg {
+  color: var(--muted);
+}
+
+.suggestion:not(:disabled):hover .suggestion-command {
+  background: var(--surface-strong);
+  color: var(--muted);
+}
+
+.suggestion:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.suggestion:disabled {
+  opacity: 0.45;
+}
+
+/* What the message box understands, said once under the starting points. */
+.chat-hint {
+  padding-top: 14px;
+  color: var(--faint);
+  font-size: var(--text-meta);
+  text-align: center;
+  animation: rise-in var(--t-slow) var(--ease-out) backwards;
+  animation-delay: 200ms;
+}
+
+.chat-hint kbd {
+  display: inline-block;
+  min-width: 20px;
+  margin: 0 2px;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.71875rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.chat-hint > span {
+  margin: 0 4px;
 }
 
 /* ------------------------------------------------------------------- turns */
@@ -202,6 +294,19 @@
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* A message just sent rises into place from the message box, growing from its corner nearest the box. */
+.turn[data-live="true"] .bubble {
+  transform-origin: 100% 100%;
+  animation: bubble-in var(--t-slow) var(--ease-out);
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.94);
+  }
 }
 
 .answer {
@@ -246,9 +351,24 @@
   transform: rotate(90deg);
 }
 
-/* While the assistant works, a dot and the line breathe; nothing else moves. */
+/*
+ * While the assistant works, a light sweeps along the line and the dot before it breathes; nothing else
+ * moves. The text is painted by its background, so the sweep is a gradient drawn through the letters.
+ */
 .activity-text[data-running="true"] {
-  animation: pulse 1.6s ease-in-out infinite;
+  background: linear-gradient(
+      90deg,
+      var(--muted) 0%,
+      var(--muted) 38%,
+      var(--text) 50%,
+      var(--muted) 62%,
+      var(--muted) 100%
+    )
+    0 0 / 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 1.8s linear infinite;
 }
 
 .activity-text[data-running="true"]::before {
@@ -258,7 +378,8 @@
   height: 8px;
   margin-right: 8px;
   border-radius: 50%;
-  background: currentColor;
+  background: var(--muted);
+  animation: pulse 1.6s ease-in-out infinite;
 }
 
 .activity-time::before {
@@ -274,7 +395,8 @@
   background: var(--surface);
   font-size: var(--text-sm);
   line-height: 1.45;
-  animation: fade-in 0.16s ease-out;
+  transform-origin: 0 0;
+  animation: pop-in var(--t-base) var(--ease-out);
 }
 
 .reasoning {
@@ -358,6 +480,11 @@
   display: flex;
   gap: 2px;
   margin: -4px 0 0 -8px;
+}
+
+/* The newest answer's actions arrive as it finishes. */
+.turn[data-latest="true"] .turn-actions {
+  animation: fade-in var(--t-base) var(--ease-out);
 }
 
 .turn-stopped {
@@ -824,4 +951,199 @@
   border-radius: 50%;
   background: var(--text);
   animation: pulse 1s ease-in-out infinite;
+}
+
+/* -------------------------------------------------------------- stillness */
+
+/* Without motion the chips and the hint are simply there, and the working line is plain text. */
+@media (prefers-reduced-motion: reduce) {
+  .suggestion,
+  .chat-hint {
+    animation: none;
+  }
+
+  .activity-text[data-running="true"] {
+    background: none;
+    color: inherit;
+    animation: none;
+  }
+}
+
+/* --------------------------------------------------------------- grid bots */
+
+/* A grid bot's range: its lines along a bar, green where it buys and red where it sells, and the price now. */
+.grid-range {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.grid-range-track {
+  position: relative;
+  height: 28px;
+  margin: 0 7px;
+}
+
+.grid-range-track::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -7px;
+  left: -7px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 3px;
+  background: var(--surface-strong);
+}
+
+.grid-range-line {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 16px;
+  margin: -8px 0 0 -1px;
+  border-radius: 1px;
+  background: var(--faint);
+  animation: grid-line-in var(--t-slow) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 24) * 16ms);
+}
+
+.grid-range-line[data-side="buy"] {
+  background: var(--up);
+}
+
+.grid-range-line[data-side="sell"] {
+  background: var(--down);
+}
+
+@keyframes grid-line-in {
+  from {
+    opacity: 0;
+    transform: scaleY(0.2);
+  }
+}
+
+/* Where the price is now. Outside the range it waits at the end it left by, in the colour that asks for a look. */
+.grid-range-mark {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 3px solid var(--bg);
+  border-radius: 50%;
+  background: var(--text);
+  box-shadow: 0 0 0 1px var(--border-strong);
+  animation: chip-in var(--t-base) var(--ease-pop) backwards;
+  animation-delay: 180ms;
+  transition: left var(--t-slow) var(--ease-out);
+}
+
+.grid-range-mark[data-outside] {
+  background: var(--warn);
+}
+
+.grid-range-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+
+.grid-range-now {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.grid-range[data-compact] .grid-range-track {
+  height: 16px;
+  margin: 0 5px;
+}
+
+.grid-range[data-compact] .grid-range-track::before {
+  right: -5px;
+  left: -5px;
+  height: 4px;
+  margin-top: -2px;
+}
+
+.grid-range[data-compact] .grid-range-line {
+  height: 10px;
+  margin-top: -5px;
+}
+
+.grid-range[data-compact] .grid-range-mark {
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-width: 2px;
+}
+
+.grid-note {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.grid-warnings {
+  display: grid;
+  gap: 6px;
+}
+
+.grid-warnings li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.grid-warnings svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--warn);
+}
+
+/* The trader's bots: one block each, the range under the name, and a way to the bot's page. */
+.grid-bot-row {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  padding: 10px 0;
+}
+
+.grid-bot-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.grid-bot-pnl {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.grid-bot-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  font-size: var(--text-meta);
+}
+
+.grid-bot-foot .btn {
+  margin-right: -8px;
+}
+
+.grid-ticket {
+  max-width: 560px;
+}
+
+.grid-started {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
 }

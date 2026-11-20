@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { RunView, UsageView } from "../../api/types";
 import { Icon } from "../../components/Icon";
 import { StepList } from "../../components/StepList";
+import { followUps } from "../../lib/commands";
 import { count, duration, usd } from "../../lib/format";
 import { useFlash } from "../../lib/hooks";
 import { Markdown } from "../../lib/markdown";
@@ -10,6 +11,8 @@ import { activityNow, activitySummary } from "../../lib/steps";
 import { type LiveTurn, ask, notify, openExternal, useApp, useSnapshot } from "../../state/app";
 import { TicketCard } from "../market/TicketCard";
 import { Card } from "./Cards";
+import { GridDraftCard } from "./GridDraftCard";
+import { Suggestions } from "./Suggestions";
 
 function usageText(usage: UsageView): string {
   const tokens = `${count(usage.promptTokens)} in, ${count(usage.completionTokens)} out`;
@@ -101,6 +104,14 @@ interface TurnProps {
   latest: boolean;
 }
 
+/** What to do next, under the newest answer once it is done. Hidden while any answer is being written. */
+function FollowUps({ run }: { run: RunView }) {
+  const snapshot = useSnapshot();
+  const answering = useApp((state) => state.live !== null);
+  if (answering || snapshot.busy) return null;
+  return <Suggestions items={followUps(run, snapshot)} label="Follow-ups" variant="follow" />;
+}
+
 /** One exchange: the trader's message, then what the assistant did, saw and said. */
 export function Turn({ run, live, latest }: TurnProps) {
   const network = useSnapshot().network;
@@ -113,7 +124,7 @@ export function Turn({ run, live, latest }: TurnProps) {
   const toolAtWork = run.steps.some((step) => step.status === "running" && step.name !== "model");
 
   return (
-    <article className="turn">
+    <article className="turn" data-live={running} data-latest={latest}>
       <div className="said">
         <p className="bubble">{run.title}</p>
       </div>
@@ -140,7 +151,9 @@ export function Turn({ run, live, latest }: TurnProps) {
         ) : null}
         {run.status === "stopped" ? <p className="turn-stopped">Stopped</p> : null}
         {run.ticket ? <TicketCard ticket={run.ticket} /> : null}
+        {run.grid ? <GridDraftCard draft={run.grid} /> : null}
         {running ? null : <Actions run={run} />}
+        {latest && !running ? <FollowUps run={run} /> : null}
       </div>
     </article>
   );

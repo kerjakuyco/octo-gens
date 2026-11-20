@@ -104,3 +104,20 @@ describe("news", () => {
     expect(activityNow([step("read_page", "tidewire.example", "running")])).toBe("Reading an article");
   });
 });
+
+describe("grid bots", () => {
+  it("says a grid bot was planned or drafted, and that the bots were read", () => {
+    const read = [step("get_quote", "BTCUSDT"), step("analyze_market", "BTCUSDT 4h"), step("plan_grid", "BTCUSDT neutral 10 grids")];
+    expect(activitySummary(read)).toBe("Checked BTC price and 4h chart, planned a grid bot");
+    expect(activitySummary([...read, step("propose_grid", "BTCUSDT neutral 10 grids")])).toBe(
+      "Checked BTC price and 4h chart, drafted a grid bot",
+    );
+    expect(activitySummary([...read, step("propose_grid", "BTCUSDT", "error")])).toBe(
+      "Checked BTC price and 4h chart, planned a grid bot",
+    );
+    expect(activitySummary([step("get_grids", "")])).toBe("Checked your grid bots");
+    expect(activityNow([step("plan_grid", "BTCUSDT", "running")])).toBe("Planning a grid bot");
+    expect(activityNow([step("propose_grid", "BTCUSDT", "running")])).toBe("Drafting a grid bot");
+    expect(stepLabel("grid.limit_order")).toBe("Grid orders");
+  });
+});

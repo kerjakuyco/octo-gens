@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import type {
   CardView,
+  GridBotView,
+  GridPreviewView,
+  GridStatus,
   MarketRow,
   NewsView,
   OrderBookView,
@@ -23,10 +26,11 @@ import {
 } from "../../lib/format";
 import { instrumentFor } from "../../lib/market";
 import { useNow } from "../../lib/clock";
-import { focusMarket, openExternal, useSnapshot } from "../../state/app";
+import { focusMarket, openExternal, openGrid, useSnapshot } from "../../state/app";
 import { InstrumentMark } from "../market/InstrumentMark";
 import { RsiBar, ShareBar, TrendChip, macdWords } from "../market/Readings";
 import { Sparkline } from "../market/Sparkline";
+import { GridRange, gridDirectionLabel, perGridLabel, spacingLabel } from "./GridRange";
 
 /** A market's name as a button that shows the market in the panel. */
 function SymbolButton({ symbol, children }: { symbol: string; children?: ReactNode }) {
@@ -265,6 +269,132 @@ function AccountCard() {
   );
 }
 
+/**
+ * Where a grid bot would be liquidated, estimated: below the range for what it buys, above it for what it
+ * sells. A bot on cross margin has no estimate of its own, so nothing is shown.
+ */
+export function GridLiquidation({ long, short }: { long: string | null; short: string | null }) {
+  if (long && short) {
+    return (
+      <>
+        <Fact label="Est. liq. below">{price(long)}</Fact>
+        <Fact label="Est. liq. above">{price(short)}</Fact>
+      </>
+    );
+  }
+  const only = long ?? short;
+  return only ? <Fact label="Est. liq. price">{price(only)}</Fact> : null;
+}
+
+/** Things to know about a grid bot before starting it, as the core worded them. */
+export function GridWarnings({ warnings }: { warnings: readonly string[] }) {
+  if (warnings.length === 0) return null;
+  return (
+    <ul className="grid-warnings">
+      {warnings.map((warning) => (
+        <li key={warning}>
+          <Icon name="alert" size={14} />
+          <span>{warning}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** A grid bot worked out as a dry run: its range, how it splits it, and what it trades with. Nothing was sent. */
+function GridCard({ preview }: { preview: GridPreviewView }) {
+  const label = gridDirectionLabel(preview.direction);
+  const buying = preview.initialSide === "buy";
+  return (
+    <section className="card card-wide grid-card" aria-label={`${label.text} plan for ${preview.base}`}>
+      <header className="card-head">
+        <SymbolButton symbol={preview.symbol}>
+          <span className="muted">Grid plan</span>
+        </SymbolButton>
+        <span className="chip" data-tone={label.tone}>
+          {label.text}
+        </span>
+      </header>
+      <GridRange lower={preview.lowerPrice} upper={preview.upperPrice} mark={preview.markPrice} levels={preview.levels} />
+      <dl className="facts facts-two">
+        <Fact label="Grids">
+          {preview.grids}, {spacingLabel(preview.spacing)}
+        </Fact>
+        <Fact label="Earns per grid">{perGridLabel(preview.profitPerGridMinPct, preview.profitPerGridMaxPct)}</Fact>
+        <Fact label="Orders">
+          <span className="up">{preview.buyOrders} buy</span> · <span className="down">{preview.sellOrders} sell</span>
+        </Fact>
+        <Fact label="Each order">
+          {units(preview.qtyPerGrid)} {preview.base}
+        </Fact>
+        <Fact label="Margin">
+          {money(preview.margin)} {preview.quote} · {leverage(preview.leverage)}
+        </Fact>
+        <GridLiquidation long={preview.estLiqLong} short={preview.estLiqShort} />
+      </dl>
+      {preview.initialSide && preview.initialQty ? (
+        <p className="grid-note">
+          Starts by {buying ? "buying" : "selling"} {units(preview.initialQty)} {preview.base} at market.
+        </p>
+      ) : null}
+      <GridWarnings warnings={preview.warnings} />
+    </section>
+  );
+}
+
+const GRID_STATUS: Record<GridStatus, { text: string; tone?: "up" | "warn" }> = {
+  running: { text: "Running", tone: "up" },
+  waiting: { text: "Waiting" },
+  stopped: { text: "Stopped" },
+  error: { text: "Needs attention", tone: "warn" },
+};
+
+/** The trader's grid bots as the assistant read them, each with a way to its page. */
+function GridsCard({ bots }: { bots: GridBotView[] }) {
+  return (
+    <section className="card card-wide" aria-label="Grid bots">
+      <header className="card-head">
+        <span className="news-head">
+          <Icon name="grid" size={16} />
+          Grid bots
+        </span>
+      </header>
+      <ul className="rows">
+        {bots.map((bot) => {
+          const label = gridDirectionLabel(bot.direction);
+          const status = GRID_STATUS[bot.status];
+          return (
+            <li key={bot.id} className="row grid-bot-row">
+              <div className="grid-bot-head">
+                <SymbolButton symbol={bot.symbol} />
+                <span className="chip" data-tone={label.tone}>
+                  {label.text}
+                </span>
+                <span className="chip" data-tone={status.tone}>
+                  {status.text}
+                </span>
+                <span className={`num grid-bot-pnl ${direction(bot.totalPnl)}`}>
+                  {signedMoney(bot.totalPnl)} {bot.quote}
+                </span>
+              </div>
+              <GridRange compact lower={bot.lowerPrice} upper={bot.upperPrice} mark={bot.markPrice} levels={bot.levels} />
+              <div className="grid-bot-foot">
+                <span className="muted num">
+                  {bot.matchedTrades} completed {bot.matchedTrades === 1 ? "trade" : "trades"} · {money(bot.margin)}{" "}
+                  {bot.quote} at {leverage(bot.leverage)}
+                </span>
+                <button type="button" className="btn btn-sm btn-ghost" onClick={() => openGrid(bot.symbol)}>
+                  Open
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 /** Something the assistant looked at, drawn from the data it got. */
 export function Card({ card }: { card: CardView }) {
   switch (card.kind) {
@@ -282,6 +412,10 @@ export function Card({ card }: { card: CardView }) {
       return <NewsCard query={card.query} articles={card.articles} />;
     case "account":
       return <AccountCard />;
+    case "grid":
+      return <GridCard preview={card.preview} />;
+    case "grids":
+      return <GridsCard bots={card.bots} />;
     default:
       // A card kind this build does not know: the answer still reads without it.
       return null;

@@ -4,6 +4,7 @@ import { Toast } from "./components/Toast";
 import { AccountPage } from "./features/account/AccountPage";
 import { ActivityPage } from "./features/activity/ActivityPage";
 import { ChatPage } from "./features/chat/ChatPage";
+import { GridPage } from "./features/grid/GridPage";
 import { MarketPage } from "./features/market/MarketPage";
 import { TradeDialog } from "./features/market/TradeDialog";
 import { MarketsPage } from "./features/markets/MarketsPage";
@@ -18,6 +19,7 @@ import {
   closeDrawer,
   closeSettings,
   focusComposer,
+  openCommands,
   openSettings,
   refreshAccount,
   refreshQuotes,
@@ -30,6 +32,12 @@ import {
 import { devParams } from "./state/dev";
 
 const QUOTES_REFRESH_MS = 20_000;
+
+/** Whether keys typed at `target` are text going into a field. */
+function editable(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+}
 const ACCOUNT_REFRESH_MS = 15_000;
 
 /** The desktop app on macOS draws its window buttons over the page, so the bars leave room for them. */
@@ -110,6 +118,20 @@ function Shell() {
           return;
         }
       }
+      // A slash typed outside any field opens the commands of the message box, as it does in the box itself.
+      if (
+        event.key === "/" &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !event.defaultPrevented &&
+        !editable(event.target) &&
+        !document.querySelector("dialog[open]")
+      ) {
+        event.preventDefault();
+        openCommands();
+        return;
+      }
       // A dialog or a menu that is open handles its own Escape.
       if (event.key !== "Escape" || event.defaultPrevented || document.querySelector("dialog[open]")) return;
       const state = app.get();
@@ -136,6 +158,7 @@ function Shell() {
         {page === "chat" ? <ChatPage /> : null}
         {page === "markets" ? <MarketsPage /> : null}
         {page === "market" ? <MarketPage /> : null}
+        {page === "grid" ? <GridPage /> : null}
         {page === "news" ? <NewsPage /> : null}
         {page === "account" ? <AccountPage /> : null}
         {page === "activity" ? <ActivityPage /> : null}

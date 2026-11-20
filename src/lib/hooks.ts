@@ -124,6 +124,30 @@ export function useRead<T>(key: string | null, read: () => Promise<T>): Read<T> 
   };
 }
 
+export interface Presence {
+  /** Whether to render it at all. */
+  mounted: boolean;
+  /** It was closed and is on its way out: style it to leave, for example `data-state="closing"`. */
+  closing: boolean;
+}
+
+/** Keeps something on screen for `ms` after it closes, so it can animate out instead of vanishing. */
+export function usePresence(open: boolean, ms = 140): Presence {
+  const [previous, setPrevious] = useState(open);
+  const [leaving, setLeaving] = useState(false);
+  // Adjusted while rendering, as React suggests for state that follows a prop, so no frame shows it gone.
+  if (open !== previous) {
+    setPrevious(open);
+    setLeaving(!open);
+  }
+  useEffect(() => {
+    if (!leaving) return;
+    const timer = setTimeout(() => setLeaving(false), ms);
+    return () => clearTimeout(timer);
+  }, [leaving, ms]);
+  return { mounted: open || leaving, closing: !open && leaving };
+}
+
 /** A value that follows `value` once it has stopped changing for `ms`. */
 export function useDebounced<T>(value: T, ms: number): T {
   const [settled, setSettled] = useState(value);

@@ -5,8 +5,10 @@ import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/shell.css";
 import "./styles/chat.css";
+import "./styles/composer.css";
 import "./styles/market.css";
 import "./styles/pages.css";
+import "./styles/grid.css";
 import "./styles/news.css";
 import "./styles/settings.css";
 

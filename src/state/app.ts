@@ -12,6 +12,8 @@ import type {
   ArticleEvent,
   AssistantRequest,
   Backend,
+  GridPreviewView,
+  GridRequest,
   McpConnectRequest,
   Network,
   Provider,
@@ -31,12 +33,13 @@ import type {
   WalletBrowserRequest,
   WalletKeyRequest,
 } from "../api/types";
+import { type CommandValues, marketName } from "../lib/commands";
 import { activeWallet } from "../lib/market";
 import { networkName } from "../lib/network";
 import { devParams } from "./dev";
 import { createStore, useStore } from "./store";
 
-export type Page = "chat" | "markets" | "market" | "news" | "account" | "activity";
+export type Page = "chat" | "markets" | "market" | "grid" | "news" | "account" | "activity";
 export type SettingsTab = "models" | "wallet" | "trading" | "tools" | "appearance" | "about";
 export type MarketTab = "book" | "funding" | "technicals" | "watchlist";
 /** Which stories the News page shows: all of them, those about watched markets, or one desk. */
@@ -141,10 +144,24 @@ export interface AppState {
   newsFilter: NewsFilter;
   settings: SettingsState | null;
   trade: TradeState | null;
+  /** Preferred symbol when opening the Grid Bots workspace (e.g. from Market detail). */
+  gridSymbol: string | null;
   /** Desktop release update check, download progress, and install readiness. */
   update: UpdateState;
   /** Incremented to ask the composer to take focus. */
   composerFocus: number;
+  /** The latest request to put a command in the message box, or to open the list of commands. */
+  composerPreset: ComposerPreset | null;
+}
+
+/** A request for the message box to take a command, ready to look over and send. */
+export interface ComposerPreset {
+  /** Grows with each request, so asking for the same command twice still applies it. */
+  tick: number;
+  /** The command to put in the box, or null to open the list of commands. */
+  command: string | null;
+  /** Settings for the command; whatever is left out keeps its default. */
+  values?: Partial<CommandValues>;
 }
 
 const MARKET_TABS: readonly MarketTab[] = ["book", "funding", "technicals", "watchlist"];
@@ -213,6 +230,7 @@ export const app = createStore<AppState>({
   newsFilter: NEWS_FILTERS.find((filter) => filter === remembered("news")) ?? "top",
   settings: null,
   trade: null,
+  gridSymbol: null,
   update: {
     status: "idle",
     info: null,
@@ -223,6 +241,7 @@ export const app = createStore<AppState>({
     skippedVersion: remembered("skippedUpdate") ?? "",
   },
   composerFocus: 0,
+  composerPreset: null,
 });
 
 export function useApp<S>(selector: (state: AppState) => S): S {
@@ -437,9 +456,42 @@ export function closeTrade(): void {
   app.set({ trade: null });
 }
 
+/** Opens the Grid Bots workspace, optionally pre-selecting a perpetual contract symbol. */
+export function openGrid(symbol?: string): void {
+  app.set({
+    page: "grid",
+    drawer: null,
+    ...(symbol ? { gridSymbol: symbol } : {}),
+  });
+}
+
 export function focusComposer(): void {
   const state = app.get();
   app.set({ page: "chat", drawer: null, composerFocus: state.composerFocus + 1 });
+}
+
+/**
+ * Puts a command in the message box with the given settings, for the trader to look over and send.
+ * Nothing is sent. With no command, opens the list of commands instead.
+ */
+export function prefillComposer(command: string | null, values?: Partial<CommandValues>): void {
+  const state = app.get();
+  app.set({
+    page: "chat",
+    drawer: null,
+    composerFocus: state.composerFocus + 1,
+    composerPreset: { tick: (state.composerPreset?.tick ?? 0) + 1, command, values },
+  });
+}
+
+/** Opens the list of commands in the message box. */
+export function openCommands(): void {
+  prefillComposer(null);
+}
+
+/** The message box took the latest request, so it is not applied again when the box is drawn anew. */
+export function takeComposerPreset(): void {
+  if (app.get().composerPreset) app.set({ composerPreset: null });
 }
 
 /* ------------------------------------------------------------------ turns */
@@ -478,6 +530,13 @@ function applyTurnEvent(event: TurnEvent): void {
         snapshot: state.snapshot ? { ...state.snapshot, draft: event.ticket } : state.snapshot,
       });
       break;
+    case "grid":
+      // Like a ticket: the drafted bot waits for the trader, and the final snapshot confirms it.
+      app.set({
+        live: { ...live, run: { ...live.run, grid: event.grid } },
+        snapshot: state.snapshot ? { ...state.snapshot, gridDraft: event.grid } : state.snapshot,
+      });
+      break;
   }
 }
 
@@ -498,6 +557,7 @@ export async function ask(prompt: string): Promise<boolean> {
     reasoning: "",
     ms: 0,
     ticket: null,
+    grid: null,
     cards: [],
     usage: null,
     model: state.snapshot.assistant.model,
@@ -592,6 +652,51 @@ export const cancelOrder = (symbol: string, orderId: string) =>
   thenRefresh(command("Cancelling the order", (api) => api.cancelOrder(symbol, orderId)));
 export const cancelAllOrders = (symbol: string) =>
   thenRefresh(command("Cancelling the orders", (api) => api.cancelAllOrders(symbol)));
+
+/* ------------------------------------------------------------------ grids */
+
+/** Computes a dry-run futures grid preview without submitting any exchange orders. */
+export const previewGrid = (grid: GridRequest): Promise<GridPreviewView> =>
+  request((api) => api.previewGrid(grid));
+
+/**
+ * Starts a grid bot the trader reviewed. Resolves to an empty string once it is running, or waiting for
+ * its start price, and otherwise to why it did not start, for the review to show beside its button.
+ */
+export async function startGrid(grid: GridRequest): Promise<string> {
+  const name = marketName(grid.symbol);
+  const outcome = await attempt(`Starting the ${name} grid bot`, (api) => api.startGrid(grid));
+  if (!outcome.ok) return outcome.reason || "Another change is still being applied. Try again in a moment.";
+  notify(`${name} grid bot started.`);
+  return "";
+}
+
+/** Brings every running bot up to date with the exchange now, instead of at the next account read. */
+export async function syncGrids(): Promise<boolean> {
+  return command("Checking the bots", (api) => api.syncGrids());
+}
+
+/** Stops a bot: cancels its orders and, when asked, closes the position in its market. */
+export async function stopGrid(id: string, closePosition: boolean): Promise<boolean> {
+  const ok = await command(closePosition ? "Stopping the bot and closing the position" : "Stopping the bot", (api) =>
+    api.stopGrid(id, closePosition),
+  );
+  if (ok) notify("Grid bot stopped.");
+  return ok;
+}
+
+/** Removes a stopped bot from the list. */
+export const deleteGrid = (id: string) => command("Removing the bot", (api) => api.deleteGrid(id));
+
+/**
+ * Starts the grid bot the assistant drafted, now that the trader has looked it over. The core checks the
+ * draft again against the live price first; how it went is filed under the draft's id.
+ */
+export const startGridDraft = (id: string) =>
+  thenRefresh(command("Starting the grid bot", (api) => api.startGridDraft(id)));
+
+/** Discards the grid bot the assistant drafted. Nothing was sent for it. */
+export const dismissGridDraft = () => command("Discarding the grid bot", (api) => api.dismissGridDraft());
 
 /* ---------------------------------------------------------------- tickets */
 

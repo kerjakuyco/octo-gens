@@ -9,6 +9,8 @@ const QUOTE_ASSET = /(?:USDT|USD1|USDC)$/;
 const FRAME = /(?:^|[\s,])(15m|1h|4h|1d)(?=$|[\s,])/;
 const TIMEFRAME = /^(?:15m|1h|4h|1d)$/;
 const DRAFT = "propose_order";
+const GRID_PLAN = "plan_grid";
+const GRID_DRAFT = "propose_grid";
 
 const LABELS: Record<string, string> = {
   model: "Model",
@@ -22,6 +24,9 @@ const LABELS: Record<string, string> = {
   get_account: "Account",
   plan_position: "Position size",
   propose_order: "Ticket",
+  plan_grid: "Grid plan",
+  propose_grid: "Grid bot",
+  get_grids: "Grid bots",
   search_news: "News",
   read_page: "Article",
   list_server_tools: "Tool list",
@@ -34,6 +39,12 @@ const LABELS: Record<string, string> = {
   "exchange.stop_loss": "Stop-loss",
   "exchange.take_profit": "Take-profit",
   "exchange.cancel": "Cancel",
+  "grid.arm": "Waiting to start",
+  "grid.initial_leg": "Opening order",
+  "grid.limit_order": "Grid orders",
+  "grid.rebalance": "Next grid order",
+  "grid.cancel": "Cancel grid orders",
+  "grid.close_position": "Close position",
   "wallet.deposit": "Deposit",
   "wallet.withdraw": "Withdrawal",
 };
@@ -87,6 +98,12 @@ function phrase(step: StepView): string | null {
     case "list_server_tools":
     case "call_server_tool":
       return "tools";
+    case "get_grids":
+      return "your grid bots";
+    case GRID_PLAN:
+    case GRID_DRAFT:
+      // Said once at the end, as what came of the work: "planned a grid bot".
+      return null;
     default:
       return stepLabel(step.name).toLowerCase() || null;
   }
@@ -96,11 +113,15 @@ function phrase(step: StepView): string | null {
 export function activitySummary(steps: StepView[]): string {
   const seen: string[] = [];
   let drafted = false;
+  let planned = false;
+  let gridDrafted = false;
   for (const step of steps) {
     if (step.name === DRAFT) {
       drafted ||= step.status !== "error";
       continue;
     }
+    if (step.name === GRID_PLAN) planned ||= step.status !== "error";
+    if (step.name === GRID_DRAFT) gridDrafted ||= step.status !== "error";
     const text = phrase(step);
     if (text && !seen.includes(text)) seen.push(text);
   }
@@ -111,6 +132,8 @@ export function activitySummary(steps: StepView[]): string {
     text = more > 0 ? `Checked ${shown.join(", ")} and ${more} more` : `Checked ${listWords(shown)}`;
   }
   if (drafted) return text ? `${text}, drafted a ticket` : "Drafted a ticket";
+  if (gridDrafted) return text ? `${text}, drafted a grid bot` : "Drafted a grid bot";
+  if (planned) return text ? `${text}, planned a grid bot` : "Planned a grid bot";
   return text;
 }
 
@@ -122,6 +145,8 @@ export function activityNow(steps: StepView[]): string {
   }
   if (!running) return "Thinking";
   if (running.name === DRAFT) return "Drafting a ticket";
+  if (running.name === GRID_PLAN) return "Planning a grid bot";
+  if (running.name === GRID_DRAFT) return "Drafting a grid bot";
   if (running.name === "load_model") return "Loading the model";
   if (running.name === "search_news") return "Reading the news";
   if (running.name === "read_page") return "Reading an article";
