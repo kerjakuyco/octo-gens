@@ -123,4 +123,40 @@ describe("SettingsDialog About updates", () => {
     expect(errorHtml).toContain("Could not reach GitHub Releases.");
     expect(errorHtml).toContain("Open GitHub Releases");
   });
+
+  it("organizes settings into Assistant, Exchange, and App groups with rich section views", () => {
+    state.openSettings("models");
+    const modelsHtml = renderToStaticMarkup(<SettingsDialog />);
+    expect(modelsHtml).toContain('focusgroup="tablist nomemory"');
+    expect(modelsHtml).toContain("Assistant");
+    expect(modelsHtml).toContain("Exchange");
+    expect(modelsHtml).toContain("App");
+    expect(modelsHtml).toContain("Active model");
+    expect(modelsHtml).toContain("Cloud providers");
+    expect(modelsHtml).toContain("Local servers");
+    expect(modelsHtml).toContain("Reasoning effort");
+
+    state.openSettings("trading");
+    const tradingHtml = renderToStaticMarkup(<SettingsDialog />);
+    expect(tradingHtml).toContain("Order guardrails");
+    expect(tradingHtml).toContain("Quick leverage caps");
+    expect(tradingHtml).toContain("Assistant permissions");
+
+    state.openSettings("appearance");
+    const generalHtml = renderToStaticMarkup(<SettingsDialog />);
+    expect(generalHtml).toContain("General");
+    expect(generalHtml).toContain("theme-grid");
+    expect(generalHtml).toContain("Market chart defaults");
+    expect(generalHtml).toContain("Default timeframe");
+    expect(generalHtml).toContain("Bollinger Bands");
+
+    state.openSettings("tools");
+    const toolsHtml = renderToStaticMarkup(<SettingsDialog />);
+    expect(toolsHtml).toContain("Built-in research");
+    expect(toolsHtml).toContain("MCP tool servers");
+
+    state.openSettings("wallet");
+    const walletHtml = renderToStaticMarkup(<SettingsDialog />);
+    expect(walletHtml).toContain("Copy wallet address");
+  });
 });

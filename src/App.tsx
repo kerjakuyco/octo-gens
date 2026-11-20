@@ -15,7 +15,9 @@ import {
   SIDEBAR_INLINE,
   app,
   closeDrawer,
+  closeSettings,
   focusComposer,
+  openSettings,
   refreshAccount,
   refreshQuotes,
   start,
@@ -97,6 +99,13 @@ function Shell() {
         if (key === "b" && !document.querySelector("dialog[open]")) {
           event.preventDefault();
           toggleSidebar();
+          return;
+        }
+        if (event.key === ",") {
+          event.preventDefault();
+          const state = app.get();
+          if (state.settings) closeSettings();
+          else if (!state.trade) openSettings();
           return;
         }
       }

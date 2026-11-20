@@ -301,6 +301,57 @@ function Inspector({ server, onClose }: { server: McpView; onClose: () => void }
   );
 }
 
+function ServerRow({
+  server,
+  onInspect,
+}: {
+  server: McpView;
+  onInspect: () => void;
+}) {
+  const busy = useBusy();
+  const [removing, setRemoving] = useState(false);
+
+  return (
+    <li className="settings-row">
+      <div className="settings-row-main">
+        <span className="settings-row-title">
+          <span className="mono truncate">{server.id}</span>
+          <span className="chip">{server.transport === "stdio" ? "Local" : "HTTP"}</span>
+        </span>
+        <span className="settings-row-desc truncate">
+          {server.name} · {plural(server.tools, "tool")}
+        </span>
+      </div>
+      <div className="row-actions">
+        {removing ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-sm btn-danger"
+              disabled={busy}
+              onClick={() => void mcpDisconnect(server.id).then(() => setRemoving(false))}
+            >
+              Remove
+            </button>
+            <button type="button" className="btn btn-sm btn-ghost" autoFocus onClick={() => setRemoving(false)}>
+              Cancel
+            </button>
+          </>
+        ) : (
+          <>
+            <button type="button" className="btn btn-sm btn-secondary" onClick={onInspect}>
+              Inspect
+            </button>
+            <button type="button" className="btn btn-sm btn-ghost" disabled={busy} onClick={() => setRemoving(true)}>
+              Remove
+            </button>
+          </>
+        )}
+      </div>
+    </li>
+  );
+}
+
 type View = { kind: "list" } | { kind: "add" } | { kind: "inspect"; id: string };
 
 /**
@@ -318,56 +369,58 @@ export function ToolsTab() {
   if (inspected) return <Inspector server={inspected} onClose={back} />;
 
   return (
-    <div className="rows">
-      <label className="switch row" data-lines={2}>
-        <span className="row-main">
-          <span className="row-name">Web search</span>
-          <span className="row-sub">News and web pages</span>
-        </span>
-        <input
-          type="checkbox"
-          role="switch"
-          checked={assistant.webSearch}
-          disabled={busy}
-          onChange={(event) => void setWebSearch(event.target.checked)}
-        />
-        <span className="switch-track" aria-hidden="true" />
-      </label>
-      <div className="row">
-        <span className="row-name">Tool servers</span>
-        <button type="button" className="btn btn-sm btn-secondary" onClick={() => setView({ kind: "add" })}>
-          <Icon name="plus" size={15} />
-          Add server
-        </button>
-      </div>
-      {servers.length === 0 ? (
-        <p className="row-empty">None yet</p>
-      ) : (
-        <ul className="row-list" aria-label="Tool servers">
-          {servers.map((server) => (
-            <li key={server.id} className="row" data-lines={2}>
-              <div className="row-main">
-                <span className="row-name mono">{server.id}</span>
-                <span className="row-sub truncate">
-                  {server.name} · {plural(server.tools, "tool")}
+    <div className="settings-stack">
+      <section className="settings-section" aria-label="Built-in research">
+        <div className="settings-section-head">
+          <h3 className="settings-section-title">Built-in research</h3>
+        </div>
+        <div className="settings-card">
+          <label className="switch settings-row">
+            <span className="settings-row-main">
+              <span className="settings-row-title">
+                Web search
+                <span className="chip" data-tone={assistant.webSearch ? "up" : undefined}>
+                  {assistant.webSearch ? "On" : "Off"}
                 </span>
-              </div>
-              <div className="row-actions">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-secondary"
-                  onClick={() => setView({ kind: "inspect", id: server.id })}
-                >
-                  Inspect
-                </button>
-                <button type="button" className="btn btn-sm btn-ghost" disabled={busy} onClick={() => void mcpDisconnect(server.id)}>
-                  Remove
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+              </span>
+              <span className="settings-row-desc">Allow the assistant to read news feeds and web pages you share.</span>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              {...({ switch: "" } as Record<string, string>)}
+              checked={assistant.webSearch}
+              disabled={busy}
+              onChange={(event) => void setWebSearch(event.target.checked)}
+            />
+            <span className="switch-track" aria-hidden="true" />
+          </label>
+        </div>
+      </section>
+
+      <section className="settings-section" aria-label="MCP tool servers">
+        <div className="settings-section-head">
+          <h3 className="settings-section-title">MCP tool servers</h3>
+          <button type="button" className="btn btn-sm btn-secondary" onClick={() => setView({ kind: "add" })}>
+            <Icon name="plus" size={14} />
+            Add server
+          </button>
+        </div>
+        {servers.length === 0 ? (
+          <div className="settings-empty">
+            <p className="settings-empty-title">No tool servers attached</p>
+            <p className="settings-empty-desc">
+              Connect local command or HTTPS MCP servers for extra market data or notes. Only read-only tools are called.
+            </p>
+          </div>
+        ) : (
+          <ul className="settings-card settings-list" aria-label="Tool servers">
+            {servers.map((server) => (
+              <ServerRow key={server.id} server={server} onInspect={() => setView({ kind: "inspect", id: server.id })} />
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

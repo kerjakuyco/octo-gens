@@ -133,13 +133,11 @@ function Connect({ network, onClose }: { network: Network; onClose: () => void }
       <form className="form" onSubmit={(event) => void submit(event)} autoComplete="off">
         <Segmented label="How to connect" value={method} options={METHODS} onChange={setMethod} fill />
         {method === "browser" ? (
-          <>
-            <div className="field">
-              <span className="field-label">Approval lasts</span>
-              <Segmented label="Approval lasts" value={days} options={DURATIONS} onChange={setDays} fill />
-              <span className="field-help">Your wallet approves a trade-only key. It cannot withdraw.</span>
-            </div>
-          </>
+          <div className="field">
+            <span className="field-label">Approval lasts</span>
+            <Segmented label="Approval lasts" value={days} options={DURATIONS} onChange={setDays} fill />
+            <span className="field-help">Your wallet approves a trade-only key. It cannot withdraw.</span>
+          </div>
         ) : (
           <>
             <label className="field">
@@ -207,16 +205,28 @@ interface WalletCardProps {
 function WalletCard({ wallet, active, pending, blocked, onConnect }: WalletCardProps) {
   const busy = useBusy();
   const [leaving, setLeaving] = useState(false);
+  const [copiedAddr, flashAddr] = useFlash(1800);
   const { network } = wallet;
 
+  async function copyAddress() {
+    if (!wallet.user) return;
+    try {
+      await navigator.clipboard.writeText(wallet.user);
+      flashAddr();
+    } catch {
+      notify("Could not copy the address.");
+    }
+  }
+
   return (
-    <section className="wallet" aria-label={`${networkName(network)} wallet`}>
+    <section className="wallet" data-active={active || undefined} aria-label={`${networkName(network)} wallet`}>
       <header className="wallet-head">
+        {wallet.connected ? <span className="dot" data-tone={wallet.needsDeposit ? "warn" : "up"} /> : null}
         <h3 className="wallet-name">{networkName(network)}</h3>
         <span className="chip" data-tone={network === "mainnet" ? "warn" : undefined}>
           {fundsNote(network)}
         </span>
-        {active ? <span className="chip">Active</span> : null}
+        {active ? <span className="chip">Active network</span> : null}
       </header>
 
       {pending ? <Pending page={pending} /> : null}
@@ -226,8 +236,21 @@ function WalletCard({ wallet, active, pending, blocked, onConnect }: WalletCardP
           <dl className="wallet-lines">
             <div>
               <dt>Wallet</dt>
-              <dd className="mono" title={wallet.user ?? undefined}>
-                {shortAddress(wallet.user)}
+              <dd>
+                <span className="mono" title={wallet.user ?? undefined}>
+                  {shortAddress(wallet.user)}
+                </span>
+                {wallet.user ? (
+                  <button
+                    type="button"
+                    className="icon-btn wallet-copy"
+                    aria-label={copiedAddr ? "Address copied" : "Copy wallet address"}
+                    title={copiedAddr ? "Copied" : "Copy address"}
+                    onClick={() => void copyAddress()}
+                  >
+                    <Icon name={copiedAddr ? "check" : "copy"} size={14} />
+                  </button>
+                ) : null}
               </dd>
             </div>
             <div>
@@ -249,7 +272,7 @@ function WalletCard({ wallet, active, pending, blocked, onConnect }: WalletCardP
           <div className="wallet-actions">
             {leaving ? (
               <>
-                <span className="grow muted">Positions stay open.</span>
+                <span className="grow muted">Positions stay open on the exchange.</span>
                 <button
                   type="button"
                   className="btn btn-sm btn-danger"
@@ -296,7 +319,7 @@ function WalletCard({ wallet, active, pending, blocked, onConnect }: WalletCardP
         </>
       ) : pending ? null : (
         <div className="wallet-actions">
-          <span className="grow muted">Not connected</span>
+          <span className="grow muted">No API wallet connected</span>
           {/* Only the network in use asks for attention. */}
           <button
             type="button"

@@ -712,6 +712,10 @@ select.input {
   animation: fade-in 0.16s ease-out;
 }
 
+.dialog:modal {
+  overscroll-behavior: contain;
+}
+
 /* It holds the focus when it opens, so that no control is ringed before the keyboard is used. */
 .dialog:focus,
 .dialog:focus-visible {
@@ -720,11 +724,13 @@ select.input {
 
 .dialog::backdrop {
   background: var(--scrim);
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 .dialog[data-size="settings"] {
-  width: min(820px, calc(100vw - 32px));
-  height: min(620px, calc(100vh - 32px));
+  width: min(880px, calc(100vw - 32px));
+  height: min(650px, calc(100vh - 32px));
 }
 
 .dialog-head {
