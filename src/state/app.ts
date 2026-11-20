@@ -71,6 +71,8 @@ export interface Notice {
 export interface TradePrefill {
   symbol?: string;
   side?: Side;
+  qty?: string;
+  reduceOnly?: boolean;
   stopLoss?: string;
   takeProfit?: string;
 }

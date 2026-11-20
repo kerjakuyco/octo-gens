@@ -108,12 +108,12 @@ function TradeForm({
 
   const [symbol, setSymbol] = useState(prefill?.symbol ?? snapshot.focus);
   const [side, setSide] = useState<Side>(prefill?.side ?? "buy");
-  const [mode, setMode] = useState<AmountMode>("value");
-  const [amount, setAmount] = useState("");
+  const [mode, setMode] = useState<AmountMode>(prefill?.qty ? "units" : "value");
+  const [amount, setAmount] = useState(prefill?.qty ?? "");
   const [leverage, setLeverage] = useState(Math.min(risk.maxLeverage, 3));
   const [stopLoss, setStopLoss] = useState(prefill?.stopLoss ?? "");
   const [takeProfit, setTakeProfit] = useState(prefill?.takeProfit ?? "");
-  const [reduceOnly, setReduceOnly] = useState(false);
+  const [reduceOnly, setReduceOnly] = useState(prefill?.reduceOnly ?? false);
   const [ticket, setTicket] = useState<TicketView | null>(review);
   const [touched, setTouched] = useState<Partial<Record<TouchedField, boolean>>>({});
   const [submitted, setSubmitted] = useState(false);
