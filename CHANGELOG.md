@@ -4,6 +4,10 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## Unreleased
 
+## 0.9.0
+
+Grid bots, on their own page and in the chat, and commands in the message box for trading, research and analysis.
+
 ### Added
 
 - **Grid bots.** **Grid bots** in the sidebar sets up a bot that buys low and sells high inside a price range, with limit orders waiting on both sides: Neutral, Long or Short, even steps in price or in percent, up to 50 grids, margin and leverage up to your limit, an optional start price, and stop prices outside the range. A dry run shows each order's size and value, the profit per completed trade and the estimated liquidation price before anything is sent. Your bots show their completed trades and profit and loss, and stop with or without closing their position. A bot places its replacement orders and watches its stop prices while the app is open; its waiting orders stay on the exchange when the app is closed. Only an order the exchange reports as filled counts as a fill, so a bot whose orders were cancelled elsewhere stops instead of trading on.
