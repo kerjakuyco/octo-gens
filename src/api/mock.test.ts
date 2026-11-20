@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ema } from "../lib/indicators";
 import { createMockBackend, mockOptionsFromUrl } from "./mock";
 import type { CardView, McpConnectRequest, RunView, Snapshot, TurnEvent } from "./types";
@@ -809,6 +809,20 @@ describe("mock backend: conversations", () => {
     expect(deleted.thread).not.toBe(firstId);
     expect(deleted.turns).toHaveLength(0);
     expect(deleted.threads.map((thread) => thread.title)).toEqual(["Top movers"]);
+  });
+
+  it("lists the conversation answered last first, even when two answers share a millisecond", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-20T08:00:00Z"));
+    try {
+      const backend = instant();
+      await backend.ask("BTC outlook", () => {});
+      await backend.newThread();
+      const second = await backend.ask("Top movers", () => {});
+      expect(second.threads.map((thread) => thread.title)).toEqual(["Top movers", "BTC outlook"]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("starts with earlier conversations in the list and none of them open", async () => {

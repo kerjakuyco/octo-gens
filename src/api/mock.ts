@@ -626,6 +626,8 @@ interface Thread {
   title: string;
   network: Network;
   runs: RunView[];
+  /** When its latest turn was filed, counted in filing order. Breaks ties between turns stamped in the same millisecond. */
+  filed: number;
 }
 
 /** How a turn talks to whoever started it: the interface, or the seeding code. */
@@ -678,6 +680,8 @@ export function createMockBackend(options: MockOptions = {}): Backend {
   let theme: Theme = options.theme ?? "system";
   let open = id().slice(0, 12);
   let threads: Thread[] = [];
+  /** Turns filed so far, for `Thread.filed`. */
+  let filings = 0;
   const activity: RunView[] = [];
   let draft: TicketView | null = null;
   let busy = false;
@@ -1324,14 +1328,15 @@ export function createMockBackend(options: MockOptions = {}): Backend {
   function threadViews(): ThreadView[] {
     return threads
       .filter((thread) => thread.runs.length > 0)
-      .map((thread) => ({
+      .map((thread) => ({ thread, time: thread.runs[thread.runs.length - 1]!.time }))
+      .sort((left, right) => right.time.localeCompare(left.time) || right.thread.filed - left.thread.filed)
+      .map(({ thread, time }) => ({
         id: thread.id,
         title: thread.title,
-        time: thread.runs[thread.runs.length - 1]!.time,
+        time,
         network: thread.network,
         turns: thread.runs.length,
-      }))
-      .sort((left, right) => right.time.localeCompare(left.time));
+      }));
   }
 
   function snapshot(): Snapshot {
@@ -2274,10 +2279,12 @@ export function createMockBackend(options: MockOptions = {}): Backend {
   function record(threadId: string, run: RunView): void {
     let thread = threads.find((candidate) => candidate.id === threadId);
     if (!thread) {
-      thread = { id: threadId, title: shorten(run.title, 48), network: run.network, runs: [] };
+      thread = { id: threadId, title: shorten(run.title, 48), network: run.network, runs: [], filed: 0 };
       threads.push(thread);
     }
     thread.runs.push(run);
+    filings += 1;
+    thread.filed = filings;
   }
 
   async function ask(prompt: string, onEvent: (event: TurnEvent) => void): Promise<Snapshot> {
