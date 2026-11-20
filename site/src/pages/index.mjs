@@ -1,4 +1,5 @@
 import { SPARK_BTC, demo, scenario } from "../demo.mjs";
+import { mark } from "../logos.mjs";
 import { REPO, RELEASES, VERSION, esc, icon } from "../site.mjs";
 
 /**
@@ -19,6 +20,17 @@ const COPY = {
     primary: "Download OctoNeo",
     secondary: "View source on GitHub",
     meta: `Version ${VERSION} for Windows, macOS (Apple silicon) and Linux. Open source under GPL-3.0-only. No OctoNeo account, no telemetry.`,
+  },
+
+  // What the app works with, named as the README and docs/exchange.md name it: the networks deposits and
+  // withdrawals use on mainnet, the wallets that approve its key and sign, and the model providers.
+  works: {
+    title: "Works with",
+    groups: [
+      { label: "Deposit and withdraw on", items: [["bnb", "BNB Chain"], ["ethereum", "Ethereum"], ["arbitrum", "Arbitrum"]] },
+      { label: "Sign with your own wallet", items: [["metamask", "MetaMask"], ["rabby", "Rabby"]], more: "and other browser wallets" },
+      { label: "Bring your own model", items: [[null, "OpenRouter"], [null, "Cloudflare"], [null, "Ollama"], [null, "LM Studio"]] },
+    ],
   },
 
   bento: {
@@ -287,6 +299,24 @@ export default {
       <a class="button button-quiet" href="${REPO}">${COPY.hero.secondary}</a>
     </div>
     <p class="hero-meta">${COPY.hero.meta}</p>
+  </div>
+</section>
+
+<section class="works-band" aria-labelledby="works-title">
+  <div class="wrap">
+    <h2 class="works-title" id="works-title">${COPY.works.title}</h2>
+    <div class="works">
+${COPY.works.groups
+  .map(
+    (group) => `      <div class="works-group">
+        <p class="works-label">${group.label}</p>
+        <ul class="works-list">
+${group.items.map(([logo, name]) => `          <li class="works-item"${logo ? "" : ' data-text="true"'}>${logo ? mark(logo) : ""}<span>${name}</span></li>`).join("\n")}${group.more ? `\n          <li class="works-item works-more">${group.more}</li>` : ""}
+        </ul>
+      </div>`,
+  )
+  .join("\n")}
+    </div>
   </div>
 </section>
 

@@ -1027,6 +1027,99 @@ html:not(.js) .nav-item-label {
   line-height: 1.55;
 }
 
+/* ------------------------------------------------------------ works with */
+
+/* What the app works with, straight under the hero: three groups of names, the networks and wallets
+   with their marks in the text's own grey, between two hairlines. On a phone the groups stack. */
+.works-band {
+  padding-top: 72px;
+}
+
+.works-title {
+  margin-bottom: 18px;
+  color: var(--text-3);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.works {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1.3fr;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.works-group {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: 28px 28px 30px;
+}
+
+.works-group + .works-group {
+  border-left: 1px solid var(--line);
+}
+
+.works-label {
+  color: var(--text-3);
+  font-size: 0.8125rem;
+}
+
+.works-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.works-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-2);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  transition: color 0.2s;
+}
+
+.works-item:hover {
+  color: var(--text);
+}
+
+.works-mark {
+  flex: none;
+}
+
+.works-more {
+  color: var(--text-3);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.works-band + .bento-band {
+  padding-top: 88px;
+}
+
+@media (max-width: 900px) {
+  .works {
+    grid-template-columns: 1fr;
+  }
+
+  .works-group {
+    padding: 22px 0 24px;
+  }
+
+  .works-group + .works-group {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}
+
 /* -------------------------------------------------------------- the bento */
 
 /* Six panels of the app, drawn in HTML, straight under the hero: three a row on a wide screen, the

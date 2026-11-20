@@ -174,7 +174,7 @@ ${nav}
   <div class="wrap">
     <div class="footer-legal">
       <p>OctoNeo is not financial advice. Trading perpetual futures carries risk.</p>
-      <p>OctoNeo is open source under the <a href="${doc("LICENSE")}">GPL-3.0-only license</a>. OpenRouter, Cloudflare, Ollama, LM Studio, MetaMask, Rabby, TradingView, CoinDesk, Cointelegraph, The Block, Decrypt, crypto.news and Yahoo Finance are trademarks of their owners. OctoNeo is an independent project and is not affiliated with or endorsed by any of them.</p>
+      <p>OctoNeo is open source under the <a href="${doc("LICENSE")}">GPL-3.0-only license</a>. BNB Chain, Ethereum, Arbitrum, OpenRouter, Cloudflare, Ollama, LM Studio, MetaMask, Rabby, TradingView, CoinDesk, Cointelegraph, The Block, Decrypt, crypto.news and Yahoo Finance are trademarks of their owners. OctoNeo is an independent project and is not affiliated with or endorsed by any of them.</p>
     </div>
   </div>
 </footer>`;
