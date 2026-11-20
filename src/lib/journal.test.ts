@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   computeJournalMetrics,
   deleteJournalEntry,
@@ -61,5 +61,40 @@ describe("trading journal store & edge analytics", () => {
 
     deleteJournalEntry(created.id);
     expect(getJournalState().entries).toHaveLength(5);
+  });
+});
+
+describe("the desktop app's journal", () => {
+  afterEach(() => {
+    vi.doUnmock("../api");
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  /** Loads the journal module as the desktop app does, over a storage holding `saved`. */
+  async function desktopJournal(saved: unknown) {
+    const store = new Map<string, string>();
+    if (saved !== undefined) store.set("octoneo.journal.v1", JSON.stringify(saved));
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => store.set(key, value),
+      },
+    });
+    vi.resetModules();
+    vi.doMock("../api", () => ({ isDesktop: () => true }));
+    return import("./journal");
+  }
+
+  it("starts empty: the sample trades are never shown as the trader's own", async () => {
+    const journal = await desktopJournal(undefined);
+    expect(journal.getJournalState().entries).toEqual([]);
+  });
+
+  it("drops the sample trades an earlier version saved, and keeps the trader's", async () => {
+    const own = { id: "jnl-mine-1", symbol: "BTCUSDT", outcome: "open", setup: "Breakout" };
+    const sample = { id: "jnl-btc-sweep", symbol: "BTCUSDT", outcome: "win", setup: "Liquidity Sweep" };
+    const journal = await desktopJournal([sample, own]);
+    expect(journal.getJournalState().entries.map((entry) => entry.id)).toEqual(["jnl-mine-1"]);
   });
 });

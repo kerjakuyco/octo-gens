@@ -688,7 +688,14 @@ function JournalEntriesView({
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {entries.length === 0 ? (
+        <div className="empty">
+          <p>No journal entries yet. Log a trade from a position under Account, from a fill below, or start one here.</p>
+          <button type="button" className="btn btn-secondary" onClick={() => openJournalComposer()}>
+            New entry
+          </button>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="empty">
           <p>No matching journal entries</p>
           <button

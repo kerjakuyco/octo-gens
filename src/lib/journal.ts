@@ -2,9 +2,14 @@
  * Persistent client-side Trading Journal & Setup Edge Analytics store for
  * decentralized perpetual futures. Entries persist to `localStorage` under
  * `octoneo.journal.v1` and sync reactively across Account and Activity views.
+ *
+ * The journal holds only what the trader logged. The sample entries below are
+ * for the browser demo and the tests: the desktop app starts empty, and drops
+ * them if an earlier version saved them beside the trader's own entries.
  */
 
 import { useSyncExternalStore } from "react";
+import { isDesktop } from "../api";
 import type { Network } from "../api/types";
 import type { EnrichedPosition, ExecutionRecord } from "./portfolio";
 
@@ -133,6 +138,7 @@ function defaultDraft(network: Network = "testnet"): JournalDraft {
   };
 }
 
+/** Invented trades for the browser demo and the tests. Never shown as a trader's own in the desktop app. */
 function starterEntries(): JournalEntry[] {
   const now = Date.now();
   const hoursAgo = (h: number) => new Date(now - h * 3_600_000).toISOString();
@@ -245,16 +251,25 @@ function starterEntries(): JournalEntry[] {
   ];
 }
 
+/** What a journal holds before anything is logged: nothing in the desktop app, the samples in the demo. */
+function initialEntries(): JournalEntry[] {
+  return isDesktop() ? [] : starterEntries();
+}
+
+/** The sample entries' ids. Earlier versions showed them in every new journal, and saved them with the first real entry. */
+const SAMPLE_IDS = new Set(starterEntries().map((entry) => entry.id));
+
 function readStorage(): JournalEntry[] {
   try {
-    if (typeof window === "undefined" || !window.localStorage) return starterEntries();
+    if (typeof window === "undefined" || !window.localStorage) return initialEntries();
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return starterEntries();
+    if (!raw) return initialEntries();
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return starterEntries();
-    return parsed as JournalEntry[];
+    if (!Array.isArray(parsed)) return initialEntries();
+    const entries = parsed as JournalEntry[];
+    return isDesktop() ? entries.filter((entry) => !SAMPLE_IDS.has(entry.id)) : entries;
   } catch {
-    return starterEntries();
+    return initialEntries();
   }
 }
 
