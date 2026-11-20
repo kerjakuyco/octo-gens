@@ -181,13 +181,25 @@ const SHOTS = [
   // bots are invented samples.
   { name: "grid-bots", query: "page=grid&seed=conversation&grids=1", scales: [1, 2], window: WINDOW, prepare: async (page) => page.evaluate(hideCut(WINDOW.height)) },
   { name: "grid-bots-phone", query: "page=grid&seed=conversation&grids=1", window: PHONE, prepare: async (page) => page.evaluate(hideCut(PHONE.height)) },
+  // Activity opens on what the app did, so the journal's picture opens its tab first.
   ...[
-    { name: "account", query: "page=account&seed=conversation&positions=1", cards: ".positions > li" },
-    { name: "journal", query: "page=activity&seed=conversation&positions=1", cards: ".journal-cards > li" },
-  ].flatMap(({ name, query, cards }) => [
-    { name, query, scales: [1, 2], window: WINDOW, prepare: endAfter(cards, 2), clip: viewport },
-    { name: `${name}-phone`, query, window: PHONE, prepare: endAfter(cards, 1), clip: viewport },
-  ]),
+    { name: "account", query: "page=account&seed=conversation&positions=1&grids=1", cards: ".ac-list > .ac-position" },
+    { name: "journal", query: "page=activity&seed=conversation&positions=1", cards: ".av-entries > .av-entry", tab: "Journal" },
+  ].flatMap(({ name, query, cards, tab }) => {
+    const open = async (page) => {
+      if (!tab) return;
+      await page.evaluate(`[...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent.trim().startsWith(${JSON.stringify(tab)}))?.click()`);
+      await sleep(500);
+    };
+    const then = (count) => async (page, view) => {
+      await open(page);
+      await endAfter(cards, count)(page, view);
+    };
+    return [
+      { name, query, scales: [1, 2], window: WINDOW, prepare: then(2), clip: viewport },
+      { name: `${name}-phone`, query, window: PHONE, prepare: then(1), clip: viewport },
+    ];
+  }),
   // The News page: the masthead, the filters and the lead stories, down to the end of the stories
   // beside the lead. On a phone the stories beside it go under it, so that picture ends with the lead.
   // The mock's newsrooms, stories and pictures are invented.

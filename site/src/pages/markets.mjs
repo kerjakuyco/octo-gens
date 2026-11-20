@@ -359,38 +359,39 @@ ${literal("entry × (1 ∓ (1 / leverage − maintenance margin))", "How the est
         },
         {
           id: "account",
-          title: "Your account, as a portfolio",
-          lead: "Account opens with your equity, free collateral and margin, directional exposure and estimated funding carry, and how much of your margin is in use. It is read from the exchange again every 15 seconds while the window is in view.",
+          title: "Your account, at a glance",
+          lead: "Account opens with your equity, your free margin and how much of it is in use, your exposure long and short, and the funding you will pay or receive over the next eight hours. It is read from the exchange again every 15 seconds while the window is in view.",
           body: `${ctx.figure("account", {
-  alt: "The Account page on testnet beside the sidebar. At the top, the wallet’s address, isolated margin with a 10x leverage limit and a trade-only key, and Deposit, Withdraw, AI Risk Check, Refresh and Place Order. Four cards: equity of 9,990.59 USDT with the wallet balance and unrealized profit and loss; 7,300.78 USDT of free collateral, with 2,689.81 USDT, 26.9% of equity, in use as margin; directional exposure, split between long and short; and the estimated funding carry, with two of three positions holding a stop-loss. Tabs for positions, open orders, collateral and the journal, then two positions, a SOL short at 3x and an ETH long at 5x, each with its size, value, entry, mark and liquidation prices and margin, its stop-loss, and for ETH a take-profit and the reward to risk, with buttons to log it in the journal, add to it, trim it by half and close it.",
-  caption: "Account on testnet: the summary, then each position with its stop-loss and take-profit. Sample data from the app’s built-in mock.",
+  alt: "The Account page on testnet beside the sidebar. At the top, the wallet’s address, isolated margin with a 10x leverage limit, a trade-only key approved until February 2027, and Deposit, Withdraw, Refresh, Ask AI and New order. Four cards: equity of 10,031.16 USDT; 5,698.90 USDT of free margin with 43% in use; exposure of 8,618.98 USDT, mostly long; and funding of +0.34 USDT to receive over the next eight hours, with two of three positions holding a stop-loss. A line says two grid bots are at work. Then two positions, a SOL short at 3x and an ETH long at 5x that a grid bot trades, each with its size, value, entry, price now, liquidation price and margin, its stop-loss, and Ask AI, Journal, Trade, Close half and Close.",
+  caption: "Account on testnet: the summary, your grid bots, then each position with its stop-loss and take-profit. Sample data from the app’s built-in mock.",
   kind: "inset",
 })}
 ${facts([
-  ["Summary", "Equity, with the wallet balance and the unrealized profit or loss. Free collateral, with the margin in use as a share of equity and the effective leverage: what your positions are worth against your equity. Directional exposure, your longs against your shorts. And the estimated funding carry, what your positions pay or receive at the current funding rates, with how many of them have a stop-loss."],
-  ["Positions", "Filter by side, and sort by size, unrealized profit, return on margin or nearness to liquidation. Each position shows its size, value, entry, mark and liquidation prices and margin, and its stop-loss and take-profit with the reward to risk between them. Close drafts a ticket for the whole position, two more buttons open the order form to add to it or to trim it by half, and Journal starts an entry for it in your trading journal."],
-  ["Open orders", "Filter by market, and sort by market, type, price, distance from the mark price, quantity or time. Cancel one order, or every order in a market."],
-  ["Collateral", "Listed by asset: the balance, what is free and what is held as margin. Beside it, your wallet, the trade-only key the app trades with, when its approval expires, and Deposit and Withdraw."],
-  ["Ask the assistant", "With a model connected, a button asks the assistant to review your positions, your margin and your liquidation risk."],
+  ["Summary", "Equity, with the wallet balance and the profit or loss still open. Free margin, with how much is in use. Exposure, your longs against your shorts. And the funding your positions pay or receive over the next eight hours at the current rates, with how many of them have a stop-loss."],
+  ["Positions", "Filter by side, and sort by size, profit, return on margin or nearness to liquidation. Each position shows its size, value, entry, price now, liquidation price and margin, and its stop-loss and take-profit with the reward to risk between them. Close drafts a ticket for the whole position and Close half for half of it, Trade opens the order form, and Journal starts an entry for it. A position a grid bot trades says so, with a link to the bot."],
+  ["Open orders", "Filter by market and by whose they are: yours or a grid bot’s. Cancelling a bot’s order, or every order in its market, asks first, because a bot whose orders are all gone stops: cancel only your own, cancel them all, or stop the bot instead."],
+  ["Grid bots", "A line under the summary shows the bots at work, the margin they use and what they made so far, with a link to Grid bots."],
+  ["Balances", "Listed by asset: the balance, what is free and what is in use. Beside them, your wallet, the trade-only key the app trades with, when its approval ends, and Deposit and Withdraw."],
+  ["Ask the assistant", "With a model connected, Ask AI puts /portfolio in the message box, for the assistant to review your positions, your margin and your liquidation risk when you send it."],
 ], "facts-wide")}`,
         },
         {
           id: "journal",
-          title: "A trading journal",
-          lead: "Activity keeps a journal of your trades. Log one from a position under Account, from a fill in the history, or from scratch. Starting from a position or a fill, the app enters what it knows: the market, the side, the leverage, the entry and the size.",
+          title: "Activity, and a trading journal",
+          lead: "Activity has two views. What the app did lists, by day, every order, ticket, deposit and withdrawal and every grid bot event, each opening to the steps behind it. The journal keeps your trades: log one from a position, from a fill, from a grid bot that stopped, or from scratch, and the app enters what it knows.",
           body: `${ctx.figure("journal", {
-  alt: "The Activity page on testnet beside the sidebar, open on the trading journal. At the top, filters for the network, and Export MD, AI Coach Review and Log Trade. Four cards: 466.10 USDT of logged profit and loss; a win rate of 66.7% over three closed trades; 93% of the checklist kept; and Liquidity Sweep as the top setup. Tabs for the journal, the history and the setups, filters by outcome and setup, and a search. Then two sample entries, both still open: an ETH long at 5x on a trend follow and a SOL short at 3x on support and resistance, each with its planned reward to risk, three of three rules kept, its profit or loss, its thesis and its review, and AI Critique, Trade and Edit.",
-  caption: "The trading journal under Activity, with invented sample entries from the app’s built-in mock. In the desktop app the journal starts empty.",
+  alt: "The Activity page on testnet beside the sidebar, open on the journal. At the top, a switch for the network, and Copy as Markdown, Review with AI and Log a trade. Four cards: 466.10 USDT of profit and loss from three closed trades; a win rate of 66.7%, two won and one lost; 93% of the checklist kept over five trades; and liquidity sweep as the best setup. Tabs for what the app did and the journal, filters by outcome and setup, and a search. Then two sample entries, both still open: an ETH long at 5x on a trend follow and a SOL short at 3x on support and resistance, each with its plan kept three of three, its profit or loss, why it was taken and what was learned, and Ask AI, Trade and Edit.",
+  caption: "The journal under Activity, with invented sample entries from the app’s built-in mock. In the desktop app the journal starts empty.",
   kind: "inset",
 })}
 ${facts([
-  ["An entry", "The market, the side, the leverage and the outcome; the setup; the entry and exit, the size, the profit or loss and the reward to risk you planned. A three-point checklist asks whether you respected the stop, sized within your risk and followed the plan, and two notes hold your thesis and the lesson."],
-  ["Setups", "Seven: trend follow, breakout, mean reversion, funding carry, support and resistance, liquidity sweep, and macro and news."],
-  ["Summary", "The profit and loss you logged, your win rate, your best setup and how often you kept to your rules. A tab beside the journal compares your setups."],
+  ["What the app did", "Orders, tickets, deposits and withdrawals and grid bot events, grouped by day and filtered by kind and network. An order shows the steps the app sent, a grid bot event its range, trades and profit, and a ticket still waiting on mainnet offers Review the ticket."],
+  ["An entry", "The market, the side, the leverage and how it went; the setup; the entry and exit, the size, the profit or loss and the reward to risk you planned, or a grid bot’s range. A three-point checklist asks whether you kept to your stop, sized within your risk and followed the plan, and two notes hold why you took it and what you learned."],
+  ["Setups", "Eight: trend follow, breakout, mean reversion, funding carry, support and resistance, liquidity sweep, macro and news, and grid bot."],
+  ["Summary", "The profit and loss you logged, your win rate, how often you kept to your plan and your best setup. Below the journal, a table shows how each setup did."],
   ["Filters", "By outcome, setup and network, or search the market, the setup and your notes."],
-  ["Review", "With a model connected, ask the assistant to review one entry, with its notes, or the journal's figures: win rate, profit and loss, profit factor, how often you kept to your rules and your best setup."],
+  ["Review", "With a model connected, Review with AI puts /journal in the message box for the journal’s figures, and Ask AI on an entry asks about that trade with its notes."],
 ], "facts-wide")}
-<p>Beside the journal, Activity lists what the app did on the exchange: each order and cancellation, step by step, and each deposit and withdrawal. Positions, open orders, the journal and the history come a page at a time.</p>
 <p>The journal starts empty. It is kept on your computer in the app window’s own storage, not in the data folder that holds your conversations, and it is not encrypted. It reaches a model only when you ask the assistant to review it, in that message. <a href="/safety/#data">Where the rest of your data lives</a>.</p>`,
         },
         {

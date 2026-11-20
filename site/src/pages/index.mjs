@@ -13,7 +13,7 @@ const COPY = {
   hero: {
     // The pill above the headline: the release, and what it brought. On a phone the words in
     // `wide` are read but not drawn, so the pill keeps to one line.
-    news: { chip: "New", text: [["wide", "Version "], ["", `${VERSION}: grid bots`], ["wide", " and commands in the chat"]] },
+    news: { chip: "New", text: [["wide", "Version "], ["", `${VERSION}: a new Account and Activity`], ["wide", ", built around your positions and grid bots"]] },
     title: ["Ask about any market.", "Confirm every order."],
     lead: "OctoNeo is an open-source AI assistant for perpetual futures, leveraged contracts that never expire, on a decentralized exchange. It reads the market, sizes trades to your risk and drafts orders.",
     primary: "Download OctoNeo",

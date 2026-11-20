@@ -230,6 +230,7 @@ ${shell([
             head: ["Version", "What changed"],
             stack: true,
             rows: [
+              ["0.10.0", "Account and Activity, redesigned: a grid bot’s orders are marked and cancelling them asks first, and Activity shows what the app did as a timeline beside the journal."],
               ["0.9.0", "Grid bots, on their own page and in the chat, and commands in the message box for trading, research and analysis."],
               ["0.8.0", "A trading journal on the Activity page, which the assistant reviews when you ask, and an Account page that reads like a portfolio. Long lists come a page at a time, the news no longer includes a publisher whose articles need a subscription, and long chat titles fit the sidebar."],
               ["0.7.0","A News page that lays out the newsrooms’ stories like a magazine, and opens a story inside the app. The order form and Settings were redesigned, the app says when a newer version is out, and the icon is now white on near-black."],
