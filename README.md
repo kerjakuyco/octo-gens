@@ -11,6 +11,7 @@ OctoNeo is a desktop AI trading assistant for perpetual futures on a decentralis
 - **Market data in depth.** A screener of every market and a page for each one: a chart with moving averages, Bollinger bands and support and resistance, the order book and latest trades, funding history and open interest, and technical readings on four timeframes.
 - **The news, read for you.** Ask why a market is moving. The assistant reads the latest headlines from crypto newsrooms, Yahoo Finance and the Federal Reserve, says who reported what and how long ago, and lists the headlines with links. Ask about a share or a commodity the exchange lists and it reads the news filed under that ticker too. It works with every model, and needs no key.
 - **A news page.** The newest stories from the same newsrooms, laid out like a magazine with their pictures. Narrow it to your watchlist, to crypto or to the economy, or to one newsroom, and open a market from the story that names it. A story opens right inside the app.
+- **A trading journal.** Log each trade with its setup, a short checklist, your thesis and the lesson. See your win rate, your best setup and how often you kept to your rules, and ask the assistant to review it. **Account** reads like a portfolio: equity, free margin, exposure and funding carry at a glance.
 - **You stay in control.** The assistant can only draft a ticket. Nothing reaches the exchange until you confirm it, and the assistant may not draft mainnet tickets until you allow it.
 - **Your wallet, your funds.** Your wallet approves a separate trade-only key for the app. The app never sees your wallet's key, and the key it holds cannot withdraw.
 - **Deposit and withdraw without leaving.** Both start in the app and are confirmed by your own wallet. You never have to visit the exchange's site.
@@ -139,6 +140,7 @@ Everything stays on your computer.
 | --- | --- |
 | Conversations, activity, preferences | Windows `%LOCALAPPDATA%\Octo Gens\`, macOS `~/Library/Application Support/Octo Gens/`, Linux `~/.local/share/octo-gens/` |
 | API wallet keys, OpenRouter key, Cloudflare API token | Your system keychain, under `org.octogens.desktop` |
+| Your trading journal (what you log under **Activity**) | The app window's own storage on your computer, not the folder above |
 
 The folder and the keychain entry keep the name the app had before it was called OctoNeo, so an existing install keeps its wallet, settings and conversations.
 
@@ -147,6 +149,7 @@ The interface has no network access of its own. Requests go from the app's core 
 - With a cloud model, your messages and what the assistant reads for them, including the account summary, go to that provider. With Ollama or LM Studio they stay on your computer.
 - With web search on, the app downloads the public news feeds of [seven publishers](docs/assistant.md#news-and-web-pages), the pictures of the stories on the **News** page, and the articles the assistant reads. They see a request from your computer, as any site you visit does. An article you open on the **News** page is loaded by the in-app browser view with its own scripts and ads, and keeps no cookies once you close it. What you type is not sent to them: a news search is answered on your computer, from the feeds already downloaded. The one exception is the ticker of a share, a fund or a commodity you ask about, which goes to Yahoo Finance because it files its news by ticker. Turn web search off in **Settings** under *Tools*.
 - The journal keeps your conversations, which can include account figures the assistant quoted. Deleting a conversation removes it from the journal.
+- Your trading journal is kept as you typed it, not encrypted. It reaches a model only when you ask the assistant to review it, in that message.
 
 | Environment variable | Effect |
 | --- | --- |

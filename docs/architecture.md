@@ -103,6 +103,7 @@ The contract is enforced. `crates/octoneo-core/tests/contract.rs` serialises rea
 | Run journal | `journal.sqlite3` in the data folder | Conversations and activity, the last 2,000 runs, with the headlines the assistant was shown (title, publisher, link). A deleted conversation is overwritten, not just unlinked. Output of tool-server tools is never written here |
 | News feeds | In memory | Read again after five minutes. Nothing is kept between launches |
 | Story pictures | In memory | The last 64, up to 32 MB. Nothing is kept between launches |
+| Trading journal | The web view's `localStorage`, key `octoneo.journal.v1` | What the trader logs under Activity, kept by the interface (`src/lib/journal.ts`). Not encrypted. Starts empty in the desktop app |
 | An opened article | In memory | The article view keeps the page's cookies and storage only while it is open |
 | Preferences | `preferences.json` | Network, watchlist, risk limits, wallet addresses, the provider and model in use, a Cloudflare account ID, local server addresses. No secrets |
 | API wallet keys, OpenRouter key, Cloudflare API token | System keychain | In memory only if no keychain exists |
