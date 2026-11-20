@@ -1,5 +1,5 @@
 // The frame every page shares: head, header, footer.
-import { ADVISORY, ISSUES, NAV, REPO, RELEASES, doc, esc, icon } from "./site.mjs";
+import { ADVISORY, ISSUES, NAV, REPO, RELEASES, SPONSOR, doc, esc, icon } from "./site.mjs";
 
 /**
  * The one inline script: it marks the page as scripted before anything is drawn, so the menu
@@ -103,10 +103,12 @@ ${product}
         </li>
 ${project}
         <li class="nav-github"><a class="nav-link" href="${REPO}">GitHub</a></li>
+        <li class="nav-github"><a class="nav-link nav-sponsor" href="${SPONSOR}">${icon("heart", 16)}Sponsor</a></li>
       </ul>
       <a class="button button-brand nav-download" href="/download/"${current("/download/")}>Download</a>
     </nav>
     <div class="header-actions">
+      <a class="button button-quiet button-small button-sponsor" href="${SPONSOR}">${icon("heart", 15)}<span>Sponsor</span></a>
       <a class="button button-quiet button-small" href="${REPO}">GitHub</a>
       <a class="button button-brand button-small" href="/download/"${current("/download/")}>Download</a>
     </div>
@@ -146,6 +148,7 @@ function footer(ctx) {
       "Project",
       [
         [REPO, "GitHub"],
+        [SPONSOR, "Sponsor"],
         [doc("LICENSE"), "License"],
         [ISSUES, "Report an issue"],
       ],

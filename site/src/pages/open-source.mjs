@@ -1,4 +1,4 @@
-import { REPO, ISSUES, chip, code, doc, docPage, esc, facts, icon, out, reference, shell, table } from "../site.mjs";
+import { REPO, ISSUES, SPONSOR, chip, code, doc, docPage, esc, facts, icon, out, reference, shell, table } from "../site.mjs";
 
 const LAYOUT = [
   "crates/octoneo-core/    Trading core in Rust: exchange client, wallet signing, indicators,",
@@ -222,6 +222,12 @@ ${shell([
 <li><strong>Tests that would fail without your change</strong>, beside the code, never reaching the internet.</li>
 </ul>
 <p>Keep a pull request to one change, and write commit messages in the ${out("https://www.conventionalcommits.org", "Conventional Commits")} style. Everyone taking part follows the ${out(doc("CODE_OF_CONDUCT.md"), "Code of Conduct")}. Security problems go through ${out(doc("SECURITY.md"), "SECURITY.md")}, not a public issue. The full guide is ${out(doc("CONTRIBUTING.md"), "CONTRIBUTING.md")}.</p>`,
+        },
+        {
+          id: "sponsor",
+          title: "Sponsor OctoNeo",
+          lead: "OctoNeo is free and open source, with no account, no fees and no telemetry. You can support its development through GitHub Sponsors.",
+          body: `<p>${out(SPONSOR, "Sponsor OctoNeo on GitHub")}, once or every month. Sponsorship supports the project; it buys no say over what the assistant may do, and every pull request keeps the same rules above.</p>`,
         },
         {
           id: "history",

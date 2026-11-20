@@ -1,6 +1,6 @@
 import { SPARK_BTC, demo, scenario } from "../demo.mjs";
 import { mark } from "../logos.mjs";
-import { REPO, RELEASES, VERSION, esc, icon } from "../site.mjs";
+import { REPO, RELEASES, SPONSOR, VERSION, esc, icon } from "../site.mjs";
 
 /**
  * Every word on the home page, in the order it appears, from the copy deck; the preview of the app
@@ -31,6 +31,12 @@ const COPY = {
       { label: "Sign with your own wallet", items: [["metamask", "MetaMask"], ["rabby", "Rabby"]], more: "and other browser wallets" },
       { label: "Bring your own model", items: [[null, "OpenRouter"], [null, "Cloudflare"], [null, "Ollama"], [null, "LM Studio"]] },
     ],
+  },
+
+  sponsor: {
+    title: "Support OctoNeo",
+    text: "OctoNeo is free and open source, with no account, no fees and no telemetry. If it is useful to you, you can support its development through GitHub Sponsors.",
+    button: "Sponsor on GitHub",
   },
 
   bento: {
@@ -391,6 +397,16 @@ ${card.items.map((item) => `          <li>${check}<span>${item}</span></li>`).jo
   )
   .join("\n")}
     </div>
+  </div>
+</section>
+
+<section class="home-band sponsor-band" aria-labelledby="sponsor-title">
+  <div class="wrap sponsor">
+    <div class="sponsor-copy">
+      <h2 class="home-title" id="sponsor-title">${COPY.sponsor.title}</h2>
+      <p class="home-lead">${COPY.sponsor.text}</p>
+    </div>
+    <a class="button button-quiet sponsor-button" href="${SPONSOR}">${icon("heart", 17)}${COPY.sponsor.button}</a>
   </div>
 </section>
 `,

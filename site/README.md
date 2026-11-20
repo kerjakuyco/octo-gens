@@ -55,7 +55,7 @@ The cards under the home page's headline, the demo window beside "From question 
 - **Every claim comes from the project's documents:** `README.md`, `docs/assistant.md`, `docs/exchange.md`, `docs/architecture.md`, `SECURITY.md`, `CHANGELOG.md`, `NOTICE.md` and `CONTRIBUTING.md`. No invented features, figures, users or prices.
 - **No third-party requests.** No CDNs, analytics, embeds, web fonts or remote pictures. The Content Security Policy in `_headers` enforces it, and `check` fails on any of them. Links to other sites are fine.
 - **Type is the system's own.** `system-ui, -apple-system, Roboto, "Noto Sans", sans-serif` and `ui-monospace, monospace`. No font files.
-- **Other companies' names are text only**, never their logos. The footer carries the trademark note from `NOTICE.md`, and pictures with a chart credit TradingView.
+- **Other companies' names are text**, with one exception: the home page's Works with band shows the single-colour marks of the networks and wallets the app works with (`src/logos.mjs`, from Web3 Icons under MIT). The footer carries the trademark note from `NOTICE.md`, and pictures with a chart credit TradingView.
 
 On each release, update `VERSION` in `src/site.mjs` (the download page builds its links from it) and `RELEASED` in `src/pages/download.mjs`.
 

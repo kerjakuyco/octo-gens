@@ -2,6 +2,7 @@
 
 export const REPO = "https://github.com/kerjakuyco/octo-neo";
 export const RELEASES = `${REPO}/releases`;
+export const SPONSOR = "https://github.com/sponsors/kerjakuyco";
 export const ISSUES = `${REPO}/issues`;
 export const ADVISORY = `${REPO}/security/advisories/new`;
 export const TRADINGVIEW = "https://www.tradingview.com";
@@ -26,7 +27,7 @@ export const esc = (value) => String(value).replace(/[&<>"']/g, (c) => ESCAPES[c
 
 /**
  * Line icons on a 24 px grid, the app's own shapes unless marked. They take the text color. Other
- * companies' marks are never drawn: an operating system or a provider is named in text.
+ * companies' marks are not drawn here: the home page's Works with band draws its own, from logos.mjs.
  */
 const ICONS = {
   chevron: '<path d="m9 6 6 6-6 6"/>',
@@ -47,6 +48,8 @@ const ICONS = {
   plug: '<path d="M9 4v4M15 4v4M6.5 8h11v3a5.5 5.5 0 0 1-11 0zM12 16.5V20"/>',
   appearance: '<circle cx="12" cy="12" r="7.5"/><path d="M12 4.5a7.5 7.5 0 0 1 0 15z" fill="currentColor" stroke="none"/>',
   info: '<circle cx="12" cy="12" r="8"/><path d="M12 11.2v5M12 7.8v.2"/>',
+  // Not the app's: the heart beside Sponsor.
+  heart: '<path d="M12 19.5s-7-4.3-7-9.4a3.9 3.9 0 0 1 3.9-3.9c1.3 0 2.4.6 3.1 1.6.7-1 1.8-1.6 3.1-1.6a3.9 3.9 0 0 1 3.9 3.9c0 5.1-7 9.4-7 9.4z"/>',
   // Not the app's: an arrow to the next page, and a folder and a file for the drawn code window.
   arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
   folder: '<path d="M4 6.5h5.5l2 2H20v10H4z"/>',

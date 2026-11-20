@@ -3001,3 +3001,43 @@ html:not(.js) .nav-item-label {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------------------------------------------------------------- sponsor */
+
+/* Sponsor beside GitHub in the bar, the heart in the text's own colour, as everything else here. */
+.button-sponsor .icon,
+.nav-sponsor .icon {
+  flex: none;
+}
+
+.nav-sponsor {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The page ends on a quiet invitation to support the project, then the footer. */
+.sponsor-band {
+  padding-bottom: 104px;
+}
+
+.sponsor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px 40px;
+  padding-top: 40px;
+  border-top: 1px solid var(--line);
+}
+
+.sponsor-copy {
+  display: grid;
+  gap: 12px;
+  max-width: 40rem;
+}
+
+.sponsor-button {
+  flex: none;
+  gap: 10px;
+}
