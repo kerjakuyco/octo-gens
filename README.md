@@ -4,7 +4,7 @@ Website: [octoneo.xyz](https://octoneo.xyz). Download the [latest release](https
 
 OctoNeo is a desktop AI trading assistant for perpetual futures on a decentralised exchange. You chat with it the way you chat with any AI assistant. It reads live market data, sizes positions from the risk you accept, and drafts order tickets. You trade from your own web3 wallet and confirm every order. It runs on Windows, macOS and Linux.
 
-![A conversation with the assistant beside the live market panel](docs/images/assistant-dark.png)
+![The assistant answering "BTC outlook", with the price, the 4h reading and the order book it read shown as cards above its answer](docs/images/assistant-dark.png)
 
 - **Just ask.** "BTC outlook", "Top movers", "Long ETH, 1% risk". The assistant plans its own research and shows what it read as cards under the answer: prices, a technical reading, the order book, a position plan.
 - **Bring your own model.** OpenRouter, Cloudflare AI Gateway, or a model on your own computer with Ollama or LM Studio.
