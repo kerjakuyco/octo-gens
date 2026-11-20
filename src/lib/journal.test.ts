@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { GridBotView } from "../api/types";
 import {
   computeJournalMetrics,
+  draftFromGridBot,
+  journalReviewPrompt,
+  setupLabel,
   deleteJournalEntry,
   formatJournalMarkdown,
   getJournalState,
@@ -56,8 +60,9 @@ describe("trading journal store & edge analytics", () => {
     expect(updated.pnlUsd).toBe("80.00");
 
     const md = formatJournalMarkdown(getJournalState().entries, computeJournalMetrics(getJournalState().entries));
-    expect(md).toContain("# OctoNeo Perpetual Futures Trading Journal");
-    expect(md).toContain("ARBUSDT · LONG 4x (WIN) — Funding Carry");
+    expect(md).toContain("# OctoNeo trading journal");
+    expect(md).toContain("ARBUSDT · Long 4x · Won · Funding carry");
+    expect(md).toContain("**Why**: Negative funding squeeze at 4h support.");
 
     deleteJournalEntry(created.id);
     expect(getJournalState().entries).toHaveLength(5);
@@ -96,5 +101,74 @@ describe("the desktop app's journal", () => {
     const sample = { id: "jnl-btc-sweep", symbol: "BTCUSDT", outcome: "win", setup: "Liquidity Sweep" };
     const journal = await desktopJournal([sample, own]);
     expect(journal.getJournalState().entries.map((entry) => entry.id)).toEqual(["jnl-mine-1"]);
+  });
+});
+
+describe("logging a grid bot", () => {
+  const bot = (patch: Partial<GridBotView>): GridBotView =>
+    ({
+      id: "bot1",
+      network: "testnet",
+      symbol: "BTCUSDT",
+      base: "BTC",
+      quote: "USDT",
+      direction: "neutral",
+      spacing: "arithmetic",
+      status: "stopped",
+      lowerPrice: "60000",
+      upperPrice: "64000",
+      grids: 10,
+      leverage: 3,
+      isolated: true,
+      margin: "250",
+      realizedPnl: "12.40",
+      unrealizedPnl: "0",
+      totalPnl: "12.40",
+      matchedTrades: 4,
+      stopLower: null,
+      stopUpper: "66000",
+      createdAt: "2026-11-20T10:00:00Z",
+      stoppedAt: "2026-11-20T12:30:00Z",
+      lastNote: "Stopped by you.",
+      ...patch,
+    }) as GridBotView;
+
+  it("drafts a stopped bot as a closed grid trade with what it made", () => {
+    const draft = draftFromGridBot(bot({}));
+    expect(draft).toMatchObject({
+      network: "testnet",
+      symbol: "BTCUSDT",
+      side: "long",
+      leverage: 3,
+      outcome: "win",
+      setup: "Grid Bot",
+      entryPrice: "60000",
+      exitPrice: "64000",
+      pnlUsd: "12.40",
+    });
+    expect(draft.checklist.stopRespected).toBe(true);
+    expect(draft.thesis).toBe("Neutral grid on BTC from 60000 to 64000: 10 grids, 250 USDT of margin at 3x.");
+    expect(draft.lesson).toContain("4 completed trades");
+    expect(draft.lesson).toContain("Stopped by you.");
+  });
+
+  it("keeps a running bot open, a short one short, and a loss a loss", () => {
+    expect(draftFromGridBot(bot({ status: "running", stoppedAt: null })).outcome).toBe("open");
+    expect(draftFromGridBot(bot({ direction: "short" })).side).toBe("short");
+    expect(draftFromGridBot(bot({ realizedPnl: "-3.10", totalPnl: "-3.10" })).outcome).toBe("loss");
+    expect(draftFromGridBot(bot({ realizedPnl: "0", totalPnl: "0" })).outcome).toBe("breakeven");
+  });
+
+  it("names setups in plain words without changing what is stored", () => {
+    expect(setupLabel("Support / Resistance")).toBe("Support and resistance");
+    expect(setupLabel("Grid Bot")).toBe("Grid bot");
+    expect(setupLabel("Something old")).toBe("Something old");
+  });
+
+  it("asks for a review with the figures in plain words", () => {
+    resetJournalToSeeds();
+    const prompt = journalReviewPrompt(computeJournalMetrics(getJournalState().entries, "testnet"));
+    expect(prompt).toContain("Review my trading journal (3 closed trades, 2 still open):");
+    expect(prompt).toContain("Best setup: Liquidity sweep");
   });
 });

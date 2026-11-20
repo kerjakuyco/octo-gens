@@ -1,7 +1,7 @@
 /**
- * Persistent client-side Trading Journal & Setup Edge Analytics store for
- * decentralized perpetual futures. Entries persist to `localStorage` under
- * `octoneo.journal.v1` and sync reactively across Account and Activity views.
+ * The trading journal: the trades the trader logs, with their setup, outcome, checklist, thesis and
+ * lesson, and the figures worked out from them. Entries persist to `localStorage` under
+ * `octoneo.journal.v1` and stay in step across the Account and Activity pages.
  *
  * The journal holds only what the trader logged. The sample entries below are
  * for the browser demo and the tests: the desktop app starts empty, and drops
@@ -10,8 +10,9 @@
 
 import { useSyncExternalStore } from "react";
 import { isDesktop } from "../api";
-import type { Network } from "../api/types";
+import type { GridBotView, Network } from "../api/types";
 import { signedMoney } from "./format";
+import { gridDuration } from "./grid";
 import type { EnrichedPosition, ExecutionRecord } from "./portfolio";
 
 const STORAGE_KEY = "octoneo.journal.v1";
@@ -26,9 +27,30 @@ export const JOURNAL_SETUPS = [
   "Support / Resistance",
   "Liquidity Sweep",
   "Macro / News",
+  "Grid Bot",
 ] as const;
 
 export type JournalSetup = (typeof JOURNAL_SETUPS)[number];
+
+/**
+ * How each setup is named on screen. The stored values stay as they were first written, so entries
+ * saved by earlier versions still match their setup.
+ */
+export const SETUP_LABELS: Record<JournalSetup, string> = {
+  "Trend Follow": "Trend follow",
+  Breakout: "Breakout",
+  "Mean Reversion": "Mean reversion",
+  "Funding Carry": "Funding carry",
+  "Support / Resistance": "Support and resistance",
+  "Liquidity Sweep": "Liquidity sweep",
+  "Macro / News": "Macro and news",
+  "Grid Bot": "Grid bot",
+};
+
+/** A setup's name on screen; an unknown one, from storage written by another version, as it is. */
+export function setupLabel(setup: string): string {
+  return (SETUP_LABELS as Record<string, string>)[setup] ?? setup;
+}
 
 export interface JournalChecklist {
   stopRespected: boolean;
@@ -471,6 +493,41 @@ export function draftFromExecution(record: ExecutionRecord): JournalDraft {
   };
 }
 
+/**
+ * A journal entry drafted from a grid bot: its market, direction, leverage, range and what it made. A
+ * stopped bot is logged with the profit it took and an outcome to match; a running one stays open.
+ * The range goes in the entry and exit prices, which the journal shows as the bot's range.
+ */
+export function draftFromGridBot(bot: GridBotView, now: number = Date.now()): JournalDraft {
+  const finished = bot.status === "stopped" || bot.status === "error";
+  const pnl = Number(finished ? bot.realizedPnl : bot.totalPnl);
+  const known = Number.isFinite(pnl);
+  const outcome: JournalOutcome = !finished ? "open" : !known || pnl === 0 ? "breakeven" : pnl > 0 ? "win" : "loss";
+  const mode = bot.direction === "neutral" ? "Neutral" : bot.direction === "long" ? "Long" : "Short";
+  const trades = `${bot.matchedTrades} completed trade${bot.matchedTrades === 1 ? "" : "s"}`;
+  const ran = gridDuration(bot.createdAt, bot.stoppedAt, now);
+  return {
+    network: bot.network,
+    symbol: bot.symbol,
+    side: bot.direction === "short" ? "short" : "long",
+    leverage: bot.leverage,
+    outcome,
+    setup: "Grid Bot",
+    entryPrice: bot.lowerPrice,
+    exitPrice: bot.upperPrice,
+    qty: "",
+    pnlUsd: known ? pnl.toFixed(2) : "",
+    rrPlanned: "",
+    checklist: {
+      stopRespected: Boolean(bot.stopLower || bot.stopUpper),
+      sizedWithinRisk: true,
+      followedPlan: true,
+    },
+    thesis: `${mode} grid on ${bot.base} from ${bot.lowerPrice} to ${bot.upperPrice}: ${bot.grids} grids, ${bot.margin} ${bot.quote} of margin at ${bot.leverage}x.`,
+    lesson: `${finished ? "Ran" : "Running for"} ${ran}. ${trades}, ${signedMoney(bot.realizedPnl)} ${bot.quote} made.${bot.lastNote ? ` ${bot.lastNote}` : ""}`,
+  };
+}
+
 function finiteOrNull(raw: string): number | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -602,34 +659,44 @@ export function computeJournalMetrics(
   };
 }
 
-/** Exports the journal and edge metrics as clean Markdown for clipboard sharing or AI analysis. */
+/** How an outcome reads in the Markdown export and on screen. */
+export const OUTCOME_WORDS: Record<JournalOutcome, string> = {
+  open: "Still open",
+  win: "Won",
+  loss: "Lost",
+  breakeven: "Broke even",
+  note: "Note",
+};
+
+/** How much more was won than lost: `7.28`, `∞` with no losses, `—` with nothing closed. */
+export function profitFactorText(metrics: JournalMetrics): string {
+  if (metrics.profitFactor === null) return "—";
+  return Number.isFinite(metrics.profitFactor) ? metrics.profitFactor.toFixed(2) : "∞";
+}
+
+/** The journal and its figures as Markdown, to paste anywhere. */
 export function formatJournalMarkdown(entries: JournalEntry[], metrics: JournalMetrics): string {
-  const pf =
-    metrics.profitFactor === null
-      ? "—"
-      : Number.isFinite(metrics.profitFactor)
-        ? metrics.profitFactor.toFixed(2)
-        : "∞";
   const lines = [
-    "# OctoNeo Perpetual Futures Trading Journal",
+    "# OctoNeo trading journal",
     "",
-    `- **Closed Trades**: ${metrics.closedCount} (${metrics.winCount}W / ${metrics.lossCount}L / ${metrics.breakevenCount}BE)`,
-    `- **Win Rate**: ${metrics.winRatePct !== null ? `${metrics.winRatePct.toFixed(1)}%` : "—"}`,
-    `- **Net Realized P&L**: ${metrics.netPnlUsd >= 0 ? "+" : "−"}${Math.abs(metrics.netPnlUsd).toFixed(2)} USDT`,
-    `- **Profit Factor**: ${pf} · **Discipline Score**: ${metrics.disciplinePct.toFixed(0)}%`,
+    `- **Closed trades**: ${metrics.closedCount} (${metrics.winCount} won, ${metrics.lossCount} lost, ${metrics.breakevenCount} broke even)`,
+    `- **Win rate**: ${metrics.winRatePct !== null ? `${metrics.winRatePct.toFixed(1)}%` : "—"}`,
+    `- **Profit and loss**: ${metrics.netPnlUsd >= 0 ? "+" : "−"}${Math.abs(metrics.netPnlUsd).toFixed(2)} USDT`,
+    `- **Profit factor**: ${profitFactorText(metrics)} · **Kept to the plan**: ${metrics.disciplinePct.toFixed(0)}%`,
     "",
-    "## Entries",
+    "## Trades",
     "",
   ];
 
   for (const entry of entries) {
     const pnl = finiteOrNull(entry.pnlUsd);
     const pnlText = pnl !== null ? `${pnl >= 0 ? "+" : "−"}${Math.abs(pnl).toFixed(2)} USDT` : "—";
+    const grid = entry.setup === "Grid Bot";
     lines.push(
-      `### ${entry.symbol} · ${entry.side.toUpperCase()} ${entry.leverage}x (${entry.outcome.toUpperCase()}) — ${entry.setup}`,
-      `- **Entry / Exit**: ${entry.entryPrice || "—"} → ${entry.exitPrice || "—"} · **Qty**: ${entry.qty || "—"} · **P&L**: ${pnlText} · **Planned R:R**: ${entry.rrPlanned || "—"}`,
-      `- **Thesis**: ${entry.thesis || "—"}`,
-      `- **Review / Lesson**: ${entry.lesson || "—"}`,
+      `### ${entry.symbol} · ${entry.side === "long" ? "Long" : "Short"} ${entry.leverage}x · ${OUTCOME_WORDS[entry.outcome]} · ${setupLabel(entry.setup)}`,
+      `- **${grid ? "Range" : "Entry and exit"}**: ${entry.entryPrice || "—"} ${grid ? "to" : "→"} ${entry.exitPrice || "—"} · **Size**: ${entry.qty || "—"} · **Profit or loss**: ${pnlText} · **Planned reward to risk**: ${entry.rrPlanned || "—"}`,
+      `- **Why**: ${entry.thesis || "—"}`,
+      `- **What I learned**: ${entry.lesson || "—"}`,
       "",
     );
   }
@@ -645,12 +712,12 @@ export function journalReviewPrompt(metrics: JournalMetrics): string {
   const pf =
     metrics.profitFactor !== null && Number.isFinite(metrics.profitFactor) ? metrics.profitFactor.toFixed(2) : "—";
   return [
-    `Review my perpetual trading journal performance (${metrics.closedCount} closed trades, ${metrics.openCount} open theses):`,
-    `- Win rate: ${metrics.winRatePct !== null ? `${metrics.winRatePct.toFixed(1)}%` : "—"}, Net realized P&L: ${signedMoney(metrics.netPnlUsd.toFixed(2))} USDT, Profit factor: ${pf}, Discipline score: ${metrics.disciplinePct.toFixed(0)}%`,
+    `Review my trading journal (${metrics.closedCount} closed trades, ${metrics.openCount} still open):`,
+    `- Win rate ${metrics.winRatePct !== null ? `${metrics.winRatePct.toFixed(1)}%` : "—"}, profit and loss ${signedMoney(metrics.netPnlUsd.toFixed(2))} USDT, profit factor ${pf}, kept to the plan ${metrics.disciplinePct.toFixed(0)}% of the time`,
     metrics.bestSetup
-      ? `- Top setup: ${metrics.bestSetup.setup} (${signedMoney(metrics.bestSetup.netPnlUsd.toFixed(2))} USDT)`
+      ? `- Best setup: ${setupLabel(metrics.bestSetup.setup)} (${signedMoney(metrics.bestSetup.netPnlUsd.toFixed(2))} USDT)`
       : "",
-    "Identify my strongest edge, any risk/discipline leaks, and how I should position my current portfolio.",
+    "Tell me where my edge is, where discipline slips, and what that means for the positions I hold now.",
   ]
     .filter(Boolean)
     .join("\n");
