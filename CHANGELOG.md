@@ -4,6 +4,16 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## Unreleased
 
+## 0.8.0
+
+A trading journal on the Activity page, and an Account page that reads like a portfolio. The news no longer includes a publisher whose articles need a subscription, and long chat titles fit the sidebar.
+
+### Added
+
+- **A trading journal.** **Activity** now keeps a journal of your trades. Log one from a position under **Account**, from a fill in the history, or from scratch, with its setup (trend follow, breakout, mean reversion, funding carry, support and resistance, liquidity sweep, or macro and news), entry and exit, size, profit or loss, the reward to risk you planned, a three-point checklist (stop respected, sized within risk, followed the plan), your thesis and the lesson. A summary shows the profit and loss you logged, your win rate, your best setup and how often you kept to your rules. Filter by outcome, setup and network, or search, and ask the assistant to review one entry or the whole journal. The journal starts empty, and is kept on this computer in the app window's own storage.
+- **Account, as a portfolio.** **Account** opens with your equity, free collateral and margin, directional exposure and estimated funding carry, and how much of your margin is in use. Positions filter by side and orders by market, collateral is listed by asset, and a button asks the assistant to review your positions, margin and liquidation risk.
+- **Pages for long lists.** Positions, open orders, the journal and the history come a page at a time.
+
 ### Removed
 
 - **The Defiant is no longer read.** Its articles ask readers to sign in or pay, so its stories could not be read in the app. The News page and the assistant now read seven publishers.

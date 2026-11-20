@@ -1,7 +1,7 @@
 {
   "name": "octoneo",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Desktop AI trading assistant for perpetual futures",
   "license": "GPL-3.0-only",
   "homepage": "https://octoneo.xyz",
