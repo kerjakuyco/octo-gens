@@ -6,8 +6,8 @@ interface DialogProps {
   open: boolean;
   onClose: () => void;
   title: string;
-  /** `settings` is the large two-pane modal that renders its own pane header. */
-  size?: "settings";
+  /** `settings` is the large two-pane modal; `trade` is sized for the manual order ticket. */
+  size?: "settings" | "trade";
   /** When true, omits the default top title bar; the child must render an element with `id={titleId}` or use `ariaLabel`. */
   headless?: boolean;
   /** The dialog's content. Wrap it in `.dialog-body` unless it does its own layout. */

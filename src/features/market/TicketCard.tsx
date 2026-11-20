@@ -30,7 +30,7 @@ export function TicketCard({ ticket }: { ticket: TicketView }) {
   const [acknowledged, setAcknowledged] = useState(false);
 
   return (
-    <section className="card ticket" data-state={status.state} aria-label={`${action} ${instrument.base} ticket`}>
+    <section className="card ticket" data-state={status.state} aria-label={`${action} ${instrument.base} order`}>
       <header className="card-head">
         <span className="ticket-title">
           <span className="chip" data-tone={ticket.side === "buy" ? "up" : "down"}>
@@ -38,33 +38,34 @@ export function TicketCard({ ticket }: { ticket: TicketView }) {
           </span>
           <button type="button" className="symbol" onClick={() => void focusMarket(ticket.symbol)}>
             <span className="symbol-name">
-              {instrument.base} / {quote}
+              {instrument.base}-{quote}
             </span>
           </button>
+          <span className="chip">Market</span>
         </span>
         <span className="chip" data-tone={real ? "warn" : undefined}>
-          {real ? "Mainnet · Real funds" : "Testnet"}
+          {real ? "Mainnet · Live funds" : "Testnet"}
         </span>
       </header>
 
       <p className="ticket-effect">{ticket.effect}</p>
 
       <dl className="facts facts-two">
-        <Line label="Quantity">
+        <Line label="Order size">
           {units(ticket.qty)} {instrument.base}
         </Line>
-        <Line label="Value">
+        <Line label="Notional">
           {money(ticket.notional)} {quote}
         </Line>
         {ticket.reduceOnly ? null : (
           <>
             <Line label="Leverage">{leverage(ticket.leverage)}</Line>
-            <Line label="Margin">
+            <Line label="Initial margin">
               {money(ticket.margin)} {quote}
             </Line>
           </>
         )}
-        {ticket.estLiquidation ? <Line label="Est. liquidation">{price(ticket.estLiquidation)}</Line> : null}
+        {ticket.estLiquidation ? <Line label="Est. liq. price">{price(ticket.estLiquidation)}</Line> : null}
         {ticket.stopLoss ? <Line label="Stop-loss">{price(ticket.stopLoss)}</Line> : null}
         {ticket.takeProfit ? <Line label="Take-profit">{price(ticket.takeProfit)}</Line> : null}
       </dl>
@@ -76,7 +77,7 @@ export function TicketCard({ ticket }: { ticket: TicketView }) {
           {real ? (
             <label className="check ticket-ack">
               <input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />
-              <span>I am trading real funds</span>
+              <span>I understand this order executes with real funds on Mainnet.</span>
             </label>
           ) : null}
           <div className="ticket-actions">
@@ -89,7 +90,7 @@ export function TicketCard({ ticket }: { ticket: TicketView }) {
               {confirmLabel(ticket)}
             </button>
             <button type="button" className="btn btn-ghost" disabled={working} onClick={() => void dismissTicket()}>
-              Dismiss
+              Discard
             </button>
           </div>
         </>
@@ -105,11 +106,11 @@ export function TicketCard({ ticket }: { ticket: TicketView }) {
         <p className="note" data-tone="warn" role="alert">
           <Icon name="alert" size={16} />
           <span>
-            <strong>Not confirmed.</strong> {status.note}
+            <strong>Order unconfirmed.</strong> {status.note}
           </span>
         </p>
       ) : null}
-      {status.state === "expired" ? <p className="ticket-expired">Expired</p> : null}
+      {status.state === "expired" ? <p className="ticket-expired">Order draft expired</p> : null}
     </section>
   );
 }

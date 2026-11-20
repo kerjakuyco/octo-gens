@@ -733,6 +733,11 @@ select.input {
   height: min(650px, calc(100vh - 32px));
 }
 
+.dialog[data-size="trade"] {
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 28px));
+}
+
 .dialog-head {
   display: flex;
   align-items: center;
