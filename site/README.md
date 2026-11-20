@@ -92,16 +92,20 @@ Deploying creates or updates the Worker `octoneo` and attaches the custom domain
 
 ### With Cloudflare's Git integration (Workers Builds)
 
-In the Cloudflare dashboard, create a Worker from this Git repository and set:
+The Worker `octoneo` is connected to this repository: a push to `main` that changes a file in `site/` builds and deploys the site. Its settings are in the Cloudflare dashboard, under the Worker's Settings, Build:
 
 | Setting | Value |
 | --- | --- |
+| Production branch | `main` |
 | Root directory | `site` |
 | Build command | `pnpm install --frozen-lockfile` |
 | Deploy command | `pnpm run deploy` (builds for octoneo.xyz, then deploys) |
+| Build watch paths | Include `site/*`, so a push that changes only the app does not rebuild the site |
 | Build variables | `NODE_VERSION=22` if the build image does not read `.node-version` |
 
-The Worker's name in the dashboard must be `octoneo`, the name in `wrangler.jsonc`. Every push to the production branch then builds and deploys the site.
+**The root directory must be `site`.** With the repository root, the build runs the app's own `pnpm run build`, and `wrangler deploy` publishes the desktop app's web interface in place of the website, on every push.
+
+The Worker's name in the dashboard must be `octoneo`, the name in `wrangler.jsonc`. `pnpm run deploy` from this folder still works by hand, but the next push that changes `site/` deploys `main` again, so push what you deploy.
 
 ## Pictures
 
