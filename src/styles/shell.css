@@ -375,8 +375,10 @@
   font-weight: 500;
 }
 
+/* One column that may be narrower than a title: a long title shortens, it never widens the list. */
 .thread-section > ul {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1px;
 }
 
@@ -384,6 +386,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  min-width: 0;
   min-height: 34px;
   border: 1px solid transparent;
   border-radius: var(--r-control);
@@ -415,7 +418,14 @@
   opacity: 0.5;
 }
 
+/* The title gives way to the row and ends in an ellipsis; a flex item would otherwise keep its full width. */
+.thread-link > .truncate {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .thread-delete {
+  flex: none;
   width: 28px;
   height: 28px;
   margin-inline-end: 3px;

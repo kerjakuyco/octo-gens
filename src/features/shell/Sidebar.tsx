@@ -161,6 +161,7 @@ function ThreadRow({ thread, current, locked }: { thread: ThreadView; current: b
       <button
         type="button"
         className="thread-link"
+        title={thread.title}
         aria-current={current ? "page" : undefined}
         disabled={locked && !current}
         onClick={() => void openThread(thread.id)}

@@ -4,6 +4,10 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## Unreleased
 
+### Fixed
+
+- A long conversation title in the sidebar ran past its edge. It now ends in an ellipsis, and pointing at it shows the whole title.
+
 ## 0.7.0
 
 A News page lays out the newsrooms' stories like a magazine, and a story opens right inside the app. The order form and Settings were redesigned, the app now tells you when a newer version is out, and the icon is black.
