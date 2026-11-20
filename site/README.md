@@ -109,7 +109,7 @@ The Worker's name in the dashboard must be `octoneo`, the name in `wrangler.json
 
 ## Pictures
 
-The screenshots in `src/assets/shots/` are of the app's interface running in a browser against its built-in mock: a fictional account and a fictional model, nothing real. Each is saved in light and dark as `<name>-<light|dark>-<pixel width>.webp`, and the build turns the dark ones into `<picture>` elements: the site is dark only. It publishes only the pictures a page shows; the light copies and the pictures no page uses stay in the folder for later. Pictures sit in the text column of the feature pages, 760 pixels wide at most. A picture named `<name>-phone` is a crop that replaces `<name>` on screens up to 640 pixels wide, where a whole window would shrink its text past reading. To take them again, after a change to the interface:
+The screenshots in `src/assets/shots/` are of the app's interface running in a browser against its built-in mock: a fictional account and a fictional model, nothing real. Each is saved in light and dark as `<name>-<light|dark>-<pixel width>.webp`, and the build turns the dark ones into `<picture>` elements: the site is dark only. It publishes only the pictures a page shows; the light copies and the pictures no page uses stay in the folder for later. Pictures sit in the text column of the feature pages, 760 pixels wide at most. A picture named `<name>-phone` replaces `<name>` on screens up to 640 pixels wide, where a whole window would shrink its text past reading: it is the same page in a narrow window, which the app lays out for its width. To take them again, after a change to the interface:
 
 ```sh
 cd ..                                            # the repository root

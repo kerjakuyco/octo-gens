@@ -94,7 +94,8 @@ export default {
 ${facts([
   ["Message box", `${code("Ctrl+K")} on Windows and Linux, ${code("Cmd+K")} on macOS`],
   ["Stop an answer", code("Esc")],
-  ["Conversations", "Kept in the sidebar by date. Reopen one to read it with what the assistant read at the time, or delete it."],
+  ["Show or hide the sidebar", `${code("Ctrl+B")} on Windows and Linux, ${code("Cmd+B")} on macOS`],
+  ["Conversations", "Kept in the sidebar by date, where you can filter them by title. Reopen one to read it with what the assistant read at the time, or delete it."],
 ])}`,
         },
         {

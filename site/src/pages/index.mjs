@@ -13,7 +13,7 @@ const COPY = {
   hero: {
     // The pill above the headline: the release, and what it brought. On a phone the words in
     // `wide` are read but not drawn, so the pill keeps to one line.
-    news: { chip: "New", text: [["wide", "Version "], ["", `${VERSION}: deposits and withdrawals`], ["wide", " in the app"]] },
+    news: { chip: "New", text: [["wide", "Version "], ["", `${VERSION}: a full-width market page`]] },
     title: ["Ask about any market.", "Confirm every order."],
     lead: "OctoNeo is an open-source AI assistant for perpetual futures, leveraged contracts that never expire, on a decentralized exchange. It reads the market, sizes trades to your risk and drafts orders.",
     primary: "Download OctoNeo",
@@ -107,7 +107,7 @@ const COPY = {
 /* ------------------------------------------------------------ the bento */
 
 // Sample data the bento draws beyond the conversations in demo.mjs. Each is the app's own: the Book
-// tab of the market panel and Settings, Models are the app's built-in mock, as the pictures on the
+// tab of a market's page and Settings, Models are the app's built-in mock, as the pictures on the
 // Markets and Models pages show; the deposit is the wallet page against a stand-in, as on the Wallet page.
 const BOOK = {
   asks: [

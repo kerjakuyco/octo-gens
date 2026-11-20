@@ -1,12 +1,12 @@
-import { TRADINGVIEW, callout, chip, code, doc, docPage, facts, literal, network, out, reference, table, ui, uiFacts } from "../site.mjs";
+import { TRADINGVIEW, callout, chip, code, doc, docPage, facts, icon, literal, network, out, reference, table, ui, uiButton } from "../site.mjs";
 
 const chartBy = `Chart by ${out(TRADINGVIEW, "TradingView")}.`;
 
 /* -------------------------------------------------------- the head's picture */
 
-// The market panel for BTC as the app's built-in mock shows it on testnet: the figures are the
-// mock's, read from the app's own screenshots on this page (the panel, Book and Funding). The
-// candles are a sample drawn to the same shape; the last one is the mock's own.
+// A market's page for BTC as the app's built-in mock shows it on testnet: the figures are the
+// mock's, as the app shows them on that page and in its Book and Funding tabs. The candles are a
+// sample drawn to the same shape; the last one is the mock's own.
 
 /** A small random number generator with a fixed seed, so every build draws the same sample. */
 function random(seed) {
@@ -134,6 +134,41 @@ ${level(63132.23, "down")}${level(62800.51, "up")}${level(62925.18, "last")}
 </div>`;
 }
 
+/**
+ * The buttons above the chart, as a new installation has them: the two moving averages and the
+ * levels on, EMA 200 and the Bollinger bands off. Each swatch is the line it draws.
+ */
+const OVERLAYS = [
+  ["EMA 20/50", "ema", true],
+  ["EMA 200", "ema200", false],
+  ["BB", "bb", false],
+  ["S/R", "sr", true],
+]
+  .map(([label, kind, on]) => `<span class="ui-overlay"${on ? " data-on" : ""}><span class="ui-swatch" data-kind="${kind}"></span>${label}</span>`)
+  .join("");
+
+/**
+ * The figures above the chart, each with what the app reads from it underneath. The dot on the
+ * 24h range is where the price sits in it, placed by pages.css from data-at, as the chart's labels are.
+ */
+const RANGE = [62233.01, 64225.14];
+const METRICS = [
+  ["Mark", "62,920.15", '<small class="up">+1.2 bps</small>'],
+  ["Index", "62,912.60", ""],
+  ["Funding", '<span class="up">+0.0183%</span>', "<small>03:40:17 · +20.04%/yr</small>"],
+  ["Open interest", "238.1M", "<small>3.8K BTC</small>"],
+  ["24h volume", "1.3B", "<small>21K BTC</small>"],
+  [
+    "24h range",
+    "62,233.01 – 64,225.14",
+    `<span class="ui-gauge"><span data-at="${Math.round(((62925.18 - RANGE[0]) / (RANGE[1] - RANGE[0])) * 100)}"></span></span>`,
+  ],
+];
+
+function metrics() {
+  return `<dl class="ui-facts ui-stats">${METRICS.map(([term, value, under]) => `<div><dt>${term}</dt><dd class="num">${value}${under}</dd></div>`).join("")}</dl>`;
+}
+
 /** The mock's order book for BTC: price, size and running total, asks above the price, bids below. */
 const ASKS = [
   ["62,927.81", "0.296", "4.15"],
@@ -152,13 +187,14 @@ const BIDS = [
   ["62,922.63", "0.968", "4.245"],
 ];
 
+/** The tabs beside the chart, on Book. */
 function book() {
   const depth = 4.245;
   // The depth bar is the running total, as a share of the deepest side shown, in tenths.
   const row = ([price, size, total], tone) =>
     `<li class="ui-book-row" data-tone="${tone}" data-depth="${Math.round((Number(total) / depth) * 10)}"><span class="num ${tone}">${price}</span><span class="num">${size}</span><span class="num">${total}</span></li>`;
   return `<section class="ui-col ui-book">
-<p class="ui-col-title">Book</p>
+<p class="ui-segments ui-tabs"><span data-on>Book</span><span>Funding</span><span>Technicals</span><span>Watchlist</span></p>
 <p class="ui-book-head"><span>Price</span><span>Size (BTC)</span><span>Total</span></p>
 <ol class="ui-book-rows">${ASKS.map((r) => row(r, "down")).join("")}</ol>
 <p class="ui-book-mid"><strong class="num">62,925.18</strong><span>Spread 0.80 bps</span></p>
@@ -166,59 +202,27 @@ function book() {
 </section>`;
 }
 
-/** Two weeks of settled funding, every eight hours: a sample between the mock's own bounds. */
-function funding() {
-  const rand = random(3);
-  const rates = Array.from({ length: 42 }, (_, i) => (i === 33 || i === 34 ? 0.0289 : 0.008 + rand() * 0.0175));
-  const W = 42 * 6;
-  const bars = rates.map((rate, i) => `M${i * 6 + 0.6} 60v${(-(rate / 0.0289) * 56).toFixed(1)}h4.8v${((rate / 0.0289) * 56).toFixed(1)}z`).join("");
-  return `<section class="ui-col ui-funding">
-<p class="ui-col-title">Funding</p>
-<div class="ui-tiles">
-<div><span>Rate</span><strong class="num up">+0.0183%</strong></div>
-<div><span>Annualised</span><strong class="num">+20.04%</strong></div>
-</div>
-<svg class="ui-funding-bars" viewBox="0 0 ${W} 60" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="${bars}"/></svg>
-<p class="ui-funding-range"><span>5 Nov, 23:00</span><span>19 Nov, 15:00</span></p>
-${uiFacts([
-  ["Interval", "8h"],
-  ["Direction", "Longs pay"],
-  ["Open interest", "3.8K BTC"],
-  ["Value", "238.1M USDT"],
-])}
-</section>`;
-}
-
-const PANEL = ui({
+const PAGE = ui({
   className: "ui-market",
   label:
-    "A sample of the market panel for BTC on testnet: the price 62,925.18, down 0.95% in 24 hours, with mark and index price, funding, open interest, volume and the 24-hour range; a 4h candlestick chart with two moving averages, resistance at 63,132.23 and support at 62,800.51; the order book around the price with a spread of 0.80 basis points; and funding at +0.0183% every 8 hours, longs paying.",
-  caption: `A slice of the market panel, drawn with the sample figures of the app’s built-in mock and candles that illustrate them: not live prices. In the app the chart is by ${out(TRADINGVIEW, "TradingView")}.`,
+    "A sample of a market’s page for BTC on testnet. At the top, Back to Markets and the market’s name. The price 62,925.18, down 0.95% in 24 hours, with Watching, Ask AI and Trade. The mark price, 1.2 basis points above the index; funding at +0.0183% with the time to the next payment and its yearly rate; open interest, 24-hour volume and the 24-hour range. A 4h candlestick chart with EMA 20/50 and support and resistance turned on, EMA 200 and the Bollinger bands off, resistance at 63,132.23 and support at 62,800.51. Beside it, the Book tab: the order book around the price, with a spread of 0.80 basis points.",
+  caption: `A market’s page, drawn with the sample figures of the app’s built-in mock and candles that illustrate them: not live prices. In the app the chart is by ${out(TRADINGVIEW, "TradingView")}.`,
   body: `<div class="ui-bar">
-<span class="ui-bar-start"><span class="ui-pair"><strong>BTC</strong> / USDT</span><strong class="ui-price num">62,925.18</strong>${chip("−0.95%", "down")}<span class="ui-muted">24h</span></span>
+<span class="ui-bar-start"><span class="ui-back">${icon("back", 15)}<span>Markets</span></span><span class="ui-bar-sep"></span><span class="ui-pair"><strong>BTC</strong> / USDT${icon("chevronDown", 14)}</span></span>
 <span class="ui-bar-end">${network("Testnet")}${chip("Sample")}</span>
 </div>
-${uiFacts(
-  [
-    ["Mark", "62,920.15"],
-    ["Index", "62,912.60"],
-    ["Funding", "+0.0183%", "up"],
-    ["Next funding", "03:40:17"],
-    ["Open interest", "238.1M"],
-    ["24h volume", "1.3B"],
-    ["24h high", "64,225.14"],
-    ["24h low", "62,233.01"],
-  ],
-  "ui-stats",
-)}
+<div class="ui-market-head">
+<p class="ui-market-quote"><strong class="ui-price num">62,925.18</strong>${chip("−0.95%", "down")}<span class="ui-muted">24h</span></p>
+<p class="ui-market-actions">${uiButton(`${icon("star", 14)}Watching`, "outline")}${uiButton(`${icon("assistant", 14)}Ask AI${icon("chevronDown", 14)}`, "outline")}${uiButton("Trade", "primary")}</p>
+</div>
+${metrics()}
 <div class="ui-market-body">
 <section class="ui-col ui-chart-col">
-<div class="ui-chart-tools"><span class="ui-segments"><span>15m</span><span>1h</span><span data-on>4h</span><span>1d</span></span><span class="ui-legend"><span class="ui-legend-20">EMA 20</span><span class="ui-legend-50">EMA 50</span></span></div>
+<div class="ui-chart-tools"><span class="ui-segments"><span>15m</span><span>1h</span><span data-on>4h</span><span>1d</span></span><span class="ui-overlays">${OVERLAYS}</span></div>
 ${chart()}
 <p class="ui-ohlc num"><span>O 63,029.86</span><span>H 63,374.44</span><span>L 62,877.28</span><span>C <span class="down">62,925.18</span></span></p>
 </section>
 ${book()}
-${funding()}
 </div>`,
 });
 
@@ -226,21 +230,21 @@ export default {
   path: "/markets/",
   title: "Markets and orders | OctoNeo",
   description:
-    "A screener of every market, a chart on four timeframes, the order book, funding and open interest, technical readings, and how an OctoNeo ticket becomes an order.",
+    "A screener of every market, a page for each one with its chart, readings, order book and funding, and how an OctoNeo ticket becomes an order.",
   render: (ctx) =>
     docPage({
       path: "/markets/",
       title: "Every market, read straight from the exchange",
-      lead: "Market data needs no wallet, no account and no model. The app opens on mainnet prices, and the screener, the chart and the market panel all read directly from the exchange’s public API.",
-      visual: PANEL,
+      lead: "Market data needs no wallet, no account and no model. The app opens on mainnet prices, and the screener and each market’s page read directly from the exchange’s public API.",
+      visual: PAGE,
       sections: [
         {
           id: "screener",
           title: "A screener of every market",
-          body: `<p><strong>Markets</strong> lists every perpetual market the exchange is trading, most traded first, with its price, 24h change, volume and funding. Sort by any column, search, and add a market to your watchlist with its star.</p>
+          body: `<p><strong>Markets</strong> lists every perpetual market the exchange is trading, most traded first, with its price, 24h change, volume and funding. Sort by any column, search, add a market to your watchlist with its star, and pick one to open its page.</p>
 ${ctx.figure("markets", {
-  alt: "The Markets page: top gainer, top loser, highest funding and most traded at the top, then a sortable table of markets with price, 24h change, volume and funding, and the market panel on the right.",
-  caption: `Markets, most traded first, beside the market panel. Sample data from the app’s built-in mock. ${chartBy}`,
+  alt: "The Markets page beside the sidebar: top gainer, top loser, highest funding and most traded at the top, then a sortable table of markets with price, 24h change, volume and funding.",
+  caption: "Markets, most traded first. Sample data from the app’s built-in mock.",
   kind: "inset",
 })}
 ${reference("How market names are matched, and what the watchlist starts with", facts([
@@ -250,40 +254,50 @@ ${reference("How market names are matched, and what the watchlist starts with", 
 ], "facts-wide"))}`,
         },
         {
-          id: "panel",
-          title: "The market panel",
-          lead: "Beside the conversation, the panel shows the market in focus and follows what the assistant looks at: a chart on 15m, 1h, 4h and 1d, the mark price, funding and the time to the next payment.",
-          body: `<div class="panel-figures">
-${ctx.figure("panel", {
-  alt: "The head of the market panel: BTC price, 24h change, mark and index price, funding, next funding time, open interest, 24h volume, high and low, and a 4h candlestick chart with two moving averages.",
-  caption: `The panel’s head and chart. ${chartBy}`,
-  kind: "panel",
+          id: "market",
+          title: "A page for each market",
+          lead: "Pick a market under Markets, in an answer or among your positions, and it opens on a page of its own beside the sidebar. Back returns to where you were, and the market’s name at the top switches to another: it lists your watchlist, and searches every market as you type.",
+          body: `${ctx.figure("market", {
+  alt: "The page for ETH on testnet, opened from Account: Back and the market’s name at the top; the price with Watching, Ask AI and Trade; a 5x long with its profit and Close, and its stop-loss and take-profit orders with Cancel; the mark and index prices, funding, open interest, 24h volume and the 24h range; a 4h candlestick chart under its overlay buttons, with moving averages, support and resistance and the long’s entry drawn on it; and the order book beside it.",
+  caption: `ETH’s page, opened from a long under Account. Sample data from the app’s built-in mock. ${chartBy}`,
+  kind: "inset",
 })}
-<div class="panel-tabs-text">
+${facts([
+  ["Figures", "The mark price and its gap to the index, funding with the time to the next payment and its yearly rate, open interest, 24h volume, and where the price sits in its 24h range."],
+  ["Chart", "Candles and volume on 15m, 1h, 4h or 1d. Buttons above it turn on EMA 20 and 50, EMA 200, Bollinger bands, and support and resistance. The app remembers your choice and the timeframe."],
+  ["Your position", "With a wallet connected, your position in the market and its open orders, with Close and Cancel as under Account. Orders draws the entry, the liquidation price and each order on the chart."],
+  ["Ask AI", "With a model connected: the market’s outlook, why it is moving, or a long or a short planned on 1% risk. The question goes to the assistant, in the open conversation."],
+])}
+<h3>Trend, volatility and flow</h3>
+<p>Two cards under the chart read the market without a model. <strong>Trend &amp; MAs</strong> says how many of the four timeframes trend up or down, how far each moved over its last five bars, and how far the price is from EMA 20, 50 and 200; click a timeframe to chart it. <strong>Volatility &amp; Flow</strong>, on the chart’s timeframe, places the price between the Bollinger bands and gives their width, ATR, realized volatility over 30 bars, the range of the last 20 bars, and relative volume: the last finished bar’s volume against the average of the 20 before it.</p>
+${ctx.figure("structure", {
+  alt: "Two cards for ETH: Trend & MAs, marked Mixed, with 15m, 1h, 4h and 1d and how far each moved, then EMA 20, 50 and 200 and the price’s distance from each; and Volatility & Flow on 4h, with relative volume of 1.50 times marked, the price’s place between the Bollinger bands and their width, ATR, realized volatility and the 20-bar range.",
+  caption: "The readings under ETH’s chart, on 4h. Sample data from the app’s built-in mock.",
+  kind: "column",
+})}
+<h3>The tabs beside the chart</h3>
 ${table({
   head: ["Tab", "What it shows"],
   stack: true,
   rows: [
-    ["Book", "The best bids and asks with their running size, the spread, the share of resting size on each side, and the latest trades."],
+    ["Book", "The best bids and asks with their running size, the spread, the share of resting size on each side, and the latest trades, with the share of their value bought and sold."],
     ["Funding", "The rate now and what it comes to over a year, two weeks of settled rates, and open interest."],
-    ["Technicals", "Trend, RSI, MACD, ATR, moving averages, support and resistance on four timeframes side by side."],
+    ["Technicals", "Trend, RSI, MACD and ATR on four timeframes side by side, and the support and resistance of the chart’s timeframe. Click a support level to open the order form on a long with it as the stop-loss, or a resistance level as the take-profit."],
     ["Watchlist", "Your markets, each with a 90-day sparkline."],
   ],
 })}
-<p>Everything in the panel is public data read on demand. None of it needs a wallet or a model, and none of it is kept between launches.</p>
-</div>
-</div>
 <div class="tab-figures">
-${ctx.figure("tab-book", { alt: "The Book tab: asks and bids with size and running total, the spread, and the share of resting size on each side.", caption: "Book", kind: "tab" })}
+${ctx.figure("tab-book", { alt: "The Book tab: asks and bids with size and running total, and the spread.", caption: "Book", kind: "tab" })}
 ${ctx.figure("tab-funding", { alt: "The Funding tab: the rate now, the annualized rate, the time to the next payment, a bar chart of two weeks of settled rates, the interval, who pays, and open interest.", caption: "Funding", kind: "tab" })}
-${ctx.figure("tab-technicals", { alt: "The Technicals tab: trend, RSI, MACD and ATR on 15m, 1h, 4h and 1d, and the nearest resistance and support levels on the 4h chart.", caption: "Technicals", kind: "tab" })}
+${ctx.figure("tab-technicals", { alt: "The Technicals tab: trend, RSI, MACD and ATR on 15m, 1h, 4h and 1d, and the nearest resistance and support levels on the 4h chart, with a note that a click sets one as the stop-loss or take-profit.", caption: "Technicals", kind: "tab" })}
 ${ctx.figure("tab-watchlist", { alt: "The Watchlist tab: markets with price, 24h change and a 90-day sparkline each.", caption: "Watchlist", kind: "tab" })}
-</div>`,
+</div>
+<p>The market data on the page is public and read on demand. None of it needs a wallet or a model, and none of it is kept between launches.</p>`,
         },
         {
           id: "requests",
           title: "Requests to the exchange",
-          lead: "The market panel asks only for the market on screen, and only while the window is in view.",
+          lead: "A market’s page asks only for the market on screen, and only while the window is in view.",
           body: `${reference("What each part asks for, and how often", facts([
             ["Watchlist and screener", "Two requests each, however many markets, because the price and funding endpoints answer for every market at once."],
             ["Sparklines", "Daily history, read again every ten minutes."],
@@ -297,7 +311,7 @@ ${ctx.figure("tab-watchlist", { alt: "The Watchlist tab: markets with price, 24h
         {
           id: "orders",
           title: "How a ticket becomes an order",
-          lead: "Every order starts as a ticket: what it does to your position, its value, the margin it needs and an estimated liquidation price. Ask the assistant for one, or use Trade in the market panel, which needs no model.",
+          lead: "Every order starts as a ticket: what it does to your position, its value, the margin it needs and an estimated liquidation price. Ask the assistant for one, or use Trade on a market’s page, which needs no model.",
           body: `${callout(`<p><strong>Not yet tried on the live exchange, on either network:</strong> orders, deposits sent from a wallet and withdrawals. Orders and withdrawals have been checked against a stand-in that follows the exchange’s API documentation, and deposits by simulating them on their chains without sending them. Practice on testnet, then start small.</p>`)}
 <h3>Checked before you see it</h3>
 ${reference("Seven checks, and what happens when one fails", table({
@@ -330,7 +344,7 @@ ${reference("Order type, leverage and margin, one position per market, closing, 
   ["Order type", "Market orders, sized in the asset or by value. Limit orders are not supported yet."],
   ["Leverage and margin", "A new position uses the ticket’s leverage, up to your limit, and isolated margin unless you choose cross. An existing position keeps the leverage and margin mode it has. An account in Multi-Assets mode gets cross margin, and the ticket says so."],
   ["One position per market", "The app keeps one net position per market. An account in hedge mode is shown with an explanation and is not traded."],
-  ["Closing", "Ask the assistant, or press Close on a position under Account. Either drafts a ticket for the whole position. One order never flips a long into a short."],
+  ["Closing", "Ask the assistant, or press Close on a position under Account or on its market’s page. Either drafts a ticket for the whole position. One order never flips a long into a short."],
   ["Mainnet", "A mainnet ticket asks you to check an acknowledgment box before it can be sent."],
 ], "facts-wide"))}
 ${reference("How the estimated liquidation price is worked out", `<p>The estimate on a ticket is worked out as follows, where ∓ is minus for a long and plus for a short:</p>
@@ -343,7 +357,7 @@ ${literal("entry × (1 ∓ (1 / leverage − maintenance margin))", "How the est
           body: `<p><strong>Account</strong> shows your equity, your positions with the exchange’s liquidation prices, and your open orders, read from the exchange again every 15 seconds while the window is in view. <strong>Activity</strong> lists what the app did on the exchange: each order and cancellation, step by step, and each deposit and withdrawal.</p>
 ${ctx.figure("account", {
   alt: "The Account page on testnet: equity, available margin, margin used, unrealized profit and loss, wallet balance, three positions with size, value, entry, mark, liquidation and margin, and open orders below.",
-  caption: `Account, with three open positions on testnet. Sample data from the app’s built-in mock. ${chartBy}`,
+  caption: "Account, with three open positions on testnet. Sample data from the app’s built-in mock.",
   kind: "inset",
 })}`,
         },

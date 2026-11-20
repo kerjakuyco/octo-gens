@@ -7,7 +7,8 @@
 //
 // APP_URL overrides http://localhost:4322/. Each picture is saved in light and dark as
 // src/assets/shots/<name>-<theme>-<pixel width>.webp: full windows at 1x and 2x, crops at 2x.
-// A picture named <name>-phone is the crop the site shows in place of <name> on a phone.
+// A picture named <name>-phone is the one the site shows in place of <name> on a phone: the same
+// page in a narrow window, which the app lays out for its width, at 2x.
 // The mock shows a fictional account and a fictional model; nothing here reaches a real service.
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -21,12 +22,11 @@ mkdirSync(OUT, { recursive: true });
 
 const ask = (text) => `history=0&network=testnet&wallet=connected&ask=${encodeURIComponent(text)}`;
 
-/**
- * A whole window is 788 pixels high: the order book's rows are 23 pixels apart from 627, so its
- * bottom edge falls between two rows. Rows in other lists that the edge would cut are hidden, so
- * a picture never ends on half a line.
- */
+/** A whole window, sidebar included. Rows that its bottom edge would cut are hidden. */
 const WINDOW = { width: 1280, height: 788 };
+
+/** The narrow window of a phone picture: the sidebar folds away and each page takes the width. */
+const PHONE = { width: 660, height: 788 };
 
 /** Hides every table row or list item that the line y crosses, so a crop ends between rows. */
 const hideCut = (y) => `(() => {
@@ -51,12 +51,15 @@ const around = (selectors, pad = 16) => `(() => {
   return { x: Math.round(left + scrollX), y: Math.round(top + scrollY), width: Math.round(right - left), height: Math.round(bottom - top) };
 })()`;
 
+/** The window as it is now, after a prepare step that changed its height. */
+const viewport = "({ x: 0, y: 0, width: innerWidth, height: innerHeight })";
+
 /**
- * Parts of the conversation are taken in a window 776 pixels wide with the sidebar and the panel
- * closed: the conversation is then 728 pixels wide, and a crop 760 wide, the width of the site's
- * text column, keeps 16 pixels of the app's own margin on each side.
+ * Parts of the conversation are taken in a window 776 pixels wide with the sidebar closed: the
+ * conversation is then 728 pixels wide, and a crop 760 wide, the width of the site's text column,
+ * keeps 16 pixels of the app's own margin on each side.
  */
-const COLUMN = { width: 776, query: "&sidebar=0&panel=0" };
+const COLUMN = { width: 776, query: "&sidebar=0" };
 const column = (selectors, pad = 16) => `(() => {
   const box = ${around(selectors, pad)};
   return box && { ...box, x: 8, width: 760 };
@@ -74,62 +77,77 @@ const settings = `(() => {
   return { x: Math.round(dialog.left), y: Math.round(dialog.top), width: Math.round(dialog.width), height: Math.round(Math.min(dialog.bottom, bottom + 32) - dialog.top) };
 })()`;
 
-/** The tabs of the market panel are cropped to one height, the height of the Technicals tab. */
+/**
+ * A market's page: ETH, opened from its position under Account the way a trader would, so Back
+ * reads Account. The mock holds a long there with a stop-loss and a take-profit, which the page
+ * lists and the chart draws.
+ */
+const ETH = "page=account&seed=conversation&positions=1";
+async function openEth(page) {
+  await page.evaluate(`[...document.querySelectorAll(".position button.symbol")].find((b) => b.textContent.trim().startsWith("ETH")).click()`);
+  // The chart is drawn, the book has rows and the readings under the chart are in.
+  await page.waitFor(`document.querySelector(".market-page .chart-canvas canvas") && !document.querySelector(".market-page .chart-overlay") && document.querySelector(".market-page .book-row") && document.querySelector(".struct-row .num")`, 20000);
+  await sleep(1200);
+}
+
+/**
+ * Makes the window end where the chart's card does, before the readings under it, then hides cut
+ * rows. The chart's height follows the window's, so the window is fitted in a few rounds.
+ */
+async function fitToChart(page, view) {
+  let height = view.height;
+  for (let round = 0; round < 12; round += 1) {
+    const fit = await page.evaluate(`Math.ceil(document.querySelector(".market-chart-card").getBoundingClientRect().bottom + 14)`);
+    if (Math.abs(fit - height) <= 1) break;
+    height = fit;
+    await page.send("Emulation.setDeviceMetricsOverride", { width: view.width, height, deviceScaleFactor: view.scale, mobile: false });
+    await sleep(400);
+  }
+  await sleep(800);
+  await page.evaluate(hideCut(height));
+}
+
+/**
+ * The tabs beside the chart are cropped inside their card, which draws its own edge, to one height:
+ * the height of the Technicals tab. A shorter tab's card is drawn down to it.
+ */
 let tabHeight = 0;
-const tabTop = `(() => Math.round(document.querySelector('.panel [role="tablist"]').getBoundingClientRect().top - 14))()`;
-const tabContentHeight = `(() => {
-  const tabs = document.querySelector('.panel [role="tablist"]').getBoundingClientRect();
-  const body = document.querySelector('.panel [role="tabpanel"]');
-  const bottom = Math.max(...[...body.querySelectorAll("*")].map((n) => n.getBoundingClientRect().bottom));
-  return Math.round(bottom + 14 - (tabs.top - 14));
-})()`;
+const tabCard = `document.querySelector(".market-detail-card")`;
+const tabContentHeight = `(() => Math.floor(${tabCard}.getBoundingClientRect().height - 2))()`;
 
 const SHOTS = [
-  // Whole windows, each with the crop a phone shows instead.
+  // Whole windows, each with the narrow window a phone shows instead: the screener, and the account.
+  ...[
+    { name: "markets", query: "page=markets" },
+    { name: "account", query: "page=account&seed=conversation&positions=1" },
+  ].flatMap(({ name, query }) => [
+    { name, query, scales: [1, 2], window: WINDOW, prepare: async (page) => page.evaluate(hideCut(WINDOW.height)) },
+    { name: `${name}-phone`, query, window: PHONE, prepare: async (page) => page.evaluate(hideCut(PHONE.height)) },
+  ]),
+  // A market's page, down to the end of its chart.
   {
-    name: "desk",
-    query: "seed=conversation",
+    name: "market",
+    query: ETH,
     scales: [1, 2],
     window: WINDOW,
-    // The conversation from its start: the answer to "BTC outlook" with the cards it read.
-    prepare: async (page) => {
-      await page.evaluate("document.querySelector('.thread').scrollTop = 0");
-      await sleep(300);
-      await page.evaluate(hideCut(WINDOW.height));
+    prepare: async (page, view) => {
+      await openEth(page);
+      await fitToChart(page, view);
     },
-    // On a phone, the market panel alone, down to the third row of the order book.
-    phone: `(() => {
-      const panel = document.querySelector(".panel").getBoundingClientRect();
-      const rows = [...document.querySelectorAll(".panel .book-row")].slice(0, 3);
-      return { x: Math.round(panel.left), y: 0, width: Math.round(panel.width), height: Math.round(rows.at(-1).getBoundingClientRect().bottom + 1) };
-    })()`,
+    clip: viewport,
   },
   {
-    name: "markets",
-    query: "page=markets",
-    scales: [1, 2],
-    window: WINDOW,
-    prepare: async (page) => page.evaluate(hideCut(WINDOW.height)),
-    // On a phone, the screener alone.
-    phone: `(() => {
-      const panel = document.querySelector(".panel").getBoundingClientRect();
-      const sidebar = document.querySelector(".sidebar").getBoundingClientRect();
-      return { x: Math.round(sidebar.right), y: 0, width: Math.round(panel.left - sidebar.right), height: ${WINDOW.height} };
-    })()`,
+    name: "market-phone",
+    query: ETH,
+    window: PHONE,
+    prepare: async (page, view) => {
+      await openEth(page);
+      await fitToChart(page, view);
+    },
+    clip: viewport,
   },
-  {
-    name: "account",
-    query: "page=account&seed=conversation&positions=1",
-    scales: [1, 2],
-    window: WINDOW,
-    prepare: async (page) => page.evaluate(hideCut(WINDOW.height)),
-    // On a phone, the account alone.
-    phone: `(() => {
-      const panel = document.querySelector(".panel").getBoundingClientRect();
-      const sidebar = document.querySelector(".sidebar").getBoundingClientRect();
-      return { x: Math.round(sidebar.right), y: 0, width: Math.round(panel.left - sidebar.right), height: ${WINDOW.height} };
-    })()`,
-  },
+  // The readings under the chart: trend and moving averages, then volatility and flow.
+  { name: "structure", query: ETH, height: 1400, prepare: openEth, clip: around([".structure-grid"], 12) },
   // Parts of the conversation.
   // These two run at the mock's own pace, so the time on the activity line is a realistic one.
   {
@@ -169,38 +187,30 @@ const SHOTS = [
     height: 1200,
     clip: column([".turn .said", ".turn .activity", ".turn .cards", ".turn .md"]),
   },
-  // The market panel: its head and chart, then each tab.
-  {
-    name: "panel",
-    query: "seed=conversation&tab=book",
-    height: 1300,
-    clip: `(() => {
-      const panel = document.querySelector(".panel").getBoundingClientRect();
-      const tabs = document.querySelector('.panel [role="tablist"]').getBoundingClientRect();
-      return { x: Math.round(panel.left), y: Math.round(panel.top), width: Math.round(panel.width), height: Math.round(tabs.top - panel.top - 6) };
-    })()`,
-  },
-  // Technicals first: its full height is the height of all four.
+  // The tabs of a market's page. Technicals first: its full height is the height of all four.
   ...["technicals", "book", "funding", "watchlist"].map((tab) => ({
     name: `tab-${tab}`,
-    query: `seed=conversation&tab=${tab}`,
-    height: 1500,
+    query: `page=market&seed=conversation&tab=${tab}`,
+    height: 1300,
     prepare: async (page) => {
       // The Book tab goes on to the latest trades; they are hidden, like any row the crop would cut.
       await page.evaluate(`(() => {
-        const body = document.querySelector('.panel [role="tabpanel"]');
-        const trades = [...body.querySelectorAll(".panel-sub")].find((n) => n.textContent.trim() === "Trades");
+        const card = ${tabCard};
+        card.style.minHeight = "${tabHeight + 2}px";
+        const body = card.querySelector('[role="tabpanel"]');
+        const trades = body.querySelector(".tape-head");
         let hide = false;
-        for (const node of trades ? [...trades.parentElement.children] : []) {
+        for (const node of trades ? [...body.children] : []) {
           if (node === trades) hide = true;
           if (hide) node.style.visibility = "hidden";
         }
       })()`);
-      await page.evaluate(hideCut(`(${tabTop} + ${tabHeight} - 10)`));
+      await sleep(200);
+      await page.evaluate(hideCut(`(${tabCard}.getBoundingClientRect().top + 1 + ${tabHeight})`));
     },
     clip: `(() => {
-      const panel = document.querySelector(".panel").getBoundingClientRect();
-      return { x: Math.round(panel.left), y: ${tabTop}, width: Math.round(panel.width), height: TAB_HEIGHT };
+      const card = ${tabCard}.getBoundingClientRect();
+      return { x: Math.round(card.left + 1), y: Math.round(card.top + 1), width: Math.round(card.width - 2), height: TAB_HEIGHT };
     })()`,
   })),
   // Settings.
@@ -225,7 +235,7 @@ const SHOTS = [
 const page = await launch();
 try {
   if (SHOTS.some((shot) => shot.name.startsWith("tab-") && (!only.size || only.has(shot.name)))) {
-    await page.goto(`${APP}?seed=conversation&tab=technicals&theme=light&speed=0`, { width: 1280, height: 1500, scale: 1, wait: 1800 });
+    await page.goto(`${APP}?page=market&seed=conversation&tab=technicals&theme=light&speed=0`, { width: 1280, height: 1300, scale: 1, wait: 1800 });
     tabHeight = await page.evaluate(tabContentHeight);
   }
   for (const shot of SHOTS) {
@@ -242,20 +252,13 @@ try {
           await page.goto(url, view);
           await page.waitFor("document.querySelector('.turn .turn-actions')", 20000);
         }
-        if (shot.prepare) await shot.prepare(page);
+        if (shot.prepare) await shot.prepare(page, view);
         const clip = shot.clip ? await page.evaluate(shot.clip.replace("TAB_HEIGHT", String(tabHeight))) : null;
         if (shot.clip && !clip) throw new Error(`${shot.name}: nothing to picture`);
         const width = Math.round((clip?.width ?? view.width) * scale);
         const file = join(OUT, `${shot.name}-${theme}-${width}.webp`);
         await page.capture(file, { clip, quality: scale === 1 ? 86 : 78 });
         console.log(file);
-        // The phone crop comes from the same window, at 2x.
-        if (shot.phone && scale === 2) {
-          const box = await page.evaluate(shot.phone);
-          const phoneFile = join(OUT, `${shot.name}-phone-${theme}-${Math.round(box.width * 2)}.webp`);
-          await page.capture(phoneFile, { clip: box, quality: 78 });
-          console.log(phoneFile);
-        }
       }
     }
   }

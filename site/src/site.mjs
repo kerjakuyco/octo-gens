@@ -5,7 +5,7 @@ export const RELEASES = `${REPO}/releases`;
 export const ISSUES = `${REPO}/issues`;
 export const ADVISORY = `${REPO}/security/advisories/new`;
 export const TRADINGVIEW = "https://www.tradingview.com";
-export const VERSION = "0.5.0";
+export const VERSION = "0.6.0";
 
 /** A file in the repository, on GitHub. */
 export const doc = (path, anchor = "") => `${REPO}/blob/main/${path}${anchor ? `#${anchor}` : ""}`;
@@ -31,6 +31,9 @@ export const esc = (value) => String(value).replace(/[&<>"']/g, (c) => ESCAPES[c
 const ICONS = {
   chevron: '<path d="m9 6 6 6-6 6"/>',
   chevronDown: '<path d="m6 9 6 6 6-6"/>',
+  back: '<path d="m15 6-6 6 6 6"/>',
+  star: '<path d="m12 4 2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.7-5 2.7.9-5.6-4-3.9 5.6-.8z"/>',
+  assistant: '<path d="M4 5.5h16v10.5H9.8L5.5 19.5V16H4z"/>',
   send: '<path d="M12 19V5m-6 6 6-6 6 6"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   alert: '<path d="M12 4 21 19.5H3zM12 10v4.5M12 17v.2"/>',
