@@ -5,6 +5,7 @@
   "description": "Desktop AI trading assistant for perpetual futures",
   "license": "GPL-3.0-only",
   "homepage": "https://octoneo.xyz",
+  "funding": "https://github.com/sponsors/kerjakuyco",
   "type": "module",
   "packageManager": "pnpm@10.33.2",
   "engines": {

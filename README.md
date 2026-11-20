@@ -1,6 +1,6 @@
 # OctoNeo
 
-Website: [octoneo.xyz](https://octoneo.xyz). Download the [latest release](https://github.com/kerjakuyco/octo-neo/releases/latest) for Windows, macOS (Apple silicon) or Linux.
+Website: [octoneo.xyz](https://octoneo.xyz). Support the project on [GitHub Sponsors](https://github.com/sponsors/kerjakuyco). Download the [latest release](https://github.com/kerjakuyco/octo-neo/releases/latest) for Windows, macOS (Apple silicon) or Linux.
 
 OctoNeo is a desktop AI trading assistant for perpetual futures on a decentralised exchange. You chat with it the way you chat with any AI assistant. It reads live market data, sizes positions from the risk you accept, and drafts order tickets. You trade from your own web3 wallet and confirm every order. It runs on Windows, macOS and Linux.
 
@@ -227,6 +227,10 @@ site/                   The project's website: static pages served by Cloudflare
 ## Contributing
 
 Bug reports, ideas and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md). To report a security problem, follow [SECURITY.md](SECURITY.md) instead of opening a public issue.
+
+## Sponsor
+
+OctoNeo is free and open source, with no account, no fees and no telemetry. If it is useful to you, you can support its development through [GitHub Sponsors](https://github.com/sponsors/kerjakuyco).
 
 ## License
 
