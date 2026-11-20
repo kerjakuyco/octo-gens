@@ -51,10 +51,33 @@ const ICONS = {
   arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
   folder: '<path d="M4 6.5h5.5l2 2H20v10H4z"/>',
   file: '<path d="M6.5 4h7.5l4 4v12h-11.5zM14 4v4h4"/>',
+  // The message box's two tools, Grid bots, and the next steps under an answer, as the app draws them.
+  trendUp: '<path d="M4 16.5 9.5 11l3.5 3.5 7-7M15 7.5h5v5"/>',
+  trendDown: '<path d="M4 7.5 9.5 13l3.5-3.5 7 7M15 16.5h5v-5"/>',
+  bolt: '<path d="M13 3.5 5.5 13.5H12l-1 7 7.5-10H12z"/>',
+  slash: '<rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="m14 8-4 8"/>',
+  dollar: '<path d="M12 4v16M15.8 7.8c-.7-1-2-1.8-3.8-1.8-2.1 0-3.8 1.1-3.8 2.8S9.7 11.4 12 12s3.9 1.3 3.9 3.1-1.7 2.9-3.9 2.9c-1.9 0-3.3-.8-4-2"/>',
+  grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.4"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.4"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.4"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.4"/>',
 };
 
 export function icon(name, size = 18, className = "") {
   return `<svg class="icon${className ? ` ${className}` : ""}" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICONS[name]}</svg>`;
+}
+
+/**
+ * The next steps under a finished answer, drawn as the app draws them: a question to ask, or a trade
+ * that goes into the message box to look over first, which shows the command it fills in. A picture
+ * of the chips, not controls. Each is [label, icon, tone ("up", "down" or ""), command or ""].
+ */
+export function followChips(list, attrs = "") {
+  return `<div class="follow-chips"${attrs} aria-hidden="true">
+${list
+  .map(
+    ([label, iconName, tone, command]) =>
+      `<span class="follow-chip"${tone ? ` data-tone="${tone}"` : ""}>${icon(iconName, 14)}<span>${esc(label)}</span>${command ? `<span class="follow-cmd">${command}</span>` : ""}</span>`,
+  )
+  .join("\n")}
+</div>`;
 }
 
 /** Inline code. */

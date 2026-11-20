@@ -205,7 +205,7 @@ function book() {
 const PAGE = ui({
   className: "ui-market",
   label:
-    "A sample of a market’s page for BTC on testnet. At the top, Back to Markets and the market’s name. The price 62,925.18, down 0.95% in 24 hours, with Watching, Ask AI and Trade. The mark price, 1.2 basis points above the index; funding at +0.0183% with the time to the next payment and its yearly rate; open interest, 24-hour volume and the 24-hour range. A 4h candlestick chart with EMA 20/50 and support and resistance turned on, EMA 200 and the Bollinger bands off, resistance at 63,132.23 and support at 62,800.51. Beside it, the Book tab: the order book around the price, with a spread of 0.80 basis points.",
+    "A sample of a market’s page for BTC on testnet. At the top, Back to Markets and the market’s name. The price 62,925.18, down 0.95% in 24 hours, with Watching, Ask AI, Grid and Trade. The mark price, 1.2 basis points above the index; funding at +0.0183% with the time to the next payment and its yearly rate; open interest, 24-hour volume and the 24-hour range. A 4h candlestick chart with EMA 20/50 and support and resistance turned on, EMA 200 and the Bollinger bands off, resistance at 63,132.23 and support at 62,800.51. Beside it, the Book tab: the order book around the price, with a spread of 0.80 basis points.",
   caption: `A market’s page, drawn with the sample figures of the app’s built-in mock and candles that illustrate them: not live prices. In the app the chart is by ${out(TRADINGVIEW, "TradingView")}.`,
   body: `<div class="ui-bar">
 <span class="ui-bar-start"><span class="ui-back">${icon("back", 15)}<span>Markets</span></span><span class="ui-bar-sep"></span><span class="ui-pair"><strong>BTC</strong> / USDT${icon("chevronDown", 14)}</span></span>
@@ -213,7 +213,7 @@ const PAGE = ui({
 </div>
 <div class="ui-market-head">
 <p class="ui-market-quote"><strong class="ui-price num">62,925.18</strong>${chip("−0.95%", "down")}<span class="ui-muted">24h</span></p>
-<p class="ui-market-actions">${uiButton(`${icon("star", 14)}Watching`, "outline")}${uiButton(`${icon("assistant", 14)}Ask AI${icon("chevronDown", 14)}`, "outline")}${uiButton("Trade", "primary")}</p>
+<p class="ui-market-actions">${uiButton(`${icon("star", 14)}Watching`, "outline")}${uiButton(`${icon("assistant", 14)}Ask AI${icon("chevronDown", 14)}`, "outline")}${uiButton(`${icon("grid", 14)}Grid`, "outline")}${uiButton("Trade", "primary")}</p>
 </div>
 ${metrics()}
 <div class="ui-market-body">
@@ -258,7 +258,7 @@ ${reference("How market names are matched, and what the watchlist starts with", 
           title: "A page for each market",
           lead: "Pick a market under Markets, in an answer or among your positions, and it opens on a page of its own beside the sidebar. Back returns to where you were, and the market’s name at the top switches to another: it lists your watchlist, and searches every market as you type.",
           body: `${ctx.figure("market", {
-  alt: "The page for ETH on testnet, opened from Account: Back and the market’s name at the top; the price with Watching, Ask AI and Trade; a 5x long with its profit and Close, and its stop-loss and take-profit orders with Cancel; the mark and index prices, funding, open interest, 24h volume and the 24h range; a 4h candlestick chart under its overlay buttons, with moving averages, support and resistance and the long’s entry drawn on it; and the order book beside it.",
+  alt: "The page for ETH on testnet, opened from Account: Back and the market’s name at the top; the price with Watching, Ask AI, Grid and Trade; a 5x long with its profit and Close, and its stop-loss and take-profit orders with Cancel; the mark and index prices, funding, open interest, 24h volume and the 24h range; a 4h candlestick chart under its overlay buttons, with moving averages, support and resistance and the long’s entry drawn on it; and the order book beside it.",
   caption: `ETH’s page, opened from a long under Account. Sample data from the app’s built-in mock. ${chartBy}`,
   kind: "inset",
 })}
@@ -266,7 +266,8 @@ ${facts([
   ["Figures", "The mark price and its gap to the index, funding with the time to the next payment and its yearly rate, open interest, 24h volume, and where the price sits in its 24h range."],
   ["Chart", "Candles and volume on 15m, 1h, 4h or 1d. Buttons above it turn on EMA 20 and 50, EMA 200, Bollinger bands, and support and resistance. The app remembers your choice and the timeframe."],
   ["Your position", "With a wallet connected, your position in the market and its open orders, with Close and Cancel as under Account. Orders draws the entry, the liquidation price and each order on the chart."],
-  ["Ask AI", "With a model connected: the market’s outlook, why it is moving, or a long or a short planned on 1% risk. The question goes to the assistant, in the open conversation."],
+  ["Ask AI", "With a model connected: the market’s outlook, why it is moving, or a long or a short planned on 1% risk, which go to the assistant in the open conversation; or a grid bot, which puts /grid for the market in the message box to look over first."],
+  ["Grid", "Opens Grid bots with this market chosen for a new bot."],
 ])}
 <h3>Trend, volatility and flow</h3>
 <p>Two cards under the chart read the market without a model. <strong>Trend &amp; MAs</strong> says how many of the four timeframes trend up or down, how far each moved over its last five bars, and how far the price is from EMA 20, 50 and 200; click a timeframe to chart it. <strong>Volatility &amp; Flow</strong>, on the chart’s timeframe, places the price between the Bollinger bands and gives their width, ATR, realized volatility over 30 bars, the range of the last 20 bars, and relative volume: the last finished bar’s volume against the average of the 20 before it.</p>

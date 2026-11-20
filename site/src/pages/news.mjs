@@ -1,4 +1,4 @@
-import { chip, code, doc, docPage, esc, facts, icon, network, out, table, ui } from "../site.mjs";
+import { chip, code, doc, docPage, esc, facts, followChips, icon, network, out, table, ui } from "../site.mjs";
 
 /**
  * The head's picture: "Any news on BTC and ETH?" as the app answers it with its built-in mock,
@@ -16,7 +16,7 @@ const HEADLINES = [
 const ANSWER = ui({
   className: "ui-chat",
   label:
-    "A sample answer in OctoNeo to Any news on BTC and ETH?: a line saying it checked the news, a news card with six headlines from invented newsrooms, each with its newsroom and age, from 38 minutes to 6 hours old, and a short answer naming who reported what.",
+    "A sample answer in OctoNeo to Any news on BTC and ETH?: a line saying it checked the news, a news card with six headlines from invented newsrooms, each with its newsroom and age, from 38 minutes to 6 hours old, and a short answer naming who reported what, with Top movers offered as the next step.",
   caption: "Sample headlines from invented newsrooms, from the app’s built-in mock. OctoNeo itself reads seven real publishers.",
   body: `<div class="ui-bar">
 <span class="ui-bar-start"><span class="ui-model">Lantern 2 Large${icon("chevronDown", 14)}</span>${chip("Sample")}</span>
@@ -38,6 +38,7 @@ ${HEADLINES.map(([title, source, age]) => `<li><span class="ui-headline">${esc(t
 <li>News explains a move. It does not say what comes next, so the stop stays where the chart puts it. This is testnet: prices can differ from mainnet.</li>
 </ul>
 </div>
+${followChips([["Top movers", "bolt", "", ""]])}
 </div>`,
 });
 

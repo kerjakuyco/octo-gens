@@ -4,7 +4,7 @@
 // conversation finished; picking a prompt, or Replay, has the script in site.js play one step by step.
 // The bento grid on the home page draws its Assistant, Markets and Safety cards from the same
 // conversations (`scenario`, `SPARK_BTC`), so the page agrees with itself.
-import { esc, icon } from "./site.mjs";
+import { esc, followChips, icon } from "./site.mjs";
 
 const SAMPLE_NOTE =
   "Sample conversation on testnet, the exchange’s practice network with test funds. The model and the account are fictional; the figures are illustrative, not live prices.";
@@ -153,6 +153,14 @@ const SCENARIOS = [
 <li>Bids hold 58% of the depth shown.</li>
 </ul>
 <p>A 4h close below 62,800.51 would break the setup. This is testnet: prices can differ from mainnet.</p>`,
+    // The next steps the app offers under this answer: a trade or a grid bot to look over in the message
+    // box, or a question it has not read yet.
+    follow: [
+      ["Long BTC", "trendUp", "up", "/long"],
+      ["Short BTC", "trendDown", "down", "/short"],
+      ["Grid BTC", "grid", "", "/grid"],
+      ["Why is BTC moving?", "news", "", ""],
+    ],
   },
   {
     id: "news",
@@ -187,6 +195,7 @@ const SCENARIOS = [
 <li>3 headlines from the last day, the oldest 6h ago.</li>
 <li>News explains a move. It does not say what comes next, so the stop stays where the chart puts it. This is testnet: prices can differ from mainnet.</li>
 </ul>`,
+    follow: [["Top movers", "bolt", "", ""]],
   },
 ];
 
@@ -329,6 +338,7 @@ ${s.cards.map(card).join("\n")}
 ${s.answer}
 </div>
 ${s.ticket ? ticket(s.ticket) : ""}
+${s.follow ? followChips(s.follow, " data-follow") : ""}
 </div>
 </article>
 </div>`;
@@ -354,7 +364,7 @@ export function demo() {
 <div class="d-panels">
 ${SCENARIOS.map(panel).join("\n")}
 </div>
-<div class="d-composer" aria-hidden="true"><span class="d-composer-text">Ask anything</span><span class="d-send">${icon("send", 18)}</span></div>
+<div class="d-composer" aria-hidden="true"><span class="d-composer-text">Ask anything, or type / for commands</span><span class="d-composer-tools"><span class="d-tool">${icon("slash", 15)}Commands</span><span class="d-tool">${icon("dollar", 15)}Market</span><span class="d-send">${icon("send", 18)}</span></span></div>
 </div>
 <div class="d-suggestions" role="tablist" aria-label="Prompts" hidden>
 ${tabs}

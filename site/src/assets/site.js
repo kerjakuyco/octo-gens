@@ -242,11 +242,12 @@
       timed: [...panel.querySelectorAll("[data-at]")],
       answer: panel.querySelector("[data-stream]"),
       ticket: panel.querySelector(".d-ticket"),
+      follow: panel.querySelector("[data-follow]"),
     };
   }
 
   function setComposer(text) {
-    composerText.textContent = text || "Ask anything";
+    composerText.textContent = text || "Ask anything, or type / for commands";
     composerText.toggleAttribute("data-typing", Boolean(text));
     composer.toggleAttribute("data-ready", Boolean(text));
   }
@@ -294,6 +295,10 @@
     }
     p.answer.replaceChildren(...answers.get(panel).cloneNode(true).childNodes);
     p.answer.hidden = false;
+    if (p.follow) {
+      p.follow.hidden = false;
+      p.follow.classList.remove("is-new");
+    }
     resetTicket(p.ticket);
     setComposer("");
     panel.removeAttribute("aria-busy");
@@ -310,6 +315,7 @@
     for (const node of p.timed) node.hidden = true;
     p.answer.replaceChildren();
     p.answer.hidden = true;
+    if (p.follow) p.follow.hidden = true;
     resetTicket(p.ticket);
     setComposer("");
     panel.scrollTop = 0;
@@ -391,6 +397,11 @@
       reveal(p.timed.filter((node) => Number(node.dataset.at) >= p.phases.length), panel);
       p.answer.hidden = false;
       await stream(answers.get(panel), p.answer, id, panel);
+      // As in the app, the next steps come once the answer is written.
+      if (p.follow) {
+        await after(200, id);
+        reveal([p.follow], panel);
+      }
 
       playing = false;
       panel.removeAttribute("aria-busy");

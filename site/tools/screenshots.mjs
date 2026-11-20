@@ -139,7 +139,7 @@ const endAfter = (cards, count) => async (page, view) => {
  */
 const ETH = "page=account&seed=conversation&positions=1";
 async function openEth(page) {
-  await page.evaluate(`[...document.querySelectorAll(".position button.symbol")].find((b) => b.textContent.trim().startsWith("ETH")).click()`);
+  await page.evaluate(`[...document.querySelectorAll(".ac-position button.symbol")].find((b) => b.textContent.trim().startsWith("ETH")).click()`);
   // The chart is drawn, the book has rows and the readings under the chart are in.
   await page.waitFor(`document.querySelector(".market-page .chart-canvas canvas") && !document.querySelector(".market-page .chart-overlay") && document.querySelector(".market-page .book-row") && document.querySelector(".struct-row .num")`, 20000);
   await sleep(1200);
