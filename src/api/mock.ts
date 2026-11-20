@@ -2135,6 +2135,35 @@ export function createMockBackend(options: MockOptions = {}): Backend {
     }
   }
 
+  /**
+   * As the core does at its next check: a bot's order cancelled without filling leaves its price level
+   * empty, and a bot whose orders are all gone stops without sending anything more.
+   */
+  function reconcileMockGrids(symbol: string): void {
+    const open = new Set(books[network].orders.map((order) => order.id));
+    for (const bot of grids) {
+      if (bot.network !== network || bot.symbol !== symbol) continue;
+      if (bot.status !== "running" && bot.status !== "waiting") continue;
+      const resting = bot.levels.filter((level) => level.orderId !== null);
+      const gone = resting.filter((level) => level.orderId !== null && !open.has(level.orderId));
+      if (gone.length === 0) continue;
+      for (const level of gone) {
+        level.orderId = null;
+        level.side = null;
+      }
+      const nowIso = new Date().toISOString();
+      bot.updatedAt = nowIso;
+      const one = gone.length === 1;
+      if (gone.length === resting.length) {
+        bot.status = "stopped";
+        bot.stoppedAt = nowIso;
+        bot.lastNote = `Stopped: its ${gone.length} ${one ? "order was" : "orders were"} cancelled outside the bot, so it sent nothing more.`;
+      } else {
+        bot.lastNote = `${one ? "1 order was" : `${gone.length} orders were`} cancelled or expired without filling, so ${one ? "its price level is" : "their price levels are"} empty.`;
+      }
+    }
+  }
+
   function stopMockGrid(gridId: string, closePosition: boolean): void {
     const bot = grids.find((g) => g.id === gridId);
     if (!bot) throw new Error("That grid bot was not found.");
@@ -3458,6 +3487,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
         if (index === -1) throw new Error("That order is no longer open.");
         book.orders.splice(index, 1);
         cancellation(`Cancel order ${orderId} on ${symbol}`);
+        reconcileMockGrids(symbol);
         return snapshot();
       }),
 
@@ -3469,6 +3499,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
         if (kept.length === book.orders.length) throw new Error(`There are no open ${symbol} orders.`);
         book.orders = kept;
         cancellation(`Cancel all open orders on ${symbol}`);
+        reconcileMockGrids(symbol);
         return snapshot();
       }),
 

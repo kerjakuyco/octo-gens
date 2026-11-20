@@ -8,6 +8,8 @@ import "./styles/chat.css";
 import "./styles/composer.css";
 import "./styles/market.css";
 import "./styles/pages.css";
+import "./styles/account.css";
+import "./styles/activity.css";
 import "./styles/grid.css";
 import "./styles/news.css";
 import "./styles/settings.css";

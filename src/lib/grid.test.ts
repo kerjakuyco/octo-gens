@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { GridBotView, TechnicalsView } from "../api/types";
 import {
+  activeBotFor,
+  botForOrder,
   computeGridPrices,
   computeProfitPerGridPct,
   estimateGridOrders,
@@ -176,5 +178,35 @@ describe("grid helpers", () => {
     expect(summary.totalUnrealizedPnl).toBe(4.5);
     expect(summary.totalPnl).toBe(23);
     expect(summary.totalMatchedTrades).toBe(6);
+  });
+});
+
+describe("which bot an order belongs to", () => {
+  const bot = (patch: Partial<GridBotView>): GridBotView =>
+    ({
+      id: "a1b2c3d4e5f6",
+      symbol: "BTCUSDT",
+      status: "running",
+      levels: [{ index: 0, price: "60000", side: "buy", orderId: "9001", filledCount: 0 }],
+      ...patch,
+    }) as GridBotView;
+
+  it("matches an order by its id on one of the bot's levels", () => {
+    expect(botForOrder([bot({})], { id: "9001", clientId: "", symbol: "BTCUSDT" })?.id).toBe("a1b2c3d4e5f6");
+  });
+
+  it("matches an order by the client id the bot gave it", () => {
+    const order = { id: "777", clientId: "ong_a1b2c3d4e5_3_12", symbol: "BTCUSDT" };
+    expect(botForOrder([bot({})], order)?.id).toBe("a1b2c3d4e5f6");
+  });
+
+  it("leaves the trader's own orders and other markets alone", () => {
+    expect(botForOrder([bot({})], { id: "777", clientId: "tkt-123", symbol: "BTCUSDT" })).toBeNull();
+    expect(botForOrder([bot({})], { id: "9001", clientId: "", symbol: "ETHUSDT" })).toBeNull();
+  });
+
+  it("finds the bot at work in a market, not a stopped one", () => {
+    expect(activeBotFor([bot({ status: "stopped" })], "BTCUSDT")).toBeNull();
+    expect(activeBotFor([bot({ status: "waiting" })], "BTCUSDT")?.status).toBe("waiting");
   });
 });

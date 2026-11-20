@@ -496,24 +496,24 @@ function ticketRecordFromTurn(run: RunView, ticket: TicketView, status: TicketSt
   const instrument = instrumentFor(snapshot, ticket.symbol);
   let recStatus: ExecutionRecord["status"] = "pending";
   let tone: ExecutionRecord["tone"] = "warn";
-  let statusLabel = "Awaiting confirm";
+  let statusLabel = "Waiting for you";
   let summary = ticket.effect;
 
   if (status.state === "done") {
     recStatus = "complete";
     tone = "up";
-    statusLabel = "Confirmed & Filled";
+    statusLabel = "Placed";
     summary = status.note;
   } else if (status.state === "failed") {
     recStatus = "failed";
     tone = "down";
-    statusLabel = "Unconfirmed";
+    statusLabel = "Not placed";
     summary = status.note;
   } else if (status.state === "expired") {
     recStatus = "expired";
     tone = undefined;
-    statusLabel = "Draft expired";
-    summary = `${ticket.effect} (draft expired before confirmation).`;
+    statusLabel = "Expired";
+    summary = `${ticket.effect} (expired before it was confirmed).`;
   }
 
   return {

@@ -1258,6 +1258,35 @@ describe("mock backend: grid bots", () => {
     expect(snap.grids.some((g) => g.status === "running")).toBe(true);
     expect(snap.grids.some((g) => g.status === "stopped")).toBe(true);
   });
+
+  it("books a seeded bot's orders in the account, each under its level's order id", async () => {
+    const snap = await instant({ grids: true }).boot();
+    const bot = snap.grids.find((g) => g.symbol === "BTCUSDT")!;
+    const ids = bot.levels.map((level) => level.orderId).filter((id): id is string => id !== null);
+    const booked = snap.account!.orders.filter((order) => ids.includes(order.id));
+    expect(booked.length).toBe(ids.length);
+    expect(booked.every((order) => order.clientId.startsWith(`ong_${bot.id.slice(0, 10)}_`))).toBe(true);
+  });
+
+  it("leaves a level empty when one of a bot's orders is cancelled, and stops a bot whose orders are all gone", async () => {
+    const backend = instant({ grids: true });
+    const snap = await backend.boot();
+    const bot = snap.grids.find((g) => g.symbol === "BTCUSDT")!;
+    const level = bot.levels.find((item) => item.orderId !== null)!;
+
+    const one = await backend.cancelOrder("BTCUSDT", level.orderId!);
+    const after = one.grids.find((g) => g.id === bot.id)!;
+    expect(after.status).toBe("running");
+    expect(after.levels[level.index]!.orderId).toBeNull();
+    expect(after.lastNote).toBe("1 order was cancelled or expired without filling, so its price level is empty.");
+    expect(after.matchedTrades).toBe(bot.matchedTrades);
+
+    const all = await backend.cancelAllOrders("BTCUSDT");
+    const stopped = all.grids.find((g) => g.id === bot.id)!;
+    expect(stopped.status).toBe("stopped");
+    expect(stopped.lastNote).toMatch(/^Stopped: its \d+ orders were cancelled outside the bot, so it sent nothing more\.$/);
+    expect(all.grids.find((g) => g.symbol === "ETHUSDT")!.status).toBe("running");
+  });
 });
 
 describe("mock backend: grid bots from the assistant", () => {

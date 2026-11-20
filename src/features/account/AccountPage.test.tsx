@@ -1,9 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-async function loadAccount() {
+/** Boots the app against the mock with `search` and renders the Account page to markup. */
+async function render(search: string): Promise<string> {
+  vi.resetModules();
   vi.stubGlobal("window", {
-    location: { search: "?speed=0&history=0&positions=1" },
+    location: { search: `?speed=0&history=0&${search}` },
     matchMedia: () => ({
       matches: false,
       addEventListener: () => {},
@@ -13,49 +15,76 @@ async function loadAccount() {
   const state = await import("../../state/app");
   await state.start();
   const { AccountPage } = await import("./AccountPage");
-  return { state, AccountPage };
+  return renderToStaticMarkup(<AccountPage />);
 }
 
-describe("AccountPage portfolio & perpetual desk", () => {
-  let AccountPage: Awaited<ReturnType<typeof loadAccount>>["AccountPage"];
+describe("Account page", () => {
+  it("says whose account it is and how it stands, in plain words", async () => {
+    const html = await render("positions=1&grids=1");
 
-  beforeAll(async () => {
-    ({ AccountPage } = await loadAccount());
+    expect(html).toContain("Wallet");
+    expect(html).toContain("Testnet · test funds");
+    expect(html).toContain("Trade-only key approved");
+    expect(html).toContain("New order");
+
+    expect(html).toContain("Equity");
+    expect(html).toContain("Free margin");
+    expect(html).toContain("Exposure");
+    expect(html).toContain("Funding, next 8 hours");
+    expect(html).toContain("2 of 3 positions with a stop-loss");
+    expect(html).toContain('role="meter"');
+
+    // None of the old jargon, and never the exchange's name.
+    for (const word of ["Net Account Equity", "Vault", "Delta Neutral", "SL armed", "Place Order", "AI Risk Check", "Limit Entry", "Dist. to Mark", "Collateral &amp; Vault"]) {
+      expect(html).not.toContain(word);
+    }
+    expect(html.toLowerCase()).not.toMatch(/\baster/);
   });
 
-  it("renders vault & agent identity, 4-card portfolio KPIs, exposure bar, and enriched perp positions", () => {
-    const html = renderToStaticMarkup(<AccountPage />);
+  it("shows positions with what protects them, and a grid bot that shares one", async () => {
+    const html = await render("positions=1&grids=1");
 
-    // Self-custody vault & trade-only agent identity bar
-    expect(html).toContain("Vault");
-    expect(html).toContain("Trade-only");
-    expect(html).toContain("Place Order");
-
-    // 4-card KPI strip: Net Account Equity, Free Collateral & Margin, Directional Exposure, Est. Funding Carry
-    expect(html).toContain("Net Account Equity");
-    expect(html).toContain("Free Collateral &amp; Margin");
-    expect(html).toContain("Directional Exposure");
-    expect(html).toContain("Est. Funding Carry");
-    expect(html).toContain("2/3 SL armed");
-
-    // Accessible desk tabs
-    expect(html).toContain('role="tablist"');
     expect(html).toContain("Positions");
-    expect(html).toContain("Open orders");
-    expect(html).toContain("Collateral &amp; Vault");
-    expect(html).toContain("Journal &amp; History");
-
-    // Enriched open positions with liquidation buffer, TP/SL protection badges, and 1-click actions
-    expect(html).toContain("ETH-USDT");
-    expect(html).toContain("SOL-USDT");
-    expect(html).toContain("DOGE-USDT");
-    expect(html).toContain("R:R 1 :");
-    expect(html).toContain("No Stop-Loss");
-    expect(html).toContain("Add / TP·SL");
-    expect(html).toContain("Trim 50%");
-    expect(html).toContain("Journal");
+    for (const market of ["ETH", "SOL", "DOGE"]) expect(html).toContain(`<span class="symbol-name">${market}</span>`);
+    expect(html).toContain("No stop-loss");
+    expect(html).toContain("Reward to risk");
+    expect(html).toContain("Close half");
     expect(html).toContain('aria-label="Close ETH long"');
-    expect(html).toContain('aria-label="Open positions pagination"');
-    expect(html).toContain("10 / page");
+    expect(html).toContain("Your ETH grid bot trades this market");
+    expect(html).toContain("Open the bot");
+  });
+
+  it("marks the orders a grid bot placed and lets them be told apart from the trader's own", async () => {
+    const html = await render("positions=1&grids=1");
+
+    expect(html).toContain("Open orders");
+    expect(html).toMatch(/Yours \d+/);
+    expect(html).toMatch(/Grid bots \d+/);
+    expect(html).toContain('data-owner="bot"');
+    expect(html).not.toMatch(/Yours 0/);
+    expect(html).toContain("placed by the grid bot");
+    expect(html).toContain("2 grid bots at work");
+    expect(html).toContain("Open grid bots");
+  });
+
+  it("lists the balances beside the wallet and the app's trade-only key", async () => {
+    const html = await render("positions=1");
+
+    expect(html).toContain("Balances");
+    expect(html).toContain("Your wallet on Testnet");
+    expect(html).toContain("The app&#x27;s trade-only key");
+    expect(html).toContain("Manage wallets");
+    expect(html).toContain("No grid bot yet.");
+    expect(html).toContain("Set one up");
+  });
+
+  it("asks for a wallet when there is none, and for a first deposit when the wallet has made none", async () => {
+    const none = await render("wallet=none");
+    expect(none).toContain("No wallet on Testnet");
+    expect(none).toContain("Connect a wallet");
+
+    const deposit = await render("wallet=deposit");
+    expect(deposit).toContain("Your account opens with a first deposit");
+    expect(deposit).toContain("Deposit");
   });
 });

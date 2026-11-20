@@ -365,3 +365,29 @@ export function summarizeGrids(grids: GridBotView[]): {
     totalMatchedTrades,
   };
 }
+
+/** The client id prefix the core gives every order of one bot: `ong_`, the first ten characters of its id, `_`. */
+function clientPrefix(bot: GridBotView): string {
+  return `ong_${bot.id.slice(0, 10)}_`;
+}
+
+/**
+ * The grid bot that placed an order, so a page can say whose order it is: matched by the order's id on
+ * one of the bot's levels, or by the client id the bot gave it.
+ */
+export function botForOrder(
+  bots: readonly GridBotView[],
+  order: { id: string; clientId: string; symbol: string },
+): GridBotView | null {
+  for (const bot of bots) {
+    if (bot.symbol !== order.symbol) continue;
+    if (bot.levels.some((level) => level.orderId === order.id)) return bot;
+    if (order.clientId.startsWith(clientPrefix(bot))) return bot;
+  }
+  return null;
+}
+
+/** The bot at work in a market, running or waiting for its start price, if there is one. */
+export function activeBotFor(bots: readonly GridBotView[], symbol: string): GridBotView | null {
+  return bots.find((bot) => bot.symbol === symbol && (bot.status === "running" || bot.status === "waiting")) ?? null;
+}
