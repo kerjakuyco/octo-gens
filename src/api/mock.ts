@@ -1323,7 +1323,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
     if (focused && !quotes[focused.symbol]) quotes[focused.symbol] = quote(focused);
     const wallet = wallets[network];
     return {
-      version: "0.5.0",
+      version: "0.6.0",
       network,
       focus: focus[network],
       feedError: "",

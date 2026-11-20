@@ -4,6 +4,30 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## Unreleased
 
+## 0.6.0
+
+Every market now has a page of its own: a larger chart with the overlays you choose, readings on trend, volatility and trading flow, and your position and orders in that market. It takes the place of the market panel beside the conversation, and the sidebar was redesigned.
+
+### Added
+
+- **A page for each market.** Pick a market under **Markets**, in an answer or among your positions under **Account**, and it opens on a page of its own beside the sidebar. **Back** returns to where you were. The market's name at the top switches to another: it lists your watchlist, and as you type it searches every market the exchange lists, with each one's price and 24h change. Above the chart are the price, the mark and index prices and the gap between them, funding with the time to the next payment and its yearly rate, open interest, 24h volume, and where the price sits in its 24h range.
+- **Chart overlays.** Buttons above the chart turn on EMA 20 and 50, EMA 200, Bollinger bands, and support and resistance. With a position or open orders in the market, *Orders* draws your entry, your liquidation price, and your stop-loss, take-profit and other open orders as lines. What you turn on, and the chart's timeframe, are remembered between launches.
+- **Market structure and flow**, under the chart. How many of the four timeframes are trending up or down (for example *3/4 Uptrend*) and how far each moved over its last five bars; click one to chart it. For the chart's timeframe: how far the price is from EMA 20, 50 and 200, where it sits between the Bollinger bands and how wide they are, ATR, realised volatility over 30 bars, the low and high of the last 20 bars, and relative volume, which compares the last finished bar's volume with the average of the 20 before it.
+- **Buying and selling pressure.** *Book* shows whether buyers or sellers drove the last forty trades: the share of their value on each side and the difference, updated every four seconds.
+- **Your position and orders on the market's page**, with **Close** and **Cancel** as under **Account**: the position's leverage, margin mode, size, entry, liquidation price and unrealised profit, and each open order. **Cancel all** appears when there are several.
+- **Ask AI.** With a model connected, a market's page offers four questions for the assistant: the market's outlook, why it is moving (from the news), and a long or a short planned on 1% risk with a stop-loss at a technical level. The question is asked in the open conversation.
+- **Levels to orders.** Under *Technicals*, click a support level and the order form opens on Long with that level as the stop-loss; click a resistance level and it is the take-profit. Clicking a timeframe in the table shows it on the chart.
+- **Filter your chats.** The search button beside *Chats* in the sidebar keeps the conversations whose title has every word you type.
+- **A shortcut for the sidebar.** `Ctrl+B` (Windows, Linux) or `Cmd+B` (macOS) shows or hides it.
+
+### Changed
+
+- **The sidebar was redesigned.** A conversation is deleted with the bin that appears when you point at it, and you confirm on its row. The wallet, **Settings** and a System, Light and Dark switch are at its foot instead of in a menu; the wallet shows its network, or *Deposit* while the account waits for its first deposit. On macOS there is more room between the window's own buttons and the app's. In a narrow window the sidebar slides in over the page and keeps the keyboard until you close it.
+
+### Removed
+
+- **The market panel beside the conversation**, and the button that showed it. Its chart, figures, tabs and **Trade** button are on each market's page, and the conversation has the room beside the sidebar to itself.
+
 ## 0.5.0
 
 The app is now called **OctoNeo**. A new interface built around the conversation, four ways to connect a model, much more market data, the news, and deposits and withdrawals without leaving the app. Every message is now answered by a model: the rule-based agents and typed orders are gone.
