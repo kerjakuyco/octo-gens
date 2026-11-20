@@ -6,6 +6,8 @@ export interface TabOption<T extends string> {
   label: string;
   /** Drawn before the label, as the sidebar's navigation does. */
   icon?: IconName;
+  /** Subtle indicator dot at the end of the tab (e.g. when a desktop update is available). */
+  dot?: boolean;
 }
 
 interface TabsProps<T extends string> {
@@ -62,6 +64,7 @@ export function Tabs<T extends string>({ label, value, options, onChange, panelI
           >
             {option.icon ? <Icon name={option.icon} /> : null}
             {option.label}
+            {option.dot ? <span className="tab-dot" aria-hidden="true" /> : null}
           </button>
         );
       })}

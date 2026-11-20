@@ -467,6 +467,44 @@
   border-top: 1px solid var(--border);
 }
 
+.foot-update {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 34px;
+  padding: 5px 10px 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-align: left;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s;
+}
+
+.foot-update:hover {
+  border-color: var(--border-strong);
+  background: var(--sidebar-hover);
+}
+
+.foot-update[data-status="ready"] {
+  border-color: color-mix(in srgb, var(--up) 35%, var(--border));
+  background: var(--up-soft);
+}
+
+.foot-update > svg {
+  flex: none;
+  color: var(--muted);
+}
+
+.foot-update > svg:last-child {
+  color: var(--faint);
+}
+
 .foot-wallet {
   display: flex;
   align-items: center;
@@ -506,6 +544,11 @@
 .foot-badge[data-tone="warn"] {
   background: var(--warn-soft);
   color: var(--warn);
+}
+
+.foot-badge[data-tone="info"] {
+  background: color-mix(in srgb, var(--focus) 14%, transparent);
+  color: var(--focus);
 }
 
 .foot-bar {

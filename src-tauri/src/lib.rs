@@ -7,6 +7,7 @@
 //! its own; every request to the exchange or a model is made from here.
 
 mod keychain;
+mod updater;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -290,6 +291,38 @@ async fn set_web_search(studio: Desk<'_>, on: bool) -> Reply<Snapshot> {
     studio.set_web_search(on).map_err(message)
 }
 
+#[tauri::command]
+async fn check_update(
+    app: AppHandle,
+    state: State<'_, updater::UpdaterState>,
+) -> Reply<updater::UpdateCheckResult> {
+    #[cfg(debug_assertions)]
+    if selftest::wanted() {
+        return Ok(updater::UpdateCheckResult::UpToDate {
+            current_version: app.package_info().version.to_string(),
+            release_url: "https://github.com/kerjakuyco/octo-neo/releases".to_string(),
+        });
+    }
+    updater::check(&app, &state).await
+}
+
+#[tauri::command]
+async fn download_update(
+    state: State<'_, updater::UpdaterState>,
+    on_event: Channel<updater::UpdateProgress>,
+) -> Reply<()> {
+    updater::download(&state, &on_event).await
+}
+
+#[tauri::command]
+async fn install_update(
+    app: AppHandle,
+    studio: Desk<'_>,
+    state: State<'_, updater::UpdaterState>,
+) -> Reply<()> {
+    updater::install(&app, studio.inner(), &state).await
+}
+
 /// The self-test, for debug builds started with `OCTONEO_SELFTEST=1`.
 ///
 /// `scripts/smoke.mjs --e2e` serves a stand-in for the exchange's testnet and a
@@ -397,6 +430,7 @@ fn secret_store() -> Arc<dyn SecretStore> {
 pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let handle = app.handle().clone();
             let mut config = StudioConfig::new(data_directory(&handle)?, secret_store());
@@ -416,6 +450,7 @@ pub fn run() {
                 selftest::drive(app.handle());
             }
             app.manage(studio);
+            app.manage(updater::UpdaterState::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -459,6 +494,9 @@ pub fn run() {
             forget_provider,
             set_theme,
             set_web_search,
+            check_update,
+            download_update,
+            install_update,
         ])
         .build(tauri::generate_context!());
 

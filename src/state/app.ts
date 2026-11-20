@@ -7,7 +7,7 @@
  * streamed, and notices.
  */
 
-import { loadBackend } from "../api";
+import { isDesktop, loadBackend } from "../api";
 import type {
   AssistantRequest,
   Backend,
@@ -24,6 +24,8 @@ import type {
   TicketView,
   Timeframe,
   TurnEvent,
+  UpdateInfo,
+  UpdateProgress,
   FundingRequest,
   WalletBrowserRequest,
   WalletKeyRequest,
@@ -82,6 +84,36 @@ export interface SettingsState {
   setup: Provider | null;
 }
 
+export type UpdateStatus =
+  | "idle"
+  | "checking"
+  | "upToDate"
+  | "available"
+  | "downloading"
+  | "ready"
+  | "installing"
+  | "error";
+
+export interface UpdateState {
+  status: UpdateStatus;
+  info: UpdateInfo | null;
+  downloaded: number;
+  contentLength: number | null;
+  error: string;
+  checkedAt: number | null;
+  /** Release version the trader chose to skip for sidebar reminders. */
+  skippedVersion: string;
+}
+
+/** True when the sidebar and About tab should surface an active update indicator. */
+export function hasVisibleUpdate(update: UpdateState): boolean {
+  if (update.status === "downloading" || update.status === "ready" || update.status === "installing") return true;
+  if (update.status === "available" && update.info) {
+    return update.info.version !== update.skippedVersion;
+  }
+  return false;
+}
+
 export interface AppState {
   phase: "booting" | "ready" | "failed";
   bootError: string;
@@ -102,6 +134,8 @@ export interface AppState {
   chartOverlays: ChartOverlays;
   settings: SettingsState | null;
   trade: TradeState | null;
+  /** Desktop release update check, download progress, and install readiness. */
+  update: UpdateState;
   /** Incremented to ask the composer to take focus. */
   composerFocus: number;
 }
@@ -170,6 +204,15 @@ export const app = createStore<AppState>({
   chartOverlays: rememberedOverlays(),
   settings: null,
   trade: null,
+  update: {
+    status: "idle",
+    info: null,
+    downloaded: 0,
+    contentLength: null,
+    error: "",
+    checkedAt: null,
+    skippedVersion: remembered("skippedUpdate") ?? "",
+  },
   composerFocus: 0,
 });
 
@@ -247,6 +290,11 @@ export async function start(): Promise<void> {
     app.set(patch);
     backend.onSnapshot(applyPushed);
     if (dev.ask) void ask(dev.ask);
+    if (isDesktop()) {
+      setTimeout(() => void checkForUpdates({ silent: true }), 2500);
+    } else if (dev.update) {
+      void checkForUpdates({ silent: true });
+    }
   } catch (error) {
     started = false;
     app.set({ phase: "failed", bootError: errorText(error) });
@@ -600,4 +648,126 @@ export function switchModel(provider: ProviderView): Promise<boolean> {
 
 export function openExternal(url: string): void {
   request((api) => api.openExternal(url)).catch((error: unknown) => notify(errorText(error), "error"));
+}
+
+/* ---------------------------------------------------------------- updates */
+
+function setUpdate(patch: Partial<UpdateState>): void {
+  app.set({ update: { ...app.get().update, ...patch } });
+}
+
+/**
+ * Checks GitHub Releases (and signed `latest.json` when configured) for a newer
+ * version. Silent startup checks never raise an error state when offline.
+ */
+export async function checkForUpdates(options?: { silent?: boolean }): Promise<boolean> {
+  const silent = options?.silent ?? false;
+  const current = app.get().update;
+  if (
+    !backend ||
+    current.status === "checking" ||
+    current.status === "downloading" ||
+    current.status === "installing"
+  ) {
+    return false;
+  }
+  if (silent && current.status === "ready") return true;
+
+  setUpdate({ status: "checking", error: "" });
+  try {
+    const result = await core().checkUpdate();
+    const checkedAt = Date.now();
+    if (result.status === "available") {
+      const { status: _status, ...info } = result;
+      void _status;
+      const prev = app.get().update;
+      const keepReady = prev.status === "ready" && prev.info?.version === info.version;
+      // An explicit manual check un-skips the discovered version so the trader can act on it.
+      let skippedVersion = prev.skippedVersion;
+      if (!silent && skippedVersion === info.version) {
+        skippedVersion = "";
+        remember("skippedUpdate", "");
+      }
+      setUpdate({
+        status: keepReady ? "ready" : "available",
+        info,
+        downloaded: keepReady ? prev.downloaded : 0,
+        contentLength: keepReady ? prev.contentLength : null,
+        error: "",
+        checkedAt,
+        skippedVersion,
+      });
+      return true;
+    }
+    setUpdate({
+      status: "upToDate",
+      info: null,
+      downloaded: 0,
+      contentLength: null,
+      error: "",
+      checkedAt,
+    });
+    return true;
+  } catch (error) {
+    if (silent) {
+      setUpdate({ status: current.info ? "available" : "idle", error: "" });
+      return false;
+    }
+    setUpdate({ status: "error", error: errorText(error), checkedAt: Date.now() });
+    return false;
+  }
+}
+
+function applyUpdateProgress(progress: UpdateProgress): void {
+  const current = app.get().update;
+  if (current.status !== "downloading") return;
+  if (progress.event === "started") {
+    setUpdate({ downloaded: 0, contentLength: progress.contentLength });
+  } else if (progress.event === "progress") {
+    setUpdate({ downloaded: progress.downloaded, contentLength: progress.contentLength });
+  }
+}
+
+/** Downloads and cryptographically verifies the available update without restarting yet. */
+export async function downloadUpdate(): Promise<boolean> {
+  const current = app.get().update;
+  if (!backend || !current.info?.canInstall) return false;
+  if (current.status === "downloading" || current.status === "installing" || current.status === "ready") {
+    return current.status === "ready";
+  }
+
+  setUpdate({ status: "downloading", downloaded: 0, contentLength: null, error: "" });
+  try {
+    await core().downloadUpdate(applyUpdateProgress);
+    setUpdate({ status: "ready", error: "" });
+    return true;
+  } catch (error) {
+    setUpdate({ status: "error", error: errorText(error) });
+    return false;
+  }
+}
+
+/** Applies the verified downloaded update and restarts OctoNeo once idle. */
+export async function installUpdate(): Promise<boolean> {
+  const state = app.get();
+  if (!backend || state.update.status !== "ready") return false;
+  if (state.live || state.working || state.snapshot?.busy) {
+    notify("Wait for the active task to finish before restarting to update.", "error");
+    return false;
+  }
+
+  setUpdate({ status: "installing", error: "" });
+  try {
+    await core().installUpdate();
+    return true;
+  } catch (error) {
+    setUpdate({ status: "error", error: errorText(error) });
+    return false;
+  }
+}
+
+/** Hides the sidebar reminder for `version` while leaving it reachable in Settings -> About. */
+export function skipUpdate(version: string): void {
+  remember("skippedUpdate", version);
+  setUpdate({ skippedVersion: version });
 }

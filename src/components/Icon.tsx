@@ -109,6 +109,7 @@ const SHAPES = {
       <path d="M12 11.2v5M12 7.8v.2" />
     </>
   ),
+  download: <path d="M12 4.5V15m-4.5-4.5L12 15l4.5-4.5M5 19.5h14" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof SHAPES;

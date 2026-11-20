@@ -71,6 +71,18 @@ The first launch of a build signed this way still asks once for each key an earl
 
 The smoke test does not touch the keychain. It sets `OCTONEO_NO_KEYCHAIN`, which keeps keys in memory for the session.
 
+### Signed in-app updates on GitHub Releases
+
+The release workflow (`.github/workflows/release.yml`) automatically signs updater bundles and publishes `latest.json` across Windows, macOS, and Linux once a Tauri updater keypair is configured:
+
+```sh
+pnpm tauri signer generate -w ~/.tauri/octoneo.key
+```
+
+1. Add the contents of `~/.tauri/octoneo.key` as the `TAURI_SIGNING_PRIVATE_KEY` repository secret in GitHub Actions (and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if you set a password).
+2. Paste the contents of `~/.tauri/octoneo.key.pub` into `plugins.updater.pubkey` in `src-tauri/tauri.conf.json`.
+3. Push a version tag (`v0.7.0`) and publish the draft release. Until the signing key is configured, the app still checks GitHub Releases and offers a direct download link instead of in-place installation.
+
 ## What we look for
 
 - **Tests that would fail without your change.** Tests live beside the code. They never reach the internet: the exchange and model providers are mocked with local HTTP servers.

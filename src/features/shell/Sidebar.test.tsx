@@ -70,4 +70,42 @@ describe("Sidebar", () => {
     expect(closedTag).toContain('aria-hidden="true"');
     expect(closedTag).toContain("inert");
   });
+
+  it("shows a compact update pill in the footer until the version is skipped", () => {
+    state.app.set({
+      update: {
+        status: "available",
+        info: {
+          version: "0.7.0",
+          currentVersion: "0.6.0",
+          date: "2026-11-20T00:00:00Z",
+          notes: "Improvements",
+          releaseUrl: "https://github.com/kerjakuyco/octo-neo/releases/tag/v0.7.0",
+          canInstall: true,
+        },
+        downloaded: 0,
+        contentLength: null,
+        error: "",
+        checkedAt: Date.now(),
+        skippedVersion: "",
+      },
+    });
+    const availableHtml = renderToStaticMarkup(<Sidebar overlay={false} />);
+    expect(availableHtml).toContain("foot-update");
+    expect(availableHtml).toContain("Update v0.7.0");
+
+    state.skipUpdate("0.7.0");
+    const skippedHtml = renderToStaticMarkup(<Sidebar overlay={false} />);
+    expect(skippedHtml).not.toContain("foot-update");
+
+    state.app.set({
+      update: {
+        ...state.app.get().update,
+        status: "ready",
+      },
+    });
+    const readyHtml = renderToStaticMarkup(<Sidebar overlay={false} />);
+    expect(readyHtml).toContain("foot-update");
+    expect(readyHtml).toContain("Restart for v0.7.0");
+  });
 });

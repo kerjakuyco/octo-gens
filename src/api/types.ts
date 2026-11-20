@@ -635,6 +635,27 @@ export type TurnEvent =
   | { type: "ticket"; ticket: TicketView }
   | { type: "finished"; run: RunView };
 
+/** Details of a newer GitHub Release discovered by the desktop updater. */
+export interface UpdateInfo {
+  version: string;
+  currentVersion: string;
+  date: string | null;
+  notes: string;
+  releaseUrl: string;
+  /** True when a signed bundle can be downloaded and installed in-app; false when falling back to GitHub Releases. */
+  canInstall: boolean;
+}
+
+export type UpdateCheckResult =
+  | ({ status: "available" } & UpdateInfo)
+  | { status: "upToDate"; currentVersion: string; releaseUrl: string };
+
+/** Streamed while `downloadUpdate` fetches and verifies the update package. */
+export type UpdateProgress =
+  | { event: "started"; contentLength: number | null }
+  | { event: "progress"; downloaded: number; contentLength: number | null }
+  | { event: "downloaded" };
+
 /** The backend the UI talks to. Implemented by the Tauri bridge and by the browser mock. */
 export interface Backend {
   /** Loads markets and watchlist quotes for the last used network. */
@@ -703,6 +724,12 @@ export interface Backend {
   setTheme(theme: Theme): Promise<Snapshot>;
   /** Lets the assistant search the news and read web pages, or stops it. Works with no model connected. */
   setWebSearch(on: boolean): Promise<Snapshot>;
+  /** Checks GitHub Releases (and signed `latest.json` when configured) for a newer desktop version. */
+  checkUpdate(): Promise<UpdateCheckResult>;
+  /** Downloads and cryptographically verifies the pending signed update, streaming byte progress. */
+  downloadUpdate(onEvent: (event: UpdateProgress) => void): Promise<void>;
+  /** Installs the downloaded update and restarts the desktop app. */
+  installUpdate(): Promise<void>;
   openExternal(url: string): Promise<void>;
   /** Subscribes to snapshots pushed by background work (wallet approval, launch). Returns an unsubscribe function. */
   onSnapshot(listener: (snapshot: Snapshot) => void): () => void;

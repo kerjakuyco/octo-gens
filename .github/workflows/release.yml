@@ -1,11 +1,15 @@
 name: Release
 
-# Builds installers for every platform and attaches them to a draft release.
-# Push a tag such as v0.3.0, review the draft on GitHub, then publish it.
+# Builds installers for every platform, signs updater bundles when
+# TAURI_SIGNING_PRIVATE_KEY is configured, and attaches them (plus latest.json)
+# to a draft release. Push a tag such as v0.7.0, review the draft on GitHub,
+# then publish it.
 #
-# The installers are not signed with a developer certificate or notarized:
-# that needs certificates this repository does not hold. macOS builds are
-# sealed with an ad-hoc signature only. See SECURITY.md.
+# The installers are not signed with an Apple/Windows developer certificate or
+# notarized: that needs certificates this repository does not hold. macOS
+# builds are sealed with an ad-hoc signature only. Updater artifacts use Tauri's
+# Ed25519 minisign keypair (TAURI_SIGNING_PRIVATE_KEY) so in-app updates are
+# cryptographically verified before installing. See SECURITY.md.
 
 on:
   push:
@@ -57,18 +61,36 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: rustup show
       - run: cargo test -p octoneo-core
-      - run: pnpm tauri build
+      - name: Build installers and updater bundles
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            pnpm tauri build --config src-tauri/tauri.updater.conf.json
+          else
+            echo "::notice::TAURI_SIGNING_PRIVATE_KEY is not set; building installers without signed updater bundles."
+            pnpm tauri build
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: octoneo-${{ matrix.name }}
           if-no-files-found: error
           path: |
             target/release/bundle/dmg/*.dmg
+            target/release/bundle/macos/*.app.tar.gz
+            target/release/bundle/macos/*.app.tar.gz.sig
             target/release/bundle/msi/*.msi
+            target/release/bundle/msi/*.msi.sig
             target/release/bundle/nsis/*.exe
+            target/release/bundle/nsis/*.exe.sig
             target/release/bundle/deb/*.deb
+            target/release/bundle/deb/*.deb.sig
             target/release/bundle/rpm/*.rpm
+            target/release/bundle/rpm/*.rpm.sig
             target/release/bundle/appimage/*.AppImage
+            target/release/bundle/appimage/*.AppImage.sig
       - name: Attach installers to the draft release
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
@@ -76,5 +98,68 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
-          files=(target/release/bundle/dmg/*.dmg target/release/bundle/msi/*.msi target/release/bundle/nsis/*.exe target/release/bundle/deb/*.deb target/release/bundle/rpm/*.rpm target/release/bundle/appimage/*.AppImage)
+          files=(
+            target/release/bundle/dmg/*.dmg
+            target/release/bundle/macos/*.app.tar.gz
+            target/release/bundle/macos/*.app.tar.gz.sig
+            target/release/bundle/msi/*.msi
+            target/release/bundle/msi/*.msi.sig
+            target/release/bundle/nsis/*.exe
+            target/release/bundle/nsis/*.exe.sig
+            target/release/bundle/deb/*.deb
+            target/release/bundle/deb/*.deb.sig
+            target/release/bundle/rpm/*.rpm
+            target/release/bundle/rpm/*.rpm.sig
+            target/release/bundle/appimage/*.AppImage
+            target/release/bundle/appimage/*.AppImage.sig
+          )
           gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
+
+  updater-manifest:
+    name: Updater manifest (latest.json)
+    needs: [draft, bundle]
+    if: always() && needs.bundle.result == 'success' && (needs.draft.result == 'success' || needs.draft.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: octoneo-*
+          path: release-artifacts
+      - name: Generate latest.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="$GITHUB_REF_NAME"
+            VERSION="${TAG#v}"
+            gh release view "$TAG" --json body -q .body > release-notes.md || : > release-notes.md
+          else
+            VERSION="$(node -p "require('./package.json').version")"
+            TAG="v${VERSION}"
+            : > release-notes.md
+          fi
+          node scripts/updater-manifest.mjs \
+            --version "$VERSION" \
+            --tag "$TAG" \
+            --repo "${{ github.repository }}" \
+            --dir release-artifacts \
+            --notes-file release-notes.md \
+            --out latest.json
+      - name: Upload latest.json artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: octoneo-updater-manifest
+          if-no-files-found: ignore
+          path: latest.json
+      - name: Attach latest.json to the draft release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -f latest.json ]; then
+            gh release upload "$GITHUB_REF_NAME" latest.json --clobber
+          fi

@@ -53,6 +53,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+      - run: node --test scripts/updater-manifest.test.mjs
       - run: pnpm build
 
   website:

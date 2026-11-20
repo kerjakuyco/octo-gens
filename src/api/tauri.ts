@@ -16,6 +16,8 @@ import type {
   ToolInfo,
   TradeView,
   TurnEvent,
+  UpdateCheckResult,
+  UpdateProgress,
 } from "./types";
 
 export function createTauriBackend(): Backend {
@@ -69,6 +71,14 @@ export function createTauriBackend(): Backend {
     forgetProvider: (provider) => invoke<Snapshot>("forget_provider", { provider }),
     setTheme: (theme) => invoke<Snapshot>("set_theme", { theme }),
     setWebSearch: (on) => invoke<Snapshot>("set_web_search", { on }),
+
+    checkUpdate: () => invoke<UpdateCheckResult>("check_update"),
+    downloadUpdate(onEvent) {
+      const channel = new Channel<UpdateProgress>();
+      channel.onmessage = onEvent;
+      return invoke<void>("download_update", { onEvent: channel });
+    },
+    installUpdate: () => invoke<void>("install_update"),
 
     async openExternal(url) {
       const safe = safeExternalUrl(url);

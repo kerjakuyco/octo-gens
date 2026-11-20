@@ -74,6 +74,8 @@ import type {
   TradeView,
   Trend,
   TurnEvent,
+  UpdateCheckResult,
+  UpdateProgress,
   WalletBrowserRequest,
   WalletKeyRequest,
   WalletView,
@@ -83,6 +85,7 @@ export type MockSeed = "empty" | "conversation" | "filled" | "unconfirmed" | "ex
 export type MockWallet = "connected" | "deposit" | "none" | "error";
 export type MockTicket = "long" | "short" | "close";
 export type MockLocal = "up" | "down" | "retry";
+export type MockUpdate = "available" | "manual" | "upToDate" | "error" | "installError";
 
 export interface MockOptions {
   seed?: MockSeed;
@@ -117,6 +120,8 @@ export interface MockOptions {
   speed?: number;
   /** Pause the next streamed answer half-way until `stopTurn` is called. */
   hold?: boolean;
+  /** Simulated desktop update state. Defaults to `upToDate`. */
+  update?: MockUpdate;
 }
 
 /* ------------------------------------------------------------- generators */
@@ -2741,6 +2746,53 @@ export function createMockBackend(options: MockOptions = {}): Backend {
         return snapshot();
       }),
 
+    checkUpdate: (): Promise<UpdateCheckResult> =>
+      settle(() => {
+        const mode = options.update ?? "upToDate";
+        const releasesUrl = "https://github.com/kerjakuyco/octo-neo/releases";
+        if (mode === "error") {
+          throw new Error("Could not reach GitHub Releases.");
+        }
+        if (mode === "upToDate") {
+          return { status: "upToDate", currentVersion: "0.6.0", releaseUrl: releasesUrl };
+        }
+        return {
+          status: "available",
+          version: "0.7.0",
+          currentVersion: "0.6.0",
+          date: "2026-11-20T00:00:00Z",
+          notes:
+            "### What's new in 0.7.0\n- Redesigned cross-platform sidebar with inline chat filter.\n- Full-width Market Details workspace with toggleable EMA, Bollinger, S/R, and live order overlays.\n- Semi-automatic updates backed by signed GitHub Releases.",
+          releaseUrl: `${releasesUrl}/tag/v0.7.0`,
+          canInstall: mode !== "manual",
+        };
+      }),
+
+    downloadUpdate: async (onEvent: (event: UpdateProgress) => void) => {
+      await ready;
+      const mode = options.update ?? "upToDate";
+      if (mode !== "available" && mode !== "installError") {
+        throw new Error("Check for updates first.");
+      }
+      const total = 18_400_000;
+      const steps = 6;
+      onEvent({ event: "started", contentLength: total });
+      for (let i = 1; i <= steps; i += 1) {
+        if (speed > 0) await new Promise((done) => setTimeout(done, 110 * speed));
+        onEvent({ event: "progress", downloaded: Math.round((total * i) / steps), contentLength: total });
+      }
+      onEvent({ event: "downloaded" });
+    },
+
+    installUpdate: () =>
+      settle(() => {
+        if (options.update === "installError") {
+          throw new Error(
+            "Could not install the update automatically (permission denied). You can download the installer from GitHub instead.",
+          );
+        }
+      }),
+
     openExternal: async (url) => {
       if (!/^https:\/\//.test(url)) throw new Error("Only https links can be opened in the browser.");
       globalThis.open?.(url, "_blank", "noopener");
@@ -2789,5 +2841,6 @@ export function mockOptionsFromUrl(search: string): MockOptions {
     mcp: flag(params.get("mcp")),
     web: flag(params.get("web")),
     speed: numberOf(params.get("speed")),
+    update: oneOf(params.get("update"), ["available", "manual", "upToDate", "error", "installError"] as const),
   };
 }

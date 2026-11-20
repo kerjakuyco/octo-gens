@@ -8,6 +8,7 @@ import { useResolvedTheme } from "../../lib/theme";
 import { filterThreads, groupThreads } from "../../lib/threads";
 import {
   deleteThread,
+  hasVisibleUpdate,
   navigate,
   newThread,
   openSettings,
@@ -190,6 +191,7 @@ interface SidebarProps {
 export function Sidebar({ overlay, open = true }: SidebarProps) {
   const snapshot = useSnapshot();
   const page = useApp((state) => state.page);
+  const update = useApp((state) => state.update);
   // The core refuses to start, open or delete a conversation while a turn is running.
   const locked = useBusy();
   const resolvedTheme = useResolvedTheme(snapshot.theme);
@@ -218,6 +220,11 @@ export function Sidebar({ overlay, open = true }: SidebarProps) {
 
   const hidden = overlay && !open;
   const walletTone = wallet.connected ? (wallet.needsDeposit ? "warn" : "up") : undefined;
+  const showUpdate = hasVisibleUpdate(update);
+  const downloadPct =
+    update.status === "downloading" && update.contentLength && update.contentLength > 0
+      ? Math.min(100, Math.round((update.downloaded / update.contentLength) * 100))
+      : null;
 
   return (
     <aside
@@ -380,6 +387,41 @@ export function Sidebar({ overlay, open = true }: SidebarProps) {
       </div>
 
       <footer className="sidebar-foot">
+        {showUpdate ? (
+          <button
+            type="button"
+            className="foot-update"
+            data-status={update.status}
+            onClick={() => openSettings("about")}
+          >
+            {update.status === "downloading" || update.status === "installing" ? (
+              <span className="spinner" aria-hidden="true" />
+            ) : update.status === "ready" ? (
+              <span className="dot" data-tone="up" />
+            ) : (
+              <Icon name="download" size={15} />
+            )}
+            <span className="grow truncate num">
+              {update.status === "downloading"
+                ? downloadPct !== null
+                  ? `Downloading ${downloadPct}%`
+                  : "Downloading update"
+                : update.status === "installing"
+                  ? "Installing update"
+                  : update.status === "ready"
+                    ? `Restart for v${update.info?.version ?? ""}`
+                    : `Update v${update.info?.version ?? ""}`}
+            </span>
+            {update.status === "available" ? (
+              <span className="foot-badge" data-tone="info">
+                New
+              </span>
+            ) : (
+              <Icon name="chevron" size={14} />
+            )}
+          </button>
+        ) : null}
+
         <button type="button" className="foot-wallet" onClick={() => openSettings("wallet")}>
           {wallet.connected ? <span className="dot" data-tone={walletTone} /> : <Icon name="wallet" size={16} />}
           <span className="grow truncate num">{wallet.connected ? shortAddress(wallet.user) : "Connect wallet"}</span>

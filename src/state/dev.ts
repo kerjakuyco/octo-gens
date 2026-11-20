@@ -12,6 +12,7 @@
  *   dialog=trade                                 open the order form
  *   ask=<prompt>                                 send a prompt on startup (seed=live does this for you)
  *   platform=macos                               lay the window out as the macOS app does
+ *   update=available|manual|upToDate|error       simulate a desktop update check on startup
  *
  * The mock backend reads its own parameters (seed, network, wallet, …); see `api/mock.ts`.
  */
@@ -29,6 +30,7 @@ export interface DevParams {
   dialog?: "trade";
   ask?: string;
   platform?: "macos";
+  update?: boolean;
 }
 
 const PAGES: readonly Page[] = ["chat", "markets", "market", "account", "activity"];
@@ -58,5 +60,6 @@ export function devParams(): DevParams {
     dialog: oneOf(params.get("dialog"), ["trade"] as const),
     ask: ask || undefined,
     platform: oneOf(params.get("platform"), ["macos"] as const),
+    update: params.has("update") || undefined,
   };
 }

@@ -42,6 +42,15 @@
   box-shadow: none;
 }
 
+.tab-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-inline-start: auto;
+  border-radius: 50%;
+  background: var(--focus);
+}
+
 .settings-panel {
   display: grid;
   align-content: start;
@@ -483,8 +492,8 @@
 
 .about {
   display: grid;
-  justify-items: start;
-  gap: 14px;
+  justify-items: stretch;
+  gap: 16px;
   /* The name sits level with the first tab. */
   padding-top: 5px;
 }
@@ -496,5 +505,231 @@
 
 .about-links {
   display: grid;
+  justify-items: start;
   gap: 6px;
+}
+
+.update-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+
+.update-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+}
+
+.update-meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.update-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.update-sub {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.update-error {
+  color: var(--down);
+  font-size: var(--text-sm);
+}
+
+.update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.update-ext-link {
+  margin-inline-start: auto;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.update-ext-link:hover {
+  color: var(--text);
+}
+
+.update-progress-wrap {
+  display: grid;
+  gap: 6px;
+}
+
+.update-progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+
+.update-progress {
+  --progress-bar-radius: 999px;
+  --progress-bar-track: var(--surface-strong);
+  --progress-bar-fill: var(--primary);
+  --progress-bar-indeterminate-size: 30%;
+  --progress-bar-indeterminate-animation-duration: 1.5s;
+  appearance: none;
+  display: block;
+  inline-size: 100%;
+  block-size: 6px;
+  border: 0 solid;
+  border-radius: var(--progress-bar-radius);
+  background: var(--progress-bar-track);
+  overflow: clip;
+  container-type: inline-size;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .update-progress {
+    --progress-bar-indeterminate-animation-duration: 10s;
+  }
+}
+
+.update-progress:dir(rtl) {
+  --progress-bar-indeterminate-animation: progress-bar-indeterminate
+    var(--progress-bar-indeterminate-animation-duration) infinite linear reverse;
+}
+
+.update-progress:indeterminate {
+  --progress-bar-animation: var(
+    --progress-bar-indeterminate-animation,
+    progress-bar-indeterminate var(--progress-bar-indeterminate-animation-duration) infinite linear
+  );
+}
+
+.update-progress::-webkit-progress-bar {
+  background: transparent;
+}
+
+.update-progress::-webkit-progress-value {
+  border-radius: var(--progress-bar-radius);
+  background: var(--progress-bar-fill);
+  transition: inline-size 0.25s;
+  animation: var(--progress-bar-animation, revert-rule);
+}
+
+.update-progress::-moz-progress-bar {
+  border-radius: var(--progress-bar-radius);
+  background: var(--progress-bar-fill);
+  transition: inline-size 0.25s;
+  animation: var(--progress-bar-animation, revert-rule);
+}
+
+@keyframes progress-bar-indeterminate {
+  from,
+  to {
+    inline-size: var(--progress-bar-indeterminate-size);
+    margin-right: auto;
+  }
+  from {
+    translate: -100%;
+  }
+  to {
+    translate: 100cqi;
+  }
+}
+
+.update-notes {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.update-notes > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.update-notes > summary::-webkit-details-marker {
+  display: none;
+}
+
+.update-notes > summary:hover {
+  color: var(--text);
+}
+
+.update-notes > summary::before {
+  content: "";
+  inline-size: 14px;
+  block-size: 14px;
+  flex-shrink: 0;
+  background-color: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat center / contain;
+  rotate: -90deg;
+}
+
+.update-notes > summary:dir(rtl)::before {
+  rotate: 90deg;
+}
+
+.update-notes[open] > summary::before {
+  rotate: 0deg;
+}
+
+.update-notes::details-content {
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  contain: layout;
+}
+
+.update-notes:not([open])::details-content {
+  block-size: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .update-notes > summary::before {
+    transition: rotate 0.2s;
+  }
+
+  .update-notes::details-content {
+    transition: block-size, content-visibility, display;
+    transition-duration: 0.24s;
+    transition-timing-function: ease-in-out;
+    transition-behavior: allow-discrete;
+  }
+}
+
+.update-notes-body {
+  max-height: 180px;
+  overflow-y: auto;
+  padding-top: 8px;
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+
+.update-notes-body :is(h1, h2, h3, h4) {
+  margin: 0 0 6px;
+  font-size: var(--text-ui);
+  font-weight: 600;
+}
+
+.update-notes-body ul {
+  display: grid;
+  gap: 4px;
+  padding-inline-start: 18px;
+  list-style: disc;
 }
