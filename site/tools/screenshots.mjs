@@ -177,6 +177,10 @@ const SHOTS = [
   // Account and the trading journal under Activity: the summary at the top, then two positions or
   // two journal entries, one on a phone. The mock's journal holds invented sample entries; the
   // desktop app starts with an empty journal.
+  // Grid bots: the summary, the bots at work and the top of the form for a new one. The mock's
+  // bots are invented samples.
+  { name: "grid-bots", query: "page=grid&seed=conversation&grids=1", scales: [1, 2], window: WINDOW, prepare: async (page) => page.evaluate(hideCut(WINDOW.height)) },
+  { name: "grid-bots-phone", query: "page=grid&seed=conversation&grids=1", window: PHONE, prepare: async (page) => page.evaluate(hideCut(PHONE.height)) },
   ...[
     { name: "account", query: "page=account&seed=conversation&positions=1", cards: ".positions > li" },
     { name: "journal", query: "page=activity&seed=conversation&positions=1", cards: ".journal-cards > li" },
@@ -257,6 +261,20 @@ const SHOTS = [
     clip: column(['.turn .card[aria-label="Plan"]', ".turn .md", ".turn .ticket"]),
   },
   { name: "ticket-mainnet", query: "seed=liveticket" + COLUMN.query, width: COLUMN.width, clip: column([".ticket"], 12) },
+  // A grid bot the assistant drafted from the levels it read, waiting in the conversation to be started.
+  { name: "grid-draft", query: "seed=grid" + COLUMN.query, width: COLUMN.width, height: 1500, clip: column([".grid-ticket"], 12) },
+  // The message box with its commands open, as "/" opens them, over an empty conversation.
+  {
+    name: "commands",
+    query: "seed=empty&history=0" + COLUMN.query,
+    width: COLUMN.width,
+    height: 900,
+    prepare: async (page) => {
+      await page.evaluate(`window.dispatchEvent(new KeyboardEvent("keydown", { key: "/", bubbles: true }))`);
+      await sleep(700);
+    },
+    clip: column([".composer-wrap", ".composer-pop"], 16),
+  },
   {
     name: "news",
     query: ask("Any news on BTC and ETH?") + COLUMN.query,

@@ -230,7 +230,7 @@ export default {
   path: "/markets/",
   title: "Markets and orders | OctoNeo",
   description:
-    "A screener of every market, a page for each one with its chart, readings, order book and funding, how an OctoNeo ticket becomes an order, your account and your trading journal.",
+    "A screener of every market, a page for each one with its chart, readings, order book and funding, how an OctoNeo ticket becomes an order, your account, your trading journal and grid bots.",
   render: (ctx) =>
     docPage({
       path: "/markets/",
@@ -392,6 +392,31 @@ ${facts([
 ], "facts-wide")}
 <p>Beside the journal, Activity lists what the app did on the exchange: each order and cancellation, step by step, and each deposit and withdrawal. Positions, open orders, the journal and the history come a page at a time.</p>
 <p>The journal starts empty. It is kept on your computer in the app window’s own storage, not in the data folder that holds your conversations, and it is not encrypted. It reaches a model only when you ask the assistant to review it, in that message. <a href="/safety/#data">Where the rest of your data lives</a>.</p>`,
+        },
+        {
+          id: "grid-bots",
+          title: "Grid bots",
+          lead: "A grid bot splits a price range into levels and keeps an order waiting at each one: buys below the price, sells above it. When a buy fills it places a sell one level up, and when that sells it buys again one level down. Each buy and its sell is a completed trade, which earns the gap between two levels less the fees.",
+          body: `${ctx.figure("grid-bots", {
+  alt: "The Grid bots page on testnet beside the sidebar. Four tiles: two bots running, 1,850.00 USDT of margin in use, +266.07 USDT of profit and loss and 44 completed trades. Under Your bots, a neutral BTC bot at 3x running for a day and fourteen hours, with its range from 59,144.90 to 66,695.40 and the price inside it, 19 completed trades, six buy and six sell orders and its latest note; below it, a long ETH bot at 4x.",
+  caption: "Grid bots on testnet, with sample bots from the app’s built-in mock.",
+  kind: "inset",
+})}
+${facts([
+  ["Direction", "Neutral starts with no position. Long buys a position first and sells it off as the price climbs the range; Short sells first and buys it back as the price falls."],
+  ["Range and grids", "The lowest and highest price and up to 50 grids between them, in even price steps or even percentage steps. Suggested ranges come from the market’s support and resistance."],
+  ["Margin and leverage", "How much of your balance the bot uses, at a leverage up to your limit."],
+  ["Start and stop", "Optional: a price the bot waits for before it places its orders, and prices below and above the range where it stops and can close its position."],
+  ["Review", "A dry run shows each order’s size and value, the profit per completed trade after fees and the estimated liquidation price before anything is sent. On mainnet you tick an acknowledgement."],
+  ["Your bots", "Running and stopped, each with its range and the price, profit and loss, completed trades, its orders and its latest note. Stopping asks whether to close the position too."],
+], "facts-wide")}
+<p>Ask the assistant for a grid, or use ${code("/grid")}: it reads the market’s levels, works the bot out as a dry run and drafts it in the conversation, where you start it or discard it. Starting checks the draft against the live price again.</p>
+${ctx.figure("grid-draft", {
+  alt: "A grid bot the assistant drafted on testnet: a neutral grid on BTC-USDT, 10 grids from 61,872.04 to 63,606.89 with 250.00 USDT at 3x. A bar marks the buy levels below the price and the sell levels above it. Six buy and four sell orders of 0.001 BTC each, 0.23% to 0.24% per grid, estimated liquidation prices below and above, the reason for the range, and Start grid bot and Discard.",
+  caption: "A grid bot drafted in the conversation, waiting for you to start it. Sample data from the app’s built-in mock.",
+  kind: "column",
+})}
+<p>A bot places its replacement orders and watches its stop prices while OctoNeo is open; its waiting orders stay on the exchange when you close the app. Only an order the exchange reports as filled counts as a fill, so an order cancelled elsewhere leaves its level empty, and a bot whose orders are all gone stops. One bot runs in a market, and it shares that market’s position with anything else you trade there.</p>`,
         },
         {
           id: "errors",

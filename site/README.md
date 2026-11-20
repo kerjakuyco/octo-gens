@@ -113,8 +113,8 @@ The screenshots in `src/assets/shots/` are of the app's interface running in a b
 
 | Page | Pictures |
 | --- | --- |
-| Assistant | `turn-btc`, `settings-tools` |
-| Markets | `markets`, `market`, `structure`, `tab-book`, `tab-funding`, `tab-technicals`, `tab-watchlist`, `order-form`, `account`, `journal` |
+| Assistant | `turn-btc`, `commands`, `settings-tools` |
+| Markets | `markets`, `market`, `structure`, `tab-book`, `tab-funding`, `tab-technicals`, `tab-watchlist`, `order-form`, `account`, `journal`, `grid-bots`, `grid-draft` |
 | News | `news-page`, `settings-tools` |
 | Wallet | `wallet-connect`, `wallet-deposit`, `wallet-withdraw` |
 | Safety | `settings-trading` |

@@ -74,6 +74,7 @@ export default {
               ["Draft a ticket for you to confirm, with a stop-loss", "Call tool-server tools that are not marked read-only"],
               ["Read recent headlines from crypto newsrooms, Yahoo Finance and the Federal Reserve, and the article behind one", "Read a page it was not given: only its news results and links you paste"],
               ["Call read-only tools of a tool server you attached", "Answer without a model: there are no canned replies"],
+              ["Work out a grid bot as a dry run, draft it for you to start, and read how your bots are doing", "Start, stop or change a grid bot"],
             ],
           })}`,
         },

@@ -214,7 +214,7 @@ ${shell([
 <h3>What a pull request must keep</h3>
 <ul class="checks">
 <li><strong>The assistant cannot trade.</strong> No tool that places, changes or cancels an order, and no weakening of the safeguards. Pull requests that do will not be merged.</li>
-<li><strong>A model answers, or nothing does.</strong> No rule-based replies and no typed commands.</li>
+<li><strong>A model answers, or nothing does.</strong> No rule-based replies; the commands in the message box only write a message for the model.</li>
 <li><strong>The app’s key never moves funds.</strong> A deposit is a transaction your own wallet sends, and a withdrawal is signed by your wallet, in your browser, every time.</li>
 <li><strong>Secrets stay in the keychain.</strong> Nothing secret in preferences, the journal, logs, snapshots or errors.</li>
 <li><strong>Money is exact.</strong> Prices, quantities and balances are decimals; floats are for indicators only.</li>
@@ -230,6 +230,7 @@ ${shell([
             head: ["Version", "What changed"],
             stack: true,
             rows: [
+              ["0.9.0", "Grid bots, on their own page and in the chat, and commands in the message box for trading, research and analysis."],
               ["0.8.0", "A trading journal on the Activity page, which the assistant reviews when you ask, and an Account page that reads like a portfolio. Long lists come a page at a time, the news no longer includes a publisher whose articles need a subscription, and long chat titles fit the sidebar."],
               ["0.7.0","A News page that lays out the newsrooms’ stories like a magazine, and opens a story inside the app. The order form and Settings were redesigned, the app says when a newer version is out, and the icon is now white on near-black."],
               ["0.6.0", "A page for each market in place of the market panel: chart overlays, readings on trend, volatility and trading flow, and your position and orders in that market. The sidebar was redesigned, and conversations can be filtered by title."],

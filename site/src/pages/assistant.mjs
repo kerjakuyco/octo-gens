@@ -83,7 +83,7 @@ export default {
     docPage({
       path: "/assistant/",
       title: "An assistant that shows what it read",
-      lead: "Every message is answered by a language model that calls tools. It plans its own research, shows what it read as cards under the answer, and drafts tickets for you to confirm. There are no canned replies and no typed commands.",
+      lead: "Every message is answered by a language model that calls tools. It plans its own research, shows what it read as cards under the answer, and drafts tickets and grid bots for you to confirm. There are no canned replies: the commands in the message box only write a message.",
       visual: CONVERSATION,
       sections: [
         {
@@ -97,6 +97,25 @@ ${facts([
   ["Show or hide the sidebar", `${code("Ctrl+B")} on Windows and Linux, ${code("Cmd+B")} on macOS`],
   ["Conversations", "Kept in the sidebar by date, where you can filter them by title. Reopen one to read it with what the assistant read at the time, or delete it."],
 ])}`,
+        },
+        {
+          id: "commands",
+          title: "Commands, and markets by name",
+          body: `<p>Type ${code("/")} in the message box, or press Commands under it, for what the assistant is asked most. Pick one, set what it takes as chips beside it, add anything else in your own words, and send. The box shows, word for word, the message the command writes; the assistant answers it as if you had typed it, and a trade still ends in a ticket you confirm.</p>
+${ctx.figure("commands", {
+  alt: "The message box with its commands open: under a Trade heading, Open a long, Open a short, Plan a trade, Close a position and Reduce a position, the last two dimmed with the note that there are no open positions, and Grid bot; under Research, Market outlook and Why is it moving. Each row shows the command typed after a slash and what it does.",
+  caption: "The commands, opened with a slash. Commands that cannot run yet stay in the list and say why. Sample data from the app’s built-in mock.",
+  kind: "column",
+})}
+${facts([
+  ["Trade", `${code("/long")}, ${code("/short")}, ${code("/plan")}, ${code("/close")}, ${code("/reduce")} and ${code("/grid")}: the market, the risk, the leverage up to your limit and a take-profit at the next level, or for a grid bot its direction, range timeframe, grids and margin.`],
+  ["Research", `${code("/outlook")}, ${code("/why")}, ${code("/news")}, ${code("/movers")}, ${code("/watchlist")} and ${code("/funding")}.`],
+  ["Analysis", `${code("/technicals")}, ${code("/levels")}, ${code("/book")} and ${code("/compare")}, on the timeframe you pick.`],
+  ["Account", `${code("/portfolio")}, ${code("/journal")} and ${code("/bots")}: your positions, your journal and your grid bots.`],
+  ["Markets by name", `Type ${code("$")} and a few letters to pick a market from a list with its price and its move today.`],
+  ["Next steps", "Under an answer, suggestions pick up where it left off. A trade suggestion fills the box for you to look over; it is never sent by itself."],
+], "facts-wide")}
+<p>A command that needs something you have not set up, a wallet or web search, says so in the box with a button to fix it, and cannot be sent until it can run. ${code("/")} anywhere outside a text field opens the list.</p>`,
         },
         {
           id: "tools",

@@ -4,7 +4,7 @@ const LINKS = [
   ["/", "Home", "What OctoNeo is, and a preview of the assistant."],
   ["/assistant/", "The assistant", "How it researches, what it shows, and the tickets it drafts."],
   ["/models/", "Models", "OpenRouter, Cloudflare AI Gateway, Ollama and LM Studio."],
-  ["/markets/", "Markets and orders", "The screener, a page for each market, how a ticket becomes an order, your account and a trading journal."],
+  ["/markets/", "Markets and orders", "The screener, a page for each market, how a ticket becomes an order, your account, a trading journal and grid bots."],
   ["/news/", "News", "Seven publishers, searched on your computer."],
   ["/wallet/", "Wallet and funds", "The trade-only key, deposits and withdrawals."],
   ["/safety/", "Safety and privacy", "What the assistant cannot do, and where your data lives."],
