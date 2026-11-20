@@ -55,15 +55,19 @@ describe("Sidebar", () => {
     expect(marketHtml).toMatch(/aria-current="page"[^>]*>.*Markets/);
   });
 
-  it("lists News right after Markets and marks it while the News page is open", () => {
+  it("lists Grid bots and News after Markets and marks the active workspace page", () => {
     state.navigate("news");
     const html = renderToStaticMarkup(<Sidebar overlay={false} />);
     const labels = [...html.matchAll(/class="nav-item"[^>]*>.*?<span class="grow truncate">([^<]+)<\/span>/g)].map(
       (match) => match[1],
     );
-    expect(labels).toEqual(["Markets", "News", "Account", "Activity"]);
+    expect(labels).toEqual(["Markets", "Grid bots", "News", "Account", "Activity"]);
     expect(html).toMatch(/<button type="button" class="nav-item" aria-current="page"><svg[^>]*>.*?<\/svg><span class="grow truncate">News</);
     expect(html).not.toMatch(/aria-current="page"[^>]*>(?:(?!<\/button>).)*Markets/);
+
+    state.navigate("grid");
+    const gridHtml = renderToStaticMarkup(<Sidebar overlay={false} />);
+    expect(gridHtml).toMatch(/aria-current="page"[^>]*>.*Grid bots/);
     state.navigate("markets");
   });
 

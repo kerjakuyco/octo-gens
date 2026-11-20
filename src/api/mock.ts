@@ -6,8 +6,9 @@
  * here and are entirely fictional. Nothing in this file talks to a network.
  *
  * URL parameters (browser only) force a starting state:
- *   seed=empty|conversation|filled|unconfirmed|expired|live|liveticket
- *                                                    the open conversation
+ *   seed=empty|conversation|filled|unconfirmed|expired|live|liveticket|grid
+ *                                                    the open conversation (grid: a grid bot drafted in it,
+ *                                                    with mainnet tickets allowed when the network is mainnet)
  *   network=mainnet|testnet                          active network (testnet unless seed=liveticket)
  *   wallet=connected|deposit|none|error              wallet of the active network
  *   positions=1|0                                    open positions and resting orders
@@ -27,6 +28,7 @@
  */
 
 import { ago } from "../lib/format";
+import { computeGridPrices, computeProfitPerGridPct, planLadderSides } from "../lib/grid";
 import { ema } from "../lib/indicators";
 import { networkName } from "../lib/network";
 import { mockNewsFeed } from "./mockNews";
@@ -42,6 +44,14 @@ import type {
   Effort,
   FundingPoint,
   FundingView,
+  GridBotView,
+  GridDirection,
+  GridDraftView,
+  GridLevelView,
+  GridPreviewView,
+  GridRequest,
+  GridSpacing,
+  GridStatus,
   InstrumentView,
   MarketRow,
   McpConnectRequest,
@@ -85,7 +95,7 @@ import type {
   WalletView,
 } from "./types";
 
-export type MockSeed = "empty" | "conversation" | "filled" | "unconfirmed" | "expired" | "live" | "liveticket";
+export type MockSeed = "empty" | "conversation" | "filled" | "unconfirmed" | "expired" | "live" | "liveticket" | "grid";
 export type MockWallet = "connected" | "deposit" | "none" | "error";
 export type MockTicket = "long" | "short" | "close";
 export type MockLocal = "up" | "down" | "retry";
@@ -99,6 +109,8 @@ export interface MockOptions {
   wallet?: MockWallet;
   /** Start with open positions and resting orders. On for every seed except `empty`. */
   positions?: boolean;
+  /** Seed sample perpetual futures grid bots (browser demo only; off by default). */
+  grids?: boolean;
   /** Which ticket a seeded conversation drafts. */
   ticket?: MockTicket;
   /**
@@ -684,6 +696,8 @@ export function createMockBackend(options: MockOptions = {}): Backend {
   let filings = 0;
   const activity: RunView[] = [];
   let draft: TicketView | null = null;
+  /** The grid bot the assistant drafted, waiting for the trader to start or discard it. */
+  let gridDraft: GridDraftView | null = null;
   let busy = false;
   let stopRequested = false;
   let wake: (() => void) | null = null;
@@ -698,6 +712,44 @@ export function createMockBackend(options: MockOptions = {}): Backend {
   const failures: Record<string, string> = {};
   const servers = new Map<string, McpView>();
   const listeners = new Set<(snapshot: Snapshot) => void>();
+
+  interface MockGrid {
+    id: string;
+    network: Network;
+    symbol: string;
+    base: string;
+    quote: string;
+    direction: GridDirection;
+    spacing: GridSpacing;
+    status: GridStatus;
+    lowerPrice: number;
+    upperPrice: number;
+    grids: number;
+    leverage: number;
+    isolated: boolean;
+    margin: number;
+    qtyPerGrid: number;
+    entryPrice: number;
+    triggerPrice: number | null;
+    stopUpper: number | null;
+    stopLower: number | null;
+    closeOnStop: boolean;
+    postOnly: boolean;
+    matchedTrades: number;
+    realizedPnl: number;
+    createdAt: string;
+    updatedAt: string;
+    stoppedAt: string | null;
+    lastNote: string;
+    levels: {
+      index: number;
+      price: number;
+      side: Side | null;
+      orderId: string | null;
+      filledCount: number;
+    }[];
+  }
+  const grids: MockGrid[] = [];
 
   const universe = padMarkets(options.markets ?? 0);
   const marketsOf = (target: Network): Market[] =>
@@ -746,7 +798,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
   }
   let active: Provider = options.provider ?? "openrouter";
   let effort: Effort = "auto";
-  let liveTickets = seed === "liveticket";
+  let liveTickets = seed === "liveticket" || (seed === "grid" && network === "mainnet");
   let webSearch = options.web !== false;
   /** Stories are dated before the mock started, so they age as it runs; the feeds are read again every five minutes. */
   const newsAnchor = Date.now();
@@ -1364,11 +1416,13 @@ export function createMockBackend(options: MockOptions = {}): Backend {
       turns: (threads.find((thread) => thread.id === open)?.runs ?? []).map(cloneRun),
       activity: activity.map(cloneRun),
       draft: draft ? { ...draft } : null,
+      gridDraft: gridDraft ? { ...gridDraft } : null,
       receipts: { ...receipts },
       failures: { ...failures },
       servers: [...servers.values()].map((server) => ({ ...server })),
       pendingWallet: pendingWallet ? { ...pendingWallet } : null,
       busy,
+      grids: grids.filter((bot) => bot.network === network).map(gridView),
     };
   }
 
@@ -1580,6 +1634,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
       reasoning: "",
       ms: 0,
       ticket: null,
+      grid: null,
       cards: [],
       usage: null,
       model,
@@ -1665,6 +1720,615 @@ export function createMockBackend(options: MockOptions = {}): Backend {
 
   function cancellation(title: string): void {
     execution(title, [{ name: "exchange.cancel", detail: title, status: "ok", ms: 164, preview: "done" }], `${title}: done.`);
+  }
+
+  /* --------------------------------------------------------------- grids */
+
+  function gridView(bot: MockGrid): GridBotView {
+    const spec = findMarket(bot.symbol, bot.network);
+    const liveMark = spec ? mark(spec) : bot.entryPrice;
+    const held = books[bot.network].positions.get(bot.symbol);
+    const unrealized =
+      bot.status === "running" && held ? (liveMark - held.entry) * held.qty : 0;
+    const total = bot.realizedPnl + unrealized;
+    const prices = bot.levels.map((lvl) => lvl.price);
+    const { min, max } = computeProfitPerGridPct(prices);
+    const activeBuyOrders = bot.levels.filter((l) => l.orderId !== null && l.side === "buy").length;
+    const activeSellOrders = bot.levels.filter((l) => l.orderId !== null && l.side === "sell").length;
+    return {
+      id: bot.id,
+      network: bot.network,
+      symbol: bot.symbol,
+      base: bot.base,
+      quote: bot.quote,
+      direction: bot.direction,
+      spacing: bot.spacing,
+      status: bot.status,
+      lowerPrice: amount(bot.lowerPrice),
+      upperPrice: amount(bot.upperPrice),
+      grids: bot.grids,
+      leverage: bot.leverage,
+      isolated: bot.isolated,
+      margin: bot.margin.toFixed(2),
+      qtyPerGrid: trimUnits(bot.qtyPerGrid),
+      entryPrice: amount(bot.entryPrice),
+      markPrice: amount(liveMark),
+      triggerPrice: bot.triggerPrice === null ? null : amount(bot.triggerPrice),
+      stopUpper: bot.stopUpper === null ? null : amount(bot.stopUpper),
+      stopLower: bot.stopLower === null ? null : amount(bot.stopLower),
+      closeOnStop: bot.closeOnStop,
+      postOnly: bot.postOnly,
+      matchedTrades: bot.matchedTrades,
+      realizedPnl: bot.realizedPnl.toFixed(2),
+      unrealizedPnl: unrealized.toFixed(2),
+      totalPnl: total.toFixed(2),
+      roiPct: bot.margin > 0 ? Number(((total / bot.margin) * 100).toFixed(2)) : null,
+      profitPerGridMinPct: min,
+      profitPerGridMaxPct: max,
+      activeBuyOrders,
+      activeSellOrders,
+      createdAt: bot.createdAt,
+      updatedAt: bot.updatedAt,
+      stoppedAt: bot.stoppedAt,
+      lastNote: bot.lastNote,
+      levels: bot.levels.map((lvl): GridLevelView => ({
+        index: lvl.index,
+        price: amount(lvl.price),
+        side: lvl.side,
+        orderId: lvl.orderId,
+        filledCount: lvl.filledCount,
+      })),
+    };
+  }
+
+  function planMockGrid(request: GridRequest) {
+    const spec = market(request.symbol);
+    if (!Number.isInteger(request.leverage) || request.leverage < 1 || request.leverage > risk.maxLeverage) {
+      throw new Error(`Leverage ${request.leverage}x is outside your risk limit (1x to ${risk.maxLeverage}x).`);
+    }
+    const lower = positive(request.lowerPrice, "the lower price");
+    const upper = positive(request.upperPrice, "the upper price");
+    const margin = positive(request.margin, "the initial margin");
+    if (lower === null || upper === null || upper <= lower) {
+      throw new Error("Upper price must be higher than lower price.");
+    }
+    if (!Number.isInteger(request.grids) || request.grids < 2 || request.grids > 50) {
+      throw new Error("Grid count must be between 2 and 50.");
+    }
+    if (margin === null) throw new Error("Enter a positive USDT amount for the initial margin.");
+
+    const triggerPrice = positive(request.triggerPrice, "the trigger price");
+    const stopUpper = positive(request.stopUpper, "the stop-upper price");
+    const stopLower = positive(request.stopLower, "the stop-lower price");
+    if (stopLower !== null && stopLower >= lower) {
+      throw new Error("The stop below must be under the bottom of the range.");
+    }
+    if (stopUpper !== null && stopUpper <= upper) {
+      throw new Error("The stop above must be over the top of the range.");
+    }
+
+    const prices = computeGridPrices(lower, upper, request.grids, request.spacing);
+    const liveMark = mark(spec);
+    const refPrice = triggerPrice ?? liveMark;
+    const places = stepDecimals(spec);
+    const minStep = 10 ** -places;
+    const notionalBudget = (margin * request.leverage * 0.95) / request.grids;
+    const qtyPerGrid = Math.floor((notionalBudget / Math.max(upper, liveMark)) * 10 ** places + EPSILON) / 10 ** places;
+    const minNotionalPerRung = Math.max(MIN_NOTIONAL, minStep * Math.max(upper, liveMark));
+    const minMargin = Math.ceil(((minNotionalPerRung * request.grids) / (request.leverage * 0.95)) * 100) / 100;
+    if (qtyPerGrid < minStep || qtyPerGrid * liveMark < MIN_NOTIONAL) {
+      throw new Error(
+        `Initial margin is too small for ${request.grids} grids on ${spec.symbol}. Increase margin to at least ${cash(minMargin)} ${spec.quote} or use fewer grids.`,
+      );
+    }
+
+    const ladder = planLadderSides(request.direction, prices, refPrice);
+    const isolated = isolatedNow();
+    const avgLong = refPrice > lower ? (refPrice + lower) / 2 : lower;
+    const avgShort = refPrice < upper ? (refPrice + upper) / 2 : upper;
+    const estLiqLong =
+      isolated && (request.direction === "long" || request.direction === "neutral")
+        ? liquidation(avgLong, request.leverage, true)
+        : null;
+    const estLiqShort =
+      isolated && (request.direction === "short" || request.direction === "neutral")
+        ? liquidation(avgShort, request.leverage, false)
+        : null;
+
+    const wallet = wallets[network];
+    const avail = usable(wallet) ? figures().available : null;
+    const warnings: string[] = [];
+    if (!wallet.connected) {
+      warnings.push("Connect a wallet to start a grid bot.");
+    } else if (avail !== null && margin > avail) {
+      warnings.push(`The margin, ${cash(margin)} ${spec.quote}, is more than your free balance, ${cash(avail)} ${spec.quote}.`);
+    }
+    if (refPrice < lower || refPrice > upper) {
+      warnings.push("The price is outside this range, so every order starts on one side.");
+    }
+    const { min: profitMin, max: profitMax } = computeProfitPerGridPct(prices);
+    if (profitMin <= 0.05) {
+      warnings.push(`Each grid earns only ${profitMin.toFixed(2)}% after fees. Use fewer grids or a wider range.`);
+    }
+    if (crossOnly && risk.isolated) {
+      warnings.push("Your account uses Multi-Assets mode, so this bot uses cross margin.");
+    }
+
+    return {
+      spec,
+      liveMark,
+      refPrice,
+      lower,
+      upper,
+      margin,
+      isolated,
+      qtyPerGrid,
+      notionalPerGrid: qtyPerGrid * liveMark,
+      totalNotional: qtyPerGrid * liveMark * request.grids,
+      minMargin,
+      prices,
+      ladder,
+      profitMin,
+      profitMax,
+      triggerPrice,
+      stopUpper,
+      stopLower,
+      closeOnStop: request.closeOnStop ?? true,
+      postOnly: request.postOnly ?? true,
+      estLiqLong,
+      estLiqShort,
+      warnings,
+      avail,
+    };
+  }
+
+  function buildGridPreview(request: GridRequest): GridPreviewView {
+    const plan = planMockGrid(request);
+    return {
+      network,
+      symbol: plan.spec.symbol,
+      base: plan.spec.base,
+      quote: plan.spec.quote,
+      markPrice: amount(plan.liveMark),
+      direction: request.direction,
+      spacing: request.spacing,
+      lowerPrice: amount(plan.lower),
+      upperPrice: amount(plan.upper),
+      grids: request.grids,
+      leverage: request.leverage,
+      isolated: plan.isolated,
+      margin: plan.margin.toFixed(2),
+      qtyPerGrid: trimUnits(plan.qtyPerGrid),
+      notionalPerGrid: plan.notionalPerGrid.toFixed(2),
+      totalNotional: plan.totalNotional.toFixed(2),
+      minMargin: plan.minMargin.toFixed(2),
+      profitPerGridMinPct: plan.profitMin,
+      profitPerGridMaxPct: plan.profitMax,
+      initialSide: plan.ladder.initialSide,
+      initialQty:
+        plan.ladder.initialSide && plan.ladder.initialLegs > 0
+          ? trimUnits(plan.qtyPerGrid * plan.ladder.initialLegs)
+          : null,
+      estLiqLong: plan.estLiqLong === null ? null : amount(plan.estLiqLong),
+      estLiqShort: plan.estLiqShort === null ? null : amount(plan.estLiqShort),
+      buyOrders: plan.ladder.buyCount,
+      sellOrders: plan.ladder.sellCount,
+      triggerPrice: plan.triggerPrice === null ? null : amount(plan.triggerPrice),
+      stopUpper: plan.stopUpper === null ? null : amount(plan.stopUpper),
+      stopLower: plan.stopLower === null ? null : amount(plan.stopLower),
+      closeOnStop: plan.closeOnStop,
+      postOnly: plan.postOnly,
+      levels: plan.prices.map((p, index) => ({
+        index,
+        price: amount(p),
+        side: plan.ladder.sides[index] ?? null,
+        orderId: null,
+        filledCount: 0,
+      })),
+      warnings: plan.warnings,
+    };
+  }
+
+  function deployMockGrid(bot: MockGrid, deployPrice: number, recordRun = true): void {
+    const book = books[bot.network];
+    const prices = bot.levels.map((l) => l.price);
+    const ladder = planLadderSides(bot.direction, prices, deployPrice);
+    const steps: StepView[] = [
+      { name: "exchange.leverage", detail: `${bot.leverage}x`, status: "ok", ms: 42, preview: "" },
+    ];
+    if (ladder.initialSide && ladder.initialLegs > 0) {
+      const initQty = bot.qtyPerGrid * ladder.initialLegs;
+      const signedQty = ladder.initialSide === "buy" ? initQty : -initQty;
+      const existing = book.positions.get(bot.symbol);
+      if (existing) {
+        const nextQty = existing.qty + signedQty;
+        if (Math.abs(nextQty) < EPSILON) book.positions.delete(bot.symbol);
+        else existing.qty = nextQty;
+      } else {
+        book.positions.set(bot.symbol, {
+          qty: signedQty,
+          entry: deployPrice,
+          leverage: bot.leverage,
+          isolated: bot.isolated,
+        });
+      }
+      steps.push({
+        name: "grid.initial_leg",
+        detail: `${ladder.initialSide} ${trimUnits(initQty)} ${bot.symbol}`,
+        status: "ok",
+        ms: 118,
+        preview: `FILLED at ${pretty(deployPrice)}`,
+      });
+    }
+
+    let placed = 0;
+    for (let i = 0; i < bot.levels.length; i += 1) {
+      const side = ladder.sides[i] ?? null;
+      const lvl = bot.levels[i]!;
+      if (!side) {
+        lvl.side = null;
+        lvl.orderId = null;
+        continue;
+      }
+      orderSeq += 1;
+      const oid = String(orderSeq);
+      lvl.side = side;
+      lvl.orderId = oid;
+      book.orders.push({
+        id: oid,
+        clientId: `ong_${bot.id}_${i}`,
+        symbol: bot.symbol,
+        side,
+        type: "LIMIT",
+        price: lvl.price,
+        stopPrice: null,
+        qty: bot.qtyPerGrid,
+        reduceOnly: false,
+        time: new Date().toISOString(),
+      });
+      placed += 1;
+    }
+
+    bot.status = "running";
+    bot.entryPrice = deployPrice;
+    bot.updatedAt = new Date().toISOString();
+    bot.lastNote = `Running: ${placed} orders placed.`;
+    if (recordRun) {
+      steps.push({
+        name: "grid.limit_order",
+        detail: `${placed} orders on ${bot.base}`,
+        status: "ok",
+        ms: 185,
+        preview: `${ladder.buyCount} buy · ${ladder.sellCount} sell`,
+      });
+      execution(`Start a ${bot.base} grid bot`, steps, bot.lastNote);
+    }
+  }
+
+  function startMockGrid(request: GridRequest): void {
+    requireWallet();
+    const plan = planMockGrid(request);
+    if (plan.avail !== null && plan.margin > plan.avail) {
+      throw new Error(
+        `This grid needs ${cash(plan.margin)} ${plan.spec.quote} of margin, but only ${cash(plan.avail)} ${plan.spec.quote} is available.`,
+      );
+    }
+    const nowIso = new Date().toISOString();
+    const bot: MockGrid = {
+      id: id().slice(0, 12),
+      network,
+      symbol: plan.spec.symbol,
+      base: plan.spec.base,
+      quote: plan.spec.quote,
+      direction: request.direction,
+      spacing: request.spacing,
+      status: "waiting",
+      lowerPrice: plan.lower,
+      upperPrice: plan.upper,
+      grids: request.grids,
+      leverage: request.leverage,
+      isolated: plan.isolated,
+      margin: plan.margin,
+      qtyPerGrid: plan.qtyPerGrid,
+      entryPrice: plan.liveMark,
+      triggerPrice: plan.triggerPrice,
+      stopUpper: plan.stopUpper,
+      stopLower: plan.stopLower,
+      closeOnStop: plan.closeOnStop,
+      postOnly: plan.postOnly,
+      matchedTrades: 0,
+      realizedPnl: 0,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      stoppedAt: null,
+      lastNote: "",
+      levels: plan.prices.map((p, index) => ({
+        index,
+        price: p,
+        side: null,
+        orderId: null,
+        filledCount: 0,
+      })),
+    };
+
+    const waiting =
+      plan.triggerPrice !== null && Math.abs(plan.liveMark - plan.triggerPrice) > plan.liveMark * 0.001;
+    if (waiting) {
+      bot.status = "waiting";
+      bot.lastNote = `Waiting for ${bot.base} to reach ${pretty(plan.triggerPrice!)}.`;
+      execution(
+        `Start a ${bot.base} grid bot`,
+        [{ name: "grid.arm", detail: `trigger ${pretty(plan.triggerPrice!)}`, status: "ok", ms: 24, preview: "WAITING" }],
+        bot.lastNote,
+      );
+    } else {
+      deployMockGrid(bot, plan.liveMark, true);
+    }
+    grids.unshift(bot);
+  }
+
+  /** Starts the grid bot the assistant drafted, as `startGridDraft` does in the core. */
+  function startDraft(draftId: string): void {
+    if (!gridDraft || gridDraft.id !== draftId || gridDraft.network !== network) {
+      throw new Error("This grid bot draft has expired. Ask for a new one.");
+    }
+    const drafted = gridDraft;
+    gridDraft = null;
+    try {
+      const refusal = gridRefusal(drafted.request);
+      if (refusal) throw new Error(refusal);
+      const spec = market(drafted.request.symbol);
+      const now = mark(spec);
+      if (now < Number(drafted.request.lowerPrice) || now > Number(drafted.request.upperPrice)) {
+        throw new Error(`${spec.base} left the range after this grid bot was drafted. Nothing was sent; ask for a new one.`);
+      }
+      startMockGrid(drafted.request);
+    } catch (error) {
+      failures[drafted.id] = messageOf(error);
+      throw error;
+    }
+    const bot = grids[0]!;
+    receipts[drafted.id] =
+      bot.status === "waiting"
+        ? `Started: waiting for ${bot.base} to reach ${pretty(bot.triggerPrice ?? bot.entryPrice)}.`
+        : `Started: ${bot.levels.filter((level) => level.orderId !== null).length} orders placed between ${pretty(bot.lowerPrice)} and ${pretty(bot.upperPrice)}.`;
+  }
+
+  function syncMockGrids(): void {
+    const activeBots = grids.filter(
+      (b) => b.network === network && (b.status === "waiting" || b.status === "running"),
+    );
+    if (activeBots.length === 0 || !usable(wallets[network])) return;
+    const book = books[network];
+
+    for (const bot of activeBots) {
+      const spec = findMarket(bot.symbol, bot.network);
+      const liveMark = spec ? mark(spec) : bot.entryPrice;
+      if (bot.status === "waiting" && bot.triggerPrice !== null) {
+        const triggered =
+          bot.entryPrice < bot.triggerPrice ? liveMark >= bot.triggerPrice : liveMark <= bot.triggerPrice;
+        if (triggered) deployMockGrid(bot, liveMark, true);
+        continue;
+      }
+      if (bot.status !== "running") continue;
+
+      // Simulate one completed grid harvest cycle on manual sync so the user can test live PnL progression.
+      const buyRung = [...bot.levels].reverse().find((l) => l.side === "buy" && l.orderId !== null);
+      const sellRung = bot.levels.find((l) => l.side === "sell" && l.orderId !== null);
+      if (buyRung && sellRung) {
+        const spread = Math.max(0.01, (sellRung.price - buyRung.price) * 0.5);
+        const gross = spread * bot.qtyPerGrid;
+        const fee = sellRung.price * bot.qtyPerGrid * 0.0004;
+        const net = Math.max(0.05, Number((gross - fee).toFixed(2)));
+        buyRung.filledCount += 1;
+        bot.matchedTrades += 1;
+        bot.realizedPnl = Number((bot.realizedPnl + net).toFixed(2));
+        book.balance = Number((book.balance + net).toFixed(2));
+        bot.updatedAt = new Date().toISOString();
+        bot.lastNote = `Placed 1 order after a fill. ${bot.matchedTrades} completed trades, ${cash(bot.realizedPnl)} ${bot.quote} made.`;
+        execution(
+          `${bot.base} grid bot: placed 1 order (+${cash(net)} ${bot.quote})`,
+          [{ name: "grid.rebalance", detail: `${bot.symbol} +${cash(net)} ${bot.quote}`, status: "ok", ms: 84, preview: "FILLED" }],
+          bot.lastNote,
+        );
+      }
+    }
+  }
+
+  function stopMockGrid(gridId: string, closePosition: boolean): void {
+    const bot = grids.find((g) => g.id === gridId);
+    if (!bot) throw new Error("That grid bot was not found.");
+    if (bot.status === "stopped") return;
+    const book = books[bot.network];
+    const orderIds = new Set(bot.levels.map((l) => l.orderId).filter((v): v is string => v !== null));
+    const before = book.orders.length;
+    book.orders = book.orders.filter((o) => !orderIds.has(o.id));
+    const cancelled = before - book.orders.length;
+    for (const lvl of bot.levels) {
+      lvl.orderId = null;
+      lvl.side = null;
+    }
+
+    let closedNote = "";
+    if (closePosition) {
+      const held = book.positions.get(bot.symbol);
+      if (held) {
+        const spec = findMarket(bot.symbol, bot.network);
+        const liveMark = spec ? mark(spec) : held.entry;
+        const realized = (liveMark - held.entry) * held.qty;
+        book.balance += realized;
+        bot.realizedPnl = Number((bot.realizedPnl + realized).toFixed(2));
+        book.positions.delete(bot.symbol);
+        closedNote = ` Closed ${trimUnits(Math.abs(held.qty))} ${bot.base} position at ${pretty(liveMark)}.`;
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+    bot.status = "stopped";
+    bot.updatedAt = nowIso;
+    bot.stoppedAt = nowIso;
+    bot.lastNote = `Stopped by you. Cancelled its ${cancelled} order${cancelled === 1 ? "" : "s"}.${closedNote}`;
+    execution(
+      `Stop the ${bot.base} grid bot`,
+      [{ name: "grid.cancel", detail: `${cancelled} orders on ${bot.base}`, status: "ok", ms: 132, preview: "STOPPED" }],
+      bot.lastNote,
+    );
+  }
+
+  function deleteMockGrid(gridId: string): void {
+    const idx = grids.findIndex((g) => g.id === gridId);
+    if (idx === -1) return;
+    const bot = grids[idx]!;
+    if (bot.status === "running" || bot.status === "waiting") {
+      throw new Error("Stop this bot before removing it.");
+    }
+    grids.splice(idx, 1);
+  }
+
+  function seedGrids(): void {
+    const btc = findMarket("BTCUSDT", network);
+    const eth = findMarket("ETHUSDT", network);
+    const sol = findMarket("SOLUSDT", network);
+    const now = Date.now();
+
+    if (btc) {
+      const m = mark(btc);
+      const lower = Number((m * 0.94).toFixed(1));
+      const upper = Number((m * 1.06).toFixed(1));
+      const prices = computeGridPrices(lower, upper, 12, "arithmetic");
+      const bot: MockGrid = {
+        id: "gridbtc001",
+        network,
+        symbol: btc.symbol,
+        base: btc.base,
+        quote: btc.quote,
+        direction: "neutral",
+        spacing: "arithmetic",
+        status: "running",
+        lowerPrice: lower,
+        upperPrice: upper,
+        grids: 12,
+        leverage: 3,
+        isolated: true,
+        margin: 1200,
+        qtyPerGrid: 0.004,
+        entryPrice: Number((m * 0.996).toFixed(1)),
+        triggerPrice: null,
+        stopUpper: Number((upper * 1.035).toFixed(1)),
+        stopLower: Number((lower * 0.965).toFixed(1)),
+        closeOnStop: true,
+        postOnly: true,
+        matchedTrades: 19,
+        realizedPnl: 68.42,
+        createdAt: new Date(now - 38 * 3_600_000).toISOString(),
+        updatedAt: new Date(now - 11 * 60_000).toISOString(),
+        stoppedAt: null,
+        lastNote: "",
+        levels: prices.map((p, index) => ({
+          index,
+          price: Number(p.toFixed(1)),
+          side: null,
+          orderId: null,
+          filledCount: index >= 4 && index <= 8 ? 3 : 1,
+        })),
+      };
+      deployMockGrid(bot, m, false);
+      bot.entryPrice = Number((m * 0.996).toFixed(1));
+      bot.updatedAt = new Date(now - 11 * 60_000).toISOString();
+      bot.lastNote = "Placed 1 order after a fill. 19 completed trades, 68.42 USDT made.";
+      grids.push(bot);
+    }
+
+    if (eth) {
+      const m = mark(eth);
+      const lower = Number((m * 0.92).toFixed(2));
+      const upper = Number((m * 1.1).toFixed(2));
+      const prices = computeGridPrices(lower, upper, 10, "geometric");
+      const bot: MockGrid = {
+        id: "grideth002",
+        network,
+        symbol: eth.symbol,
+        base: eth.base,
+        quote: eth.quote,
+        direction: "long",
+        spacing: "geometric",
+        status: "running",
+        lowerPrice: lower,
+        upperPrice: upper,
+        grids: 10,
+        leverage: 4,
+        isolated: true,
+        margin: 650,
+        qtyPerGrid: 0.12,
+        entryPrice: Number((m * 0.985).toFixed(2)),
+        triggerPrice: null,
+        stopUpper: null,
+        stopLower: Number((lower * 0.95).toFixed(2)),
+        closeOnStop: true,
+        postOnly: true,
+        matchedTrades: 11,
+        realizedPnl: 34.15,
+        createdAt: new Date(now - 17 * 3_600_000).toISOString(),
+        updatedAt: new Date(now - 24 * 60_000).toISOString(),
+        stoppedAt: null,
+        lastNote: "",
+        levels: prices.map((p, index) => ({
+          index,
+          price: Number(p.toFixed(2)),
+          side: null,
+          orderId: null,
+          filledCount: index >= 3 && index <= 6 ? 2 : 0,
+        })),
+      };
+      deployMockGrid(bot, m, false);
+      bot.entryPrice = Number((m * 0.985).toFixed(2));
+      bot.updatedAt = new Date(now - 24 * 60_000).toISOString();
+      bot.lastNote = "Placed 1 order after a fill. 11 completed trades, 34.15 USDT made.";
+      grids.push(bot);
+    }
+
+    if (sol) {
+      const m = mark(sol);
+      const lower = Number((m * 0.88).toFixed(2));
+      const upper = Number((m * 1.04).toFixed(2));
+      const prices = computeGridPrices(lower, upper, 8, "arithmetic");
+      grids.push({
+        id: "gridsol003",
+        network,
+        symbol: sol.symbol,
+        base: sol.base,
+        quote: sol.quote,
+        direction: "short",
+        spacing: "arithmetic",
+        status: "stopped",
+        lowerPrice: lower,
+        upperPrice: upper,
+        grids: 8,
+        leverage: 3,
+        isolated: true,
+        margin: 400,
+        qtyPerGrid: 1.2,
+        entryPrice: Number((m * 1.01).toFixed(2)),
+        triggerPrice: null,
+        stopUpper: Number((upper * 1.04).toFixed(2)),
+        stopLower: null,
+        closeOnStop: true,
+        postOnly: true,
+        matchedTrades: 14,
+        realizedPnl: 41.8,
+        createdAt: new Date(now - 96 * 3_600_000).toISOString(),
+        updatedAt: new Date(now - 26 * 3_600_000).toISOString(),
+        stoppedAt: new Date(now - 26 * 3_600_000).toISOString(),
+        lastNote: "Stopped by you. Cancelled its 8 orders.",
+        levels: prices.map((p, index) => ({
+          index,
+          price: Number(p.toFixed(2)),
+          side: null,
+          orderId: null,
+          filledCount: 2,
+        })),
+      });
+    }
   }
 
   /* ---------------------------------------------------------------- turns */
@@ -1851,6 +2515,132 @@ export function createMockBackend(options: MockOptions = {}): Backend {
     return lines.join("\n");
   }
 
+  /** Why the assistant may not draft this grid bot, or empty when it may. The same rules as for tickets. */
+  function gridRefusal(request: GridRequest): string {
+    const wallet = wallets[network];
+    if (!wallet.connected) return `No wallet is connected on ${networkName(network)}, so there is no account to run a grid bot from.`;
+    if (!usable(wallet)) return "The account opens after the wallet's first deposit.";
+    if (network === "mainnet" && !liveTickets) {
+      return "Mainnet tickets are off in Settings, so I may plan a mainnet grid bot but not draft it.";
+    }
+    const spec = market(request.symbol);
+    const running = grids.some(
+      (bot) => bot.network === network && bot.symbol === spec.symbol && (bot.status === "running" || bot.status === "waiting"),
+    );
+    if (running) return `A grid bot is already running on ${spec.base}. Stop it before starting another.`;
+    return "";
+  }
+
+  /**
+   * The range a grid spans: a support below the price and a resistance above it, as the reading reports
+   * them, leaving room between grids for fees. Of those, the pair with the price nearest its middle, and
+   * then the nearest levels, so the grid has orders on both sides.
+   */
+  function gridRange(spec: Market, reading: TechnicalFrame, count: number): { lower: number; upper: number } {
+    const price = mark(spec);
+    const below = reading.support.filter((level) => level < price);
+    const above = reading.resistance.filter((level) => level > price);
+    let best: { lower: number; upper: number; score: number } | null = null;
+    for (const [i, lower] of below.entries()) {
+      for (const [j, upper] of above.entries()) {
+        if (((upper - lower) / lower / count) * 100 < 0.15) continue;
+        const score = Math.abs((price - lower) / (upper - lower) - 0.5) + (i + j) * 0.05;
+        if (!best || score < best.score) best = { lower, upper, score };
+      }
+    }
+    if (best) return { lower: best.lower, upper: best.upper };
+    const half = Math.max(0.03, (0.15 * count) / 200 + 0.005);
+    return { lower: price * (1 - half), upper: price * (1 + half) };
+  }
+
+  function gridAnswer(
+    preview: GridPreviewView,
+    reading: TechnicalFrame,
+    timeframe: Timeframe,
+    refusal: string,
+    fewer = "",
+  ): string {
+    const spec = market(preview.symbol);
+    const lower = pretty(Number(preview.lowerPrice));
+    const upper = pretty(Number(preview.upperPrice));
+    const kind = preview.direction === "neutral" ? "A neutral" : preview.direction === "long" ? "A long" : "A short";
+    const low = preview.profitPerGridMinPct.toFixed(2);
+    const high = preview.profitPerGridMaxPct.toFixed(2);
+    const earns = low === high ? `${low}%` : `${low}% to ${high}%`;
+    const orders = (count: number, side: string) => `${count} ${side} order${count === 1 ? "" : "s"}`;
+    let head: string;
+    if (reading.trend === "mixed" || reading.trend === "unknown") {
+      head = `**${spec.base} is moving sideways on the ${timeframe}, which suits a grid between ${lower} and ${upper}.**`;
+    } else {
+      const up = reading.trend === "uptrend";
+      const withIt = (up && preview.direction === "long") || (!up && preview.direction === "short");
+      const against =
+        preview.direction === "neutral"
+          ? `${kind} grid ${up ? "sells into the rise and ends short" : "buys into the fall and ends long"} if it keeps going.`
+          : withIt
+            ? `${kind} grid leans with it.`
+            : `${kind} grid trades against it.`;
+      head = `**${spec.base} is ${trendWords(reading.trend)} on the ${timeframe}.** ${against}`;
+    }
+    const lines = [
+      head,
+      "",
+      ...(fewer ? [`- ${fewer}`] : []),
+      `- ${preview.grids} grids from ${lower} to ${upper}. Each earns about ${earns} after fees when the price crosses it and comes back.`,
+      `- ${cash(Number(preview.margin))} ${spec.quote} of margin at ${preview.leverage}x: ${orders(preview.buyOrders, "buy")} below the price and ${orders(preview.sellOrders, "sell")} above, ${preview.qtyPerGrid} ${spec.base} each.`,
+    ];
+    if (preview.initialSide && preview.initialQty) {
+      const buying = preview.initialSide === "buy";
+      lines.push(
+        `- It starts by ${buying ? "buying" : "selling"} ${preview.initialQty} ${spec.base} at market, so the orders ${buying ? "above have something to sell" : "below have something to buy back"}.`,
+      );
+    }
+    const liquidations = [
+      preview.estLiqLong ? `${pretty(Number(preview.estLiqLong))} below` : "",
+      preview.estLiqShort ? `${pretty(Number(preview.estLiqShort))} above` : "",
+    ].filter(Boolean);
+    if (liquidations.length > 0) lines.push(`- Estimated liquidation: ${liquidations.join(" and ")}.`);
+    lines.push("");
+    lines.push(
+      refusal
+        ? `I did not draft it: ${refusal}`
+        : `The grid bot is ready. Nothing is sent until you start it, and it places its next orders while OctoNeo is open.${network === "testnet" ? " This is testnet: practice funds." : ""}`,
+    );
+    return lines.join("\n");
+  }
+
+  function gridsAnswer(bots: GridBotView[]): string {
+    if (bots.length === 0) {
+      return `You have no grid bots on ${networkName(network)}. A grid suits a market that moves sideways; ask for one on a market you like.`;
+    }
+    const active = bots.filter((bot) => bot.status === "running" || bot.status === "waiting");
+    const total = bots.reduce((sum, bot) => sum + Number(bot.totalPnl), 0);
+    const sign = (value: number) => `${value >= 0 ? "+" : "−"}${cash(Math.abs(value))}`;
+    const lines = [
+      `**${active.length} of your ${bots.length} grid bot${bots.length === 1 ? "" : "s"} ${active.length === 1 ? "is" : "are"} working, ${sign(total)} USDT in all.**`,
+      "",
+    ];
+    for (const bot of bots.slice(0, 4)) {
+      const markNow = Number(bot.markPrice ?? bot.entryPrice);
+      const inside = markNow >= Number(bot.lowerPrice) && markNow <= Number(bot.upperPrice);
+      const state =
+        bot.status === "waiting"
+          ? `waiting for ${pretty(Number(bot.triggerPrice ?? bot.entryPrice))}`
+          : bot.status === "running"
+            ? inside
+              ? "the price is inside its range"
+              : "the price has left its range"
+            : bot.status === "error"
+              ? "stopped on an error"
+              : "stopped";
+      lines.push(
+        `- ${bot.base} ${bot.direction}: ${bot.matchedTrades} completed trade${bot.matchedTrades === 1 ? "" : "s"}, ${sign(Number(bot.totalPnl))} ${bot.quote}; ${state}.`,
+      );
+    }
+    if (active.length > 0) lines.push("", "They place their next orders while OctoNeo is open.");
+    return lines.join("\n");
+  }
+
   /** Position sizing for a risk the trader accepts, with the stop at the nearest swing level. */
   function planFor(spec: Market, direction: "long" | "short", sizing: Sizing): PlanView {
     const long = direction === "long";
@@ -1901,6 +2691,8 @@ export function createMockBackend(options: MockOptions = {}): Backend {
   const NEWS = /\b(?:news|headlines?|why)\b/i;
   const ACCOUNT = /\b(?:account|portfolio|holdings|positions?|balance|exposure|equity)\b/i;
   const MOVERS = /\b(?:moving|movers?|gainers?|losers?)\b/i;
+  const BOTS = /\b(?:my\s+(?:grid\s+)?bots?|grid\s+bots?\s+(?:doing|running|status)|how\s+are\s+my\s+grids?)\b/i;
+  const GRID = /\bgrids?\b/i;
 
   /**
    * One scripted turn of the model. Every message goes to it, as in the app:
@@ -2029,6 +2821,22 @@ export function createMockBackend(options: MockOptions = {}): Backend {
       return "";
     }
 
+    /** Drafts a grid bot the way `propose_grid` does; a refusal comes back as text. */
+    async function proposeGrid(request: GridRequest, preview: GridPreviewView, rationale: string): Promise<string> {
+      const detail = `${request.symbol} ${request.direction} ${request.grids} grids`;
+      const refusal = gridRefusal(request);
+      if (refusal) {
+        await step("propose_grid", detail, 150, JSON.stringify({ error: refusal }), true);
+        return refusal;
+      }
+      const drafted: GridDraftView = { id: id().slice(0, 16), network, request: { ...request }, preview, rationale };
+      await step("propose_grid", detail, 150, JSON.stringify({ drafted: true, grids: request.grids }));
+      gridDraft = drafted;
+      run.grid = drafted;
+      driver.emit({ type: "grid", grid: { ...drafted } });
+      return "";
+    }
+
     async function quotes(specs: Market[]): Promise<void> {
       const views = specs.map(quote);
       await step(
@@ -2047,15 +2855,15 @@ export function createMockBackend(options: MockOptions = {}): Backend {
       show({ kind: "quotes", quotes: views });
     }
 
-    async function chart(spec: Market): Promise<TechnicalFrame> {
-      const reading = frame(spec, "4h");
+    async function chart(spec: Market, timeframe: Timeframe = "4h"): Promise<TechnicalFrame> {
+      const reading = frame(spec, timeframe);
       await step(
         "analyze_market",
-        `${spec.symbol} 4h`,
+        `${spec.symbol} ${timeframe}`,
         520,
         JSON.stringify({
           symbol: spec.symbol,
-          timeframe: "4h",
+          timeframe,
           trend: reading.trend,
           rsi_14: reading.rsi14,
           atr_pct: reading.atrPct,
@@ -2136,6 +2944,95 @@ export function createMockBackend(options: MockOptions = {}): Backend {
           }
         }
         await answer(run.ticket ? ticketLine(run.ticket) : refusal);
+      } else if (BOTS.test(prompt)) {
+        await decide();
+        const bots = grids.filter((bot) => bot.network === network).map(gridView);
+        await step(
+          "get_grids",
+          "",
+          160,
+          JSON.stringify({
+            bots: bots.map((bot) => ({
+              symbol: bot.symbol,
+              direction: bot.direction,
+              status: bot.status,
+              completed_trades: bot.matchedTrades,
+              total_pnl_usdt: Number(bot.totalPnl),
+            })),
+          }),
+        );
+        if (bots.length > 0) show({ kind: "grids", bots });
+        await answer(gridsAnswer(bots));
+      } else if (GRID.test(prompt)) {
+        const spec = mentioned(prompt)[0] ?? market(focus[network]);
+        const direction: GridDirection = /\blong\b/i.test(prompt) ? "long" : /\bshort\b/i.test(prompt) ? "short" : "neutral";
+        const count = Math.min(50, Math.max(2, Number(/(\d{1,2})\s*grids?\b/i.exec(prompt)?.[1] ?? 20)));
+        const timeframe = (/\b(15m|1h|4h|1d)\b/i.exec(prompt)?.[1]?.toLowerCase() ?? "4h") as Timeframe;
+        const margin = Number(/(\d+(?:\.\d+)?)\s*USDT\b/i.exec(prompt)?.[1] ?? 100);
+        const wanted = /\bat\s+(\d{1,2})\s*x\b/i.exec(prompt)?.[1];
+        const leverage = wanted ? Number(wanted) : Math.min(3, risk.maxLeverage);
+        await decide("Reading the range first.", [
+          `The trader wants a ${direction} grid on ${spec.base}. `,
+          `Read the ${timeframe} structure, set the range from support and resistance, then size the grid. `,
+        ]);
+        await quotes([spec]);
+        const reading = await chart(spec, timeframe);
+        // As a model would: when the margin is too small for that many grids, plan again with fewer.
+        let request: GridRequest | null = null;
+        let preview: GridPreviewView | null = null;
+        let planned = "";
+        for (const tried of [count, ...[30, 20, 10, 5].filter((fewer) => fewer < count)]) {
+          const range = gridRange(spec, reading, tried);
+          const attempt: GridRequest = {
+            symbol: spec.symbol,
+            direction,
+            spacing: "arithmetic",
+            lowerPrice: amount(range.lower),
+            upperPrice: amount(range.upper),
+            grids: tried,
+            margin: margin.toFixed(2),
+            leverage,
+          };
+          try {
+            preview = buildGridPreview(attempt);
+            request = attempt;
+            break;
+          } catch (error) {
+            planned ||= messageOf(error);
+          }
+        }
+        await step(
+          "plan_grid",
+          `${spec.symbol} ${direction} ${request?.grids ?? count} grids`,
+          170,
+          preview
+            ? JSON.stringify({
+                lower: Number(preview.lowerPrice),
+                upper: Number(preview.upperPrice),
+                quantity_per_grid: Number(preview.qtyPerGrid),
+                profit_per_grid_pct: [preview.profitPerGridMinPct, preview.profitPerGridMaxPct],
+                buy_orders: preview.buyOrders,
+                sell_orders: preview.sellOrders,
+              })
+            : JSON.stringify({ error: planned }),
+          preview === null,
+        );
+        if (!preview || !request) {
+          await answer(`I could not plan a grid on ${spec.base}. ${planned}`);
+        } else {
+          show({ kind: "grid", preview });
+          const lower = pretty(Number(preview.lowerPrice));
+          const refusal = await proposeGrid(
+            request,
+            preview,
+            `${spec.base} has held between ${lower} and ${pretty(Number(preview.upperPrice))} on the ${timeframe}; a close below ${lower} breaks the range.`,
+          );
+          const fewer =
+            request.grids < count
+              ? `${cash(margin)} ${spec.quote} is too little for ${count} grids on ${spec.base}: each order has a minimum size. This plan uses ${request.grids}.`
+              : "";
+          await answer(gridAnswer(preview, reading, timeframe, refusal, fewer));
+        }
       } else if (SIZING.test(prompt)) {
         const spec = mentioned(prompt)[0] ?? market(focus[network]);
         const direction = /\b(?:short|sell)\b/i.test(prompt) ? "short" : "long";
@@ -2373,17 +3270,28 @@ export function createMockBackend(options: MockOptions = {}): Backend {
 
   async function seedAll(): Promise<void> {
     if ((options.positions ?? seed !== "empty") && usable(wallets[network])) seedBook();
+    if (options.grids === true && usable(wallets[network])) seedGrids();
 
     if (options.history ?? true) {
       for (const [prompts, minutesAgo] of HISTORY) {
         const thread = id().slice(0, 12);
         for (const [index, prompt] of prompts.entries()) await seedTurn(thread, prompt, minutesAgo - index * 3);
       }
-      // A ticket drafted in an old conversation is long gone.
+      // A ticket or a grid bot drafted in an old conversation is long gone.
       draft = null;
+      gridDraft = null;
     }
 
     if (seed === "empty" || seed === "live") return;
+    if (seed === "grid") {
+      await seedTurn(open, "BTC outlook", 9);
+      await seedTurn(
+        open,
+        "Grid BTC, neutral, 10 grids between support and resistance on the 4h, 250 USDT margin. Draft it for me to start.",
+        2,
+      );
+      return;
+    }
     await seedTurn(open, "BTC outlook", 9);
     const follow: Record<MockTicket, string> = {
       long: "Long BTC, 1% risk",
@@ -2438,6 +3346,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
         knownNetwork(next);
         network = next;
         draft = null;
+        gridDraft = null;
         return snapshot();
       }),
 
@@ -2563,6 +3472,44 @@ export function createMockBackend(options: MockOptions = {}): Backend {
         return snapshot();
       }),
 
+    previewGrid: (request) => settle(() => buildGridPreview(request)),
+
+    startGrid: (request) =>
+      settle(() => {
+        startMockGrid(request);
+        return snapshot();
+      }),
+
+    syncGrids: () =>
+      settle(() => {
+        syncMockGrids();
+        return snapshot();
+      }),
+
+    stopGrid: (gridId, closePosition) =>
+      settle(() => {
+        stopMockGrid(gridId, closePosition);
+        return snapshot();
+      }),
+
+    deleteGrid: (gridId) =>
+      settle(() => {
+        deleteMockGrid(gridId);
+        return snapshot();
+      }),
+
+    startGridDraft: (draftId) =>
+      settle(() => {
+        startDraft(draftId);
+        return snapshot();
+      }),
+
+    dismissGridDraft: () =>
+      settle(() => {
+        gridDraft = null;
+        return snapshot();
+      }),
+
     connectWalletKey: (request: WalletKeyRequest) =>
       settle(() => {
         guardIdle("changing wallets");
@@ -2586,6 +3533,8 @@ export function createMockBackend(options: MockOptions = {}): Backend {
           failing: false,
         };
         if (pendingWallet?.network === request.network) pendingWallet = null;
+        // As in the core: a grid bot drafted for another wallet is not this one's to start.
+        if (gridDraft?.network === request.network) gridDraft = null;
         return snapshot();
       }),
 
@@ -2605,6 +3554,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
             if (pendingWallet?.url !== url) return;
             wallets[request.network] = { ...walletIn("connected", request.network), expires: daysFromNow(request.days) };
             pendingWallet = null;
+            if (gridDraft?.network === request.network) gridDraft = null;
             walletNotice = {
               network: request.network,
               task: "connect",
@@ -2657,6 +3607,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
         knownNetwork(target);
         wallets[target] = noWallet();
         if (draft?.network === target) draft = null;
+        if (gridDraft?.network === target) gridDraft = null;
         return snapshot();
       }),
 
@@ -2666,8 +3617,11 @@ export function createMockBackend(options: MockOptions = {}): Backend {
         if (!Number.isInteger(request.maxLeverage) || request.maxLeverage < 1 || request.maxLeverage > 50) {
           throw new Error("Maximum leverage is a whole number from 1 to 50.");
         }
+        const marginModeChanged = risk.isolated !== Boolean(request.isolated);
         risk = { maxLeverage: request.maxLeverage, isolated: Boolean(request.isolated) };
         if (draft && !draft.reduceOnly && draft.leverage > risk.maxLeverage) draft = null;
+        // As in the core: a grid bot drafted for other limits, or another margin mode, is drafted again.
+        if (gridDraft && (gridDraft.request.leverage > risk.maxLeverage || marginModeChanged)) gridDraft = null;
         return snapshot();
       }),
 
@@ -2875,10 +3829,11 @@ export function mockOptionsFromUrl(search: string): MockOptions {
   const params = new URLSearchParams(search);
   const markets = numberOf(params.get("markets"));
   return {
-    seed: oneOf(params.get("seed"), ["empty", "conversation", "filled", "unconfirmed", "expired", "live", "liveticket"] as const),
+    seed: oneOf(params.get("seed"), ["empty", "conversation", "filled", "unconfirmed", "expired", "live", "liveticket", "grid"] as const),
     network: oneOf(params.get("network"), ["mainnet", "testnet"] as const),
     wallet: oneOf(params.get("wallet"), ["connected", "deposit", "none", "error"] as const),
     positions: flag(params.get("positions")),
+    grids: flag(params.get("grids")),
     ticket: oneOf(params.get("ticket"), ["long", "short", "close"] as const),
     pending: oneOf(params.get("pending"), ["connect", "deposit", "withdraw"] as const) ?? flag(params.get("pending")),
     multi: flag(params.get("multi")),

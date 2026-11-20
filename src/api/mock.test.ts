@@ -1195,3 +1195,218 @@ describe("mock backend: news", () => {
     stop();
   });
 });
+
+describe("mock backend: grid bots", () => {
+  it("previews, launches, syncs, stops, and deletes a futures grid bot", async () => {
+    const backend = instant();
+    const initial = await backend.boot();
+    expect(initial.grids).toEqual([]);
+
+    const btc = Number(initial.quotes.BTCUSDT!.markPrice ?? initial.quotes.BTCUSDT!.price);
+    const req = {
+      symbol: "BTCUSDT",
+      direction: "neutral" as const,
+      spacing: "arithmetic" as const,
+      lowerPrice: String(Math.round(btc * 0.94)),
+      upperPrice: String(Math.round(btc * 1.06)),
+      grids: 8,
+      margin: "600",
+      leverage: 3,
+      stopLower: String(Math.round(btc * 0.9)),
+      stopUpper: String(Math.round(btc * 1.1)),
+      closeOnStop: true,
+      postOnly: true,
+    };
+
+    const preview = await backend.previewGrid(req);
+    expect(preview.symbol).toBe("BTCUSDT");
+    expect(preview.grids).toBe(8);
+    expect(preview.levels).toHaveLength(9);
+    expect(preview.buyOrders + preview.sellOrders).toBe(8);
+    expect(preview.initialSide).toBeNull();
+    expect(Number(preview.qtyPerGrid)).toBeGreaterThan(0);
+
+    const launched = await backend.startGrid(req);
+    expect(launched.grids).toHaveLength(1);
+    const bot = launched.grids[0]!;
+    expect(bot.status).toBe("running");
+    expect(bot.activeBuyOrders + bot.activeSellOrders).toBe(8);
+    expect(launched.account?.orders.length).toBeGreaterThanOrEqual(8);
+    expect(launched.activity[0]?.title).toContain("Start a BTC grid bot");
+
+    // Cannot delete an active grid bot before stopping it.
+    await expect(backend.deleteGrid(bot.id)).rejects.toThrow("Stop this bot before removing it.");
+
+    const synced = await backend.syncGrids();
+    expect(synced.grids[0]!.matchedTrades).toBeGreaterThan(0);
+    expect(Number(synced.grids[0]!.realizedPnl)).toBeGreaterThan(0);
+
+    const stopped = await backend.stopGrid(bot.id, true);
+    expect(stopped.grids[0]!.status).toBe("stopped");
+    expect(stopped.grids[0]!.activeBuyOrders).toBe(0);
+    expect(stopped.grids[0]!.activeSellOrders).toBe(0);
+
+    const cleaned = await backend.deleteGrid(bot.id);
+    expect(cleaned.grids).toEqual([]);
+  });
+
+  it("supports ?grids=1 seeded demo bots for browser preview", async () => {
+    expect(mockOptionsFromUrl("?grids=1")).toMatchObject({ grids: true });
+    const backend = instant({ grids: true });
+    const snap = await backend.boot();
+    expect(snap.grids.length).toBeGreaterThanOrEqual(3);
+    expect(snap.grids.some((g) => g.status === "running")).toBe(true);
+    expect(snap.grids.some((g) => g.status === "stopped")).toBe(true);
+  });
+});
+
+describe("mock backend: grid bots from the assistant", () => {
+  const GRID = "Grid BTC, neutral, 10 grids between support and resistance on the 4h, 250 USDT margin. Draft it for me to start.";
+
+  it("plans a grid from the reading, drafts it, and starts it only when the trader does", async () => {
+    const backend = instant();
+    await backend.boot();
+    const events: TurnEvent[] = [];
+    const after = await backend.ask(GRID, (event) => events.push(event));
+    const run = lastTurn(after);
+
+    expect(run.status).toBe("complete");
+    expect(run.steps.map((step) => step.name)).toEqual(
+      expect.arrayContaining(["get_quote", "analyze_market", "plan_grid", "propose_grid"]),
+    );
+    expect(run.steps.find((step) => step.name === "analyze_market")?.detail).toBe("BTCUSDT 4h");
+    expect(kinds(run)).toEqual(["quotes", "technicals", "grid"]);
+    const card = run.cards.find((item) => item.kind === "grid");
+    if (card?.kind !== "grid") throw new Error("No grid card.");
+    expect(card.preview.grids).toBe(10);
+    expect(card.preview.direction).toBe("neutral");
+    expect(Number(card.preview.lowerPrice)).toBeLessThan(Number(card.preview.markPrice));
+    expect(Number(card.preview.upperPrice)).toBeGreaterThan(Number(card.preview.markPrice));
+
+    const draft = after.gridDraft;
+    expect(draft).not.toBeNull();
+    if (!draft) return;
+    expect(run.grid?.id).toBe(draft.id);
+    expect(draft.request).toMatchObject({ symbol: "BTCUSDT", direction: "neutral", grids: 10, margin: "250.00", leverage: 3 });
+    expect(draft.rationale).toMatch(/breaks the range/);
+    expect(events.some((event) => event.type === "grid" && event.grid.id === draft.id)).toBe(true);
+    expect(run.output).toContain("Nothing is sent until you start it");
+    expect(run.output).toContain("while OctoNeo is open");
+    // Drafting sent nothing.
+    expect(after.grids).toEqual([]);
+
+    const started = await backend.startGridDraft(draft.id);
+    expect(started.gridDraft).toBeNull();
+    expect(started.receipts[draft.id]).toMatch(/^Started: \d+ orders placed between/);
+    expect(started.grids).toHaveLength(1);
+    expect(started.grids[0]).toMatchObject({ symbol: "BTCUSDT", direction: "neutral", grids: 10 });
+    // A draft starts once.
+    await expect(backend.startGridDraft(draft.id)).rejects.toThrow("expired");
+  });
+
+  it("plans without drafting on mainnet while mainnet tickets are off", async () => {
+    const backend = instant({ network: "mainnet", wallet: "connected" });
+    await backend.boot();
+    const after = await backend.ask(GRID, () => {});
+    const run = lastTurn(after);
+    expect(kinds(run)).toContain("grid");
+    expect(run.grid).toBeNull();
+    expect(after.gridDraft).toBeNull();
+    expect(run.steps.find((step) => step.name === "propose_grid")?.status).toBe("error");
+    expect(run.output).toContain("I did not draft it: Mainnet tickets are off");
+  });
+
+  it("does not draft without a usable wallet, or on a market a bot already trades", async () => {
+    const none = instant({ wallet: "none" });
+    await none.boot();
+    const lonely = lastTurn(await none.ask(GRID, () => {}));
+    expect(lonely.grid).toBeNull();
+    expect(lonely.output).toContain("No wallet is connected");
+
+    const busy = instant({ grids: true });
+    await busy.boot();
+    const doubled = lastTurn(await busy.ask(GRID, () => {}));
+    expect(doubled.grid).toBeNull();
+    expect(doubled.output).toContain("A grid bot is already running on BTC");
+  });
+
+  it("reads the mode, the count, the timeframe, the margin and the leverage from the message", async () => {
+    const backend = instant();
+    await backend.boot();
+    const after = await backend.ask(
+      "Grid ETH, long, 10 grids between support and resistance on the 1d, 250 USDT margin at 2x. Draft it for me to start.",
+      () => {},
+    );
+    const run = lastTurn(after);
+    expect(run.steps.find((step) => step.name === "analyze_market")?.detail).toBe("ETHUSDT 1d");
+    expect(after.gridDraft?.request).toMatchObject({ symbol: "ETHUSDT", direction: "long", grids: 10, margin: "250.00", leverage: 2 });
+    expect(after.gridDraft?.preview.initialSide).toBe("buy");
+  });
+
+  it("lets a draft go when it is discarded or the network changes", async () => {
+    const backend = instant();
+    await backend.boot();
+    const drafted = await backend.ask(GRID, () => {});
+    expect(drafted.gridDraft).not.toBeNull();
+    expect((await backend.dismissGridDraft()).gridDraft).toBeNull();
+
+    const again = await backend.ask(GRID, () => {});
+    const id = again.gridDraft?.id ?? "";
+    const switched = await backend.setNetwork("mainnet");
+    expect(switched.gridDraft).toBeNull();
+    await backend.setNetwork("testnet");
+    await expect(backend.startGridDraft(id)).rejects.toThrow("expired");
+  });
+
+  it("files why a draft was refused when it is started", async () => {
+    const backend = instant();
+    await backend.boot();
+    const drafted = await backend.ask(GRID, () => {});
+    const draft = drafted.gridDraft;
+    if (!draft) throw new Error("No draft.");
+    // Another bot starts on the same market before the trader gets to the draft.
+    await backend.startGrid(draft.request);
+    await expect(backend.startGridDraft(draft.id)).rejects.toThrow("already running");
+    const after = await backend.snapshot();
+    expect(after.failures[draft.id]).toContain("already running");
+    expect(after.gridDraft).toBeNull();
+  });
+
+  it("reads the trader's bots when asked how they are doing", async () => {
+    const backend = instant({ grids: true });
+    await backend.boot();
+    const run = lastTurn(await backend.ask("How are my grid bots doing?", () => {}));
+    expect(run.steps.map((step) => step.name)).toContain("get_grids");
+    const card = run.cards.find((item) => item.kind === "grids");
+    if (card?.kind !== "grids") throw new Error("No bots card.");
+    expect(card.bots.length).toBeGreaterThanOrEqual(3);
+    expect(run.output).toMatch(/grid bots? (?:is|are) working/);
+
+    const empty = instant();
+    await empty.boot();
+    const nothing = lastTurn(await empty.ask("How are my grid bots doing?", () => {}));
+    expect(kinds(nothing)).toEqual([]);
+    expect(nothing.output).toContain("You have no grid bots on Testnet");
+  });
+
+  it("plans fewer grids, and says so, when the margin is too small for the count asked for", async () => {
+    const backend = instant();
+    await backend.boot();
+    const after = await backend.ask(
+      "Grid BTC, neutral, 50 grids between support and resistance on the 4h, 250 USDT margin. Draft it for me to start.",
+      () => {},
+    );
+    const run = lastTurn(after);
+    expect(after.gridDraft?.request.grids).toBeLessThan(50);
+    expect(run.output).toContain("is too little for 50 grids on BTC");
+  });
+
+  it("seeds a conversation with a grid bot waiting to start", async () => {
+    expect(mockOptionsFromUrl("?seed=grid")).toMatchObject({ seed: "grid" });
+    const backend = instant({ seed: "grid" });
+    const snapshot = await backend.boot();
+    expect(snapshot.turns).toHaveLength(2);
+    expect(snapshot.gridDraft).not.toBeNull();
+    expect(lastTurn(snapshot).grid?.id).toBe(snapshot.gridDraft?.id);
+  });
+});

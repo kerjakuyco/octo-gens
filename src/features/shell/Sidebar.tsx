@@ -210,6 +210,7 @@ export function Sidebar({ overlay, open = true }: SidebarProps) {
   const groups = useMemo(() => groupThreads(visibleThreads), [visibleThreads]);
   const wallet = activeWallet(snapshot);
   const positions = snapshot.account?.positions.length ?? 0;
+  const activeGrids = snapshot.grids.filter((bot) => bot.status === "running" || bot.status === "waiting").length;
 
   // When opened as a drawer, move keyboard focus straight to the close control without scrolling.
   useEffect(() => {
@@ -268,6 +269,16 @@ export function Sidebar({ overlay, open = true }: SidebarProps) {
               label="Markets"
               current={page === "markets" || page === "market"}
               onClick={() => navigate("markets")}
+            />
+          </li>
+          <li>
+            <NavItem
+              icon="grid"
+              label="Grid bots"
+              current={page === "grid"}
+              count={activeGrids}
+              countLabel={activeGrids === 1 ? "bot running" : "bots running"}
+              onClick={() => navigate("grid")}
             />
           </li>
           <li>

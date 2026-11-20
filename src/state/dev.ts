@@ -38,7 +38,7 @@ export interface DevParams {
   update?: boolean;
 }
 
-const PAGES: readonly Page[] = ["chat", "markets", "market", "news", "account", "activity"];
+const PAGES: readonly Page[] = ["chat", "markets", "market", "grid", "news", "account", "activity"];
 const TABS: readonly MarketTab[] = ["book", "funding", "technicals", "watchlist"];
 const NEWS: readonly NewsFilter[] = ["top", "watchlist", "crypto", "macro"];
 const SETTINGS: readonly SettingsTab[] = ["models", "wallet", "trading", "tools", "appearance", "about"];
