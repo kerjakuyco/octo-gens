@@ -4,6 +4,10 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## Unreleased
 
+### Removed
+
+- **The Defiant is no longer read.** Its articles ask readers to sign in or pay, so its stories could not be read in the app. The News page and the assistant now read seven publishers.
+
 ### Fixed
 
 - A long conversation title in the sidebar ran past its edge. It now ends in an ellipsis, and pointing at it shows the whole title.

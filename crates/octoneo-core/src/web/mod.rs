@@ -48,13 +48,14 @@ use rank::{Coin, Indexed, Mentions, Query, normal};
 /// The publishers whose feeds are read: crypto newsrooms, the Federal
 /// Reserve's own press releases, and Yahoo Finance for the stock market. Each
 /// feed is the publisher's public RSS. `true` marks a feed that gathers other
-/// publishers' articles, so its links lead off its own site.
-const PUBLISHERS: [(&str, &str, bool); 8] = [
+/// publishers' articles, so its links lead off its own site. A publisher whose
+/// articles ask readers to sign in or pay is left out: its stories cannot be
+/// read in the app, nor by the assistant.
+const PUBLISHERS: [(&str, &str, bool); 7] = [
     ("CoinDesk", "https://www.coindesk.com/arc/outboundfeeds/rss/", false),
     ("Cointelegraph", "https://cointelegraph.com/rss", false),
     ("The Block", "https://www.theblock.co/rss.xml", false),
     ("Decrypt", "https://decrypt.co/feed", false),
-    ("The Defiant", "https://thedefiant.io/feed", false),
     ("crypto.news", "https://crypto.news/feed/", false),
     (FED, "https://www.federalreserve.gov/feeds/press_all.xml", false),
     // Yahoo Finance has no feed of everything; the news filed under the S&P 500 is its market news.

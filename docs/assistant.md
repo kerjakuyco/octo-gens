@@ -98,7 +98,7 @@ A card is made only from a result that was actually read, and once per subject i
 
 Every model gets the same two tools, whichever provider it comes from, and neither needs a key or an account. They are on unless you turn off **Web search** in **Settings** under *Tools*.
 
-**Where the news comes from.** The app reads the public RSS feeds of eight publishers and nothing else:
+**Where the news comes from.** The app reads the public RSS feeds of seven publishers and nothing else:
 
 | Publisher | Feed |
 | --- | --- |
@@ -106,7 +106,6 @@ Every model gets the same two tools, whichever provider it comes from, and neith
 | Cointelegraph | `https://cointelegraph.com/rss` |
 | The Block | `https://www.theblock.co/rss.xml` |
 | Decrypt | `https://decrypt.co/feed` |
-| The Defiant | `https://thedefiant.io/feed` |
 | crypto.news | `https://crypto.news/feed/` |
 | Federal Reserve press releases | `https://www.federalreserve.gov/feeds/press_all.xml` |
 | Yahoo Finance | `https://feeds.finance.yahoo.com/rss/2.0/headline`, by ticker |

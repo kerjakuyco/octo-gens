@@ -244,7 +244,7 @@ async fn an_article_the_feed_carries_whole_is_read_without_asking_for_the_page()
 #[tokio::test]
 async fn only_public_pages_are_read_outside_tests() {
     let web = Web::new().expect("web");
-    assert_eq!(web.publishers().len(), 8);
+    assert_eq!(web.publishers().len(), 7);
     for feed in &web.feeds {
         assert!(Guard::Public.parse(&feed.url).is_ok(), "{}", feed.url);
         // Only the feed that gathers other publishers' articles may link off its own site.
