@@ -37,7 +37,7 @@ The key the app holds cannot withdraw or transfer: it is approved without that p
 
 Refreshing the watchlist costs two requests however long the list is, because the ticker and funding endpoints answer for every market at once. The screener of every market costs the same two. Daily history, which draws the sparklines, is read again every ten minutes.
 
-The market panel reads on demand, for the market on screen only and only while the window is in view: twenty levels a side of the order book and the last forty trades (every four seconds while the Book tab is open), two weeks of settled funding with open interest, and candles for a technical reading on each timeframe. `openInterest` is not in the exchange's published list of endpoints but answers on both networks; if it stops, the panel shows funding without it. Where `fundingInfo` names no interval for a market, the spacing of its last two payments is used.
+A market's page reads on demand, for the market on screen only and only while the window is in view: twenty levels a side of the order book and the last forty trades (every four seconds while the Book tab is open), two weeks of settled funding with open interest, and candles for a technical reading on each timeframe. `openInterest` is not in the exchange's published list of endpoints but answers on both networks; if it stops, the page shows funding without it. Where `fundingInfo` names no interval for a market, the spacing of its last two payments is used.
 
 Public reads are retried once when no answer arrives. Signed requests are sent exactly once.
 

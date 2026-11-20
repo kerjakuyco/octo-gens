@@ -8,7 +8,7 @@ OctoNeo is a desktop AI trading assistant for perpetual futures on a decentralis
 
 - **Just ask.** "BTC outlook", "Top movers", "Long ETH, 1% risk". The assistant plans its own research and shows what it read as cards under the answer: prices, a technical reading, the order book, a position plan.
 - **Bring your own model.** OpenRouter, Cloudflare AI Gateway, or a model on your own computer with Ollama or LM Studio.
-- **Market data in depth.** A screener of every market, a chart, the order book and latest trades, funding history and open interest, and technical readings on four timeframes.
+- **Market data in depth.** A screener of every market and a page for each one: a chart with moving averages, Bollinger bands and support and resistance, the order book and latest trades, funding history and open interest, and technical readings on four timeframes.
 - **The news, read for you.** Ask why a market is moving. The assistant reads the latest headlines from crypto newsrooms, Yahoo Finance and the Federal Reserve, says who reported what and how long ago, and lists the headlines with links. Ask about a share or a commodity the exchange lists and it reads the news filed under that ticker too. It works with every model, and needs no key.
 - **You stay in control.** The assistant can only draft a ticket. Nothing reaches the exchange until you confirm it, and the assistant may not draft mainnet tickets until you allow it.
 - **Your wallet, your funds.** Your wallet approves a separate trade-only key for the app. The app never sees your wallet's key, and the key it holds cannot withdraw.
@@ -29,7 +29,7 @@ The app opens on **mainnet** prices. Market data needs no wallet, no account and
 3. Switch to **Testnet** at the top and [connect a wallet](#connect-a-wallet).
 4. Ask **Long 0.01 BTC**. The assistant picks a stop-loss, says where it put it, and drafts a ticket. Review it, then place the order. Ask **Close my BTC** to exit.
 
-`Ctrl+K` (Windows, Linux) or `Cmd+K` (macOS) puts the cursor in the message box. `Esc` stops a running answer.
+`Ctrl+K` (Windows, Linux) or `Cmd+K` (macOS) puts the cursor in the message box, and `Ctrl+B` or `Cmd+B` shows or hides the sidebar. `Esc` stops a running answer.
 
 ## Connect a model
 
@@ -87,14 +87,14 @@ Funds move between your own wallet and your trading account. **Deposit** and **W
 
 | Where | What it shows |
 | --- | --- |
-| **Markets** | Every market the exchange lists, most traded first: price, 24h change, volume and funding. Sort by any column, search, and add a market to your watchlist. |
-| The market panel, beside the conversation | A chart on 15m, 1h, 4h and 1d for the market in focus, with its mark price, funding and the time to the next payment. |
-| *Book* | The best bids and asks with their running size, the spread, the share of resting size on each side, and the latest trades. |
+| **Markets** | Every market the exchange lists, most traded first: price, 24h change, volume and funding. Sort by any column, search, add a market to your watchlist, and pick one to open its page. |
+| A market's page | A chart on 15m, 1h, 4h and 1d, with EMA 20 and 50, EMA 200, Bollinger bands, support and resistance, and your position and orders drawn on it as you choose. Above it, the mark and index prices, funding and the time to the next payment, open interest and the 24h range; below it, the trend on each timeframe, volatility and relative volume. Your position and open orders in the market, with **Close** and **Cancel**. |
+| *Book* | The best bids and asks with their running size, the spread, the share of resting size on each side, and the latest trades with how much of their value came from buyers and from sellers. |
 | *Funding* | The rate now and what it comes to over a year, two weeks of settled rates, and open interest. |
-| *Technicals* | Trend, RSI, MACD, ATR, moving averages, support and resistance on four timeframes side by side. |
+| *Technicals* | Trend, RSI, MACD, ATR, moving averages, support and resistance on four timeframes side by side. Click a level to put it in the order form as a stop-loss or a take-profit. |
 | *Watchlist* | Your markets with a 90-day sparkline each. |
 
-The panel follows what the assistant looks at, and it reads straight from the exchange: none of it needs a wallet or a model.
+A market's page opens from **Markets**, from a market named in an answer, or from a position under **Account**. **Back** returns to where you were, and the market's name at the top switches to another. With a model connected, **Ask AI** puts a question about the market to the assistant. The market data comes straight from the exchange: none of it needs a wallet or a model.
 
 ## What the assistant can do
 
@@ -111,7 +111,7 @@ The panel follows what the assistant looks at, and it reads straight from the ex
 
 ![Headlines the assistant read, with who reported each one and how long ago](docs/images/news-light.png)
 
-Conversations are kept in the sidebar. Open one to read it again with what the assistant read at the time, or delete it.
+Conversations are kept in the sidebar, where you can filter them by title. Open one to read it again with what the assistant read at the time, or delete it.
 
 How the assistant is instructed, every tool it has, and how each provider is handled is documented in [docs/assistant.md](docs/assistant.md).
 
@@ -120,12 +120,12 @@ How the assistant is instructed, every tool it has, and how each provider is han
 ![A ticket the assistant drafted, waiting to be placed](docs/images/ticket-light.png)
 
 - **Tickets.** Every order starts as a ticket: what it does to your position, its value, the margin it needs and an estimated liquidation price. It is checked against your live account before you see it, and sent only when you confirm. A mainnet ticket also asks you to tick an acknowledgement.
-- **Two ways to draft one.** Ask the assistant, or use **Trade** in the market panel, which needs no model.
+- **Two ways to draft one.** Ask the assistant, or use **Trade** on a market's page, which needs no model.
 - **Checked twice.** When you confirm, the app reads your position and the mark price again. If either has moved away from what the ticket says, nothing is sent and you draft a fresh one.
 - **Market orders.** Tickets are market orders, sized in the asset or by value. Limit orders are not supported yet.
 - **Leverage and margin.** A new position uses the leverage on the ticket, up to your limit, and isolated margin unless you choose cross. A new installation limits leverage to 3x; you can raise the limit to 50x in **Settings** under *Trading*. An existing position keeps the leverage and margin mode it has.
 - **Stop-loss and take-profit.** They are placed right after the entry as reduce-only orders that trigger on the mark price. A stop beyond the estimated liquidation price is refused, because liquidation would come first. If the exchange refuses one after the entry has filled, the ticket says so plainly.
-- **Closing.** Ask the assistant, or press **Close** on a position under **Account**. Either drafts a ticket for the whole position. Confirming it also cancels the reduce-only orders left on that position. One order never flips a long into a short.
+- **Closing.** Ask the assistant, or press **Close** on a position under **Account** or on the market's page. Either drafts a ticket for the whole position. Confirming it also cancels the reduce-only orders left on that position. One order never flips a long into a short.
 
 **Account** shows equity, positions with the exchange's liquidation prices, and open orders. It is read from the exchange again every 15 seconds while the window is in view. **Activity** lists what the app did on the exchange: each order and cancellation, step by step.
 

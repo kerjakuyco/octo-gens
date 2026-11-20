@@ -78,7 +78,7 @@ A run that is a chat turn carries the id of its conversation; an order or a canc
 
 ### Market data
 
-Everything the market panel and the screener show is public data read on demand: `market_overview` (every market, in two requests), `order_book`, `recent_trades`, `market_funding` (the rate now, two weeks of settled rates, open interest) and `market_technicals` (one reading per timeframe). None of it needs a wallet, and none of it is kept between launches.
+The market data on a market's page and in the screener is public data read on demand: `market_overview` (every market, in two requests), `candles`, `order_book`, `recent_trades`, `market_funding` (the rate now, two weeks of settled rates, open interest) and `market_technicals` (one reading per timeframe). None of it needs a wallet, and none of it is kept between launches. Some of what a market's page shows is worked out in the interface from that data, for display only: the moving averages and Bollinger bands over the chart, the Bollinger, volatility, relative volume and 20-bar range readings under it, and the split of buying and selling in the latest trades. Every figure the assistant quotes is computed by the core.
 
 ## The shell
 
