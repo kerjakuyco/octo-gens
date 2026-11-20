@@ -15,7 +15,8 @@ use tokio_util::sync::CancellationToken;
 
 use super::tools::DeskTools;
 use super::view::{
-    CardView, RunStatus, RunView, Snapshot, StepStatus, StepView, TicketView, TurnEvent, TurnSink,
+    CardView, GridDraftView, RunStatus, RunView, Snapshot, StepStatus, StepView, TicketView, TurnEvent,
+    TurnSink,
 };
 use super::{Chosen, Studio, links_in, new_id, now_stamp};
 use crate::assistant::prompt::{DeskContext, PositionLine, SYSTEM_PROMPT, WalletState};
@@ -119,6 +120,12 @@ impl<'a> Trace<'a> {
     pub(super) fn ticket(&self, ticket: TicketView) {
         self.run().ticket = Some(ticket.clone());
         self.sink.emit(TurnEvent::Ticket { ticket });
+    }
+
+    /// Shows the grid bot this turn drafted, for the trader to start or discard.
+    pub(super) fn grid(&self, grid: GridDraftView) {
+        self.run().grid = Some(grid.clone());
+        self.sink.emit(TurnEvent::Grid { grid });
     }
 
     fn finish(self, outcome: Result<Answer>) -> RunView {
@@ -246,6 +253,7 @@ impl Studio {
                 reasoning: String::new(),
                 ms: 0,
                 ticket: None,
+                grid: None,
                 cards: Vec::new(),
                 usage: None,
                 model: chosen.model.id.clone(),
@@ -305,6 +313,8 @@ impl Studio {
             isolated: state.prefs.isolated && !cross_only,
             may_draft: network == Network::Testnet || state.prefs.live_tickets,
             pending: state.draft.as_ref().map(|draft| ticket_line(&draft.view)),
+            grid_bots: Self::grid_lines(&state),
+            pending_grid: Self::pending_grid_line(&state),
             servers: state
                 .servers
                 .iter()

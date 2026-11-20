@@ -20,10 +20,11 @@ use octoneo_core::model::{
 };
 use octoneo_core::store::MemorySecrets;
 use octoneo_core::studio::view::{
-    AccountView, CandleSeries, CardView, FundingView, InstrumentView, MarketRow, McpView, NewsDesk,
-    NewsFeedView, NewsView, OrderBookView, PendingWalletView, PlanView, QuoteView, RunStatus, RunView,
-    StepStatus, StepView, StoryView, TechnicalFrame, TechnicalsView, ThreadView, TicketView, TradeView,
-    Trend, TurnEvent, WalletNoticeView, WalletTask, WalletView,
+    AccountView, CandleSeries, CardView, FundingView, GridBotView, GridDirection, GridDraftView,
+    GridLevelView, GridPreviewView, GridRequest, GridSpacing, GridStatus, InstrumentView, MarketRow, McpView,
+    NewsDesk, NewsFeedView, NewsView, OrderBookView, PendingWalletView, PlanView, QuoteView, RunStatus,
+    RunView, StepStatus, StepView, StoryView, TechnicalFrame, TechnicalsView, ThreadView, TicketView,
+    TradeView, Trend, TurnEvent, WalletNoticeView, WalletTask, WalletView,
 };
 use octoneo_core::studio::{Studio, StudioConfig};
 use rust_decimal::Decimal;
@@ -151,6 +152,119 @@ fn ticket() -> TicketView {
     }
 }
 
+fn grid_level() -> GridLevelView {
+    GridLevelView {
+        index: 0,
+        price: "60000".into(),
+        side: Some(Side::Buy),
+        order_id: Some("101".into()),
+        filled_count: 1,
+    }
+}
+
+fn grid_preview() -> GridPreviewView {
+    GridPreviewView {
+        network: Network::Testnet,
+        symbol: "BTCUSDT".into(),
+        base: "BTC".into(),
+        quote: "USDT".into(),
+        mark_price: "62000".into(),
+        direction: GridDirection::Neutral,
+        spacing: GridSpacing::Arithmetic,
+        lower_price: "60000".into(),
+        upper_price: "64000".into(),
+        grids: 4,
+        leverage: 3,
+        isolated: true,
+        margin: "500".into(),
+        qty_per_grid: "0.005".into(),
+        notional_per_grid: "310".into(),
+        total_notional: "1240".into(),
+        min_margin: "20".into(),
+        profit_per_grid_min_pct: 1.5,
+        profit_per_grid_max_pct: 1.6,
+        initial_side: None,
+        initial_qty: None,
+        est_liq_long: Some("42000".into()),
+        est_liq_short: Some("82000".into()),
+        buy_orders: 2,
+        sell_orders: 2,
+        trigger_price: None,
+        stop_upper: Some("66000".into()),
+        stop_lower: Some("58000".into()),
+        close_on_stop: true,
+        post_only: true,
+        levels: vec![grid_level()],
+        warnings: vec!["Tight grid spacing.".into()],
+    }
+}
+
+fn grid_bot() -> GridBotView {
+    GridBotView {
+        id: "g1".into(),
+        network: Network::Testnet,
+        symbol: "BTCUSDT".into(),
+        base: "BTC".into(),
+        quote: "USDT".into(),
+        direction: GridDirection::Long,
+        spacing: GridSpacing::Geometric,
+        status: GridStatus::Running,
+        lower_price: "60000".into(),
+        upper_price: "64000".into(),
+        grids: 4,
+        leverage: 3,
+        isolated: true,
+        margin: "500".into(),
+        qty_per_grid: "0.005".into(),
+        entry_price: "62000".into(),
+        mark_price: Some("62100".into()),
+        trigger_price: None,
+        stop_upper: Some("66000".into()),
+        stop_lower: Some("58000".into()),
+        close_on_stop: true,
+        post_only: true,
+        matched_trades: 3,
+        realized_pnl: "12.5".into(),
+        unrealized_pnl: "4.2".into(),
+        total_pnl: "16.7".into(),
+        roi_pct: Some(3.34),
+        profit_per_grid_min_pct: 1.5,
+        profit_per_grid_max_pct: 1.6,
+        active_buy_orders: 2,
+        active_sell_orders: 2,
+        created_at: "2026-11-19T00:00:00Z".into(),
+        updated_at: "2026-11-19T01:00:00Z".into(),
+        stopped_at: None,
+        last_note: "Running".into(),
+        levels: vec![grid_level()],
+    }
+}
+
+/// A grid bot the assistant drafted, with every optional setting of its request given.
+fn grid_draft() -> GridDraftView {
+    GridDraftView {
+        id: "d".repeat(32),
+        network: Network::Testnet,
+        request: GridRequest {
+            symbol: "BTCUSDT".into(),
+            direction: GridDirection::Neutral,
+            spacing: GridSpacing::Arithmetic,
+            lower_price: "60000".into(),
+            upper_price: "64000".into(),
+            grids: 4,
+            margin: "500".into(),
+            leverage: 3,
+            trigger_price: Some("61000".into()),
+            stop_upper: Some("66000".into()),
+            stop_lower: Some("58000".into()),
+            close_on_stop: Some(true),
+            post_only: Some(true),
+        },
+        preview: grid_preview(),
+        rationale: "Range-bound on 4h; a close below 60,000 breaks it.".into(),
+    }
+}
+
 fn run() -> RunView {
     RunView {
         id: "r1".into(),
@@ -171,6 +285,7 @@ fn run() -> RunView {
         reasoning: String::new(),
         ms: 40,
         ticket: Some(ticket()),
+        grid: Some(grid_draft()),
         cards: vec![CardView::Account],
         usage: Some(Usage::default()),
         model: "lab/agent".into(),
@@ -342,6 +457,8 @@ fn every_view_sends_exactly_the_fields_the_interface_declares() {
         CardView::Plan { plan },
         CardView::News { query: "BTC".into(), articles: vec![headline.clone()] },
         CardView::Account,
+        CardView::Grid { preview: Box::new(grid_preview()) },
+        CardView::Grids { bots: vec![grid_bot()] },
     ];
     same("NewsView", &headline, &contract);
     // The News page, and every desk a story can come from.
@@ -387,6 +504,31 @@ fn every_view_sends_exactly_the_fields_the_interface_declares() {
     same("RunView", &run, &contract);
     same("StepView", &run.steps[0], &contract);
     same("TicketView", &ticket(), &contract);
+    same("GridLevelView", &grid_level(), &contract);
+    same("GridPreviewView", &grid_preview(), &contract);
+    same("GridBotView", &grid_bot(), &contract);
+    // A drafted grid bot carries the request starting it launches. A setting left out is left out
+    // on the wire too, as the interface's optional fields are.
+    let draft = grid_draft();
+    same("GridDraftView", &draft, &contract);
+    same("GridRequest", &draft.request, &contract);
+    let bare = GridRequest {
+        trigger_price: None,
+        stop_upper: None,
+        stop_lower: None,
+        close_on_stop: None,
+        post_only: None,
+        ..draft.request.clone()
+    };
+    let sent = keys(&serde_json::to_value(&bare).expect("serialises"));
+    assert!(sent.is_subset(&contract["GridRequest"]) && !sent.contains("triggerPrice"), "{sent:?}");
+    // A run that drafted one is kept in the journal, so it must read back as it was written.
+    let stored = serde_json::to_value(&run).expect("serialises");
+    assert_eq!(serde_json::from_value::<RunView>(stored).expect("reads back"), run);
+    // A run journaled before grid drafts existed still loads.
+    let mut older = serde_json::to_value(&run).expect("serialises");
+    older.as_object_mut().expect("object").remove("grid");
+    assert_eq!(serde_json::from_value::<RunView>(older).expect("an older run").grid, None);
     same("UsageView", &Usage::default(), &contract);
     same("CandleSeries", &CandleSeries::new("BTCUSDT", "1h", "Testnet", &[candle]), &contract);
     same(
@@ -465,6 +607,7 @@ fn every_view_sends_exactly_the_fields_the_interface_declares() {
         TurnEvent::Step { index: 0, step: run.steps[0].clone() },
         TurnEvent::Card { card: CardView::Account },
         TurnEvent::Ticket { ticket: ticket() },
+        TurnEvent::Grid { grid: grid_draft() },
         TurnEvent::Finished { run },
     ];
     let mut seen = BTreeSet::new();
@@ -488,8 +631,8 @@ fn requests_from_the_interface_are_understood_field_for_field() {
     use octoneo_core::mcp::McpConnectRequest;
     use octoneo_core::store::{Effort, Provider, Theme};
     use octoneo_core::studio::view::{
-        AssistantRequest, FundingRequest, ModelsRequest, RiskRequest, TicketRequest, WalletBrowserRequest,
-        WalletKeyRequest,
+        AssistantRequest, FundingRequest, GridRequest, ModelsRequest, RiskRequest, TicketRequest,
+        WalletBrowserRequest, WalletKeyRequest,
     };
 
     let contract = interfaces();
@@ -503,8 +646,12 @@ fn requests_from_the_interface_are_understood_field_for_field() {
     let assistant = json!({"provider": "cloudflare", "model": "a/b", "key": "token", "account": "abc", "gateway": "desk",
         "url": "http://127.0.0.1:1234", "effort": "medium", "liveTickets": true});
     let models = json!({"provider": "lmstudio", "key": "k", "account": "abc", "gateway": "desk", "url": "http://127.0.0.1:1234"});
+    let grid = json!({"symbol": "BTCUSDT", "direction": "neutral", "spacing": "arithmetic", "lowerPrice": "60000",
+        "upperPrice": "66000", "grids": 10, "margin": "500", "leverage": 3, "triggerPrice": "62500",
+        "stopUpper": "68000", "stopLower": "58000", "closeOnStop": true, "postOnly": true});
     for (interface, sample) in [
         ("TicketRequest", &ticket),
+        ("GridRequest", &grid),
         ("WalletKeyRequest", &key),
         ("WalletBrowserRequest", &browser),
         ("FundingRequest", &funding),
@@ -547,6 +694,16 @@ fn requests_from_the_interface_are_understood_field_for_field() {
     // Only what the form needs is required.
     serde_json::from_value::<TicketRequest>(json!({"symbol": "BTCUSDT", "side": "buy", "qty": "1"}))
         .expect("a minimal ticket");
+    let parsed_grid = serde_json::from_value::<GridRequest>(grid).expect("grid request");
+    assert_eq!(
+        (parsed_grid.direction, parsed_grid.spacing, parsed_grid.grids, parsed_grid.close_on_stop),
+        (GridDirection::Neutral, GridSpacing::Arithmetic, 10, Some(true))
+    );
+    serde_json::from_value::<GridRequest>(json!({
+        "symbol": "ETHUSDT", "direction": "long", "spacing": "geometric",
+        "lowerPrice": "2800", "upperPrice": "3400", "grids": 8, "margin": "300", "leverage": 3
+    }))
+    .expect("a minimal grid request");
 
     let stdio = json!({"id": "files", "transport": "stdio", "command": "node", "args": ["server.js"], "env": {"A": "1"}});
     let http = json!({"id": "news", "transport": "http", "url": "https://example.com/mcp", "token": "t"});
@@ -585,6 +742,9 @@ fn requests_from_the_interface_are_understood_field_for_field() {
     );
     assert_eq!(union("Effort"), wire(&[Effort::Auto, Effort::Low, Effort::Medium, Effort::High]));
     assert_eq!(union("Theme"), wire(&[Theme::System, Theme::Light, Theme::Dark]));
+    assert_eq!(union("GridDirection"), wire(&GridDirection::ALL));
+    assert_eq!(union("GridSpacing"), wire(&GridSpacing::ALL));
+    assert_eq!(union("GridStatus"), wire(&GridStatus::ALL));
     for (interface, field, values) in [
         ("PositionView", "side", vec!["long", "short"]),
         ("PlanView", "direction", vec!["long", "short"]),

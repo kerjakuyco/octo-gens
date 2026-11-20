@@ -53,6 +53,7 @@ impl Events {
                 TurnEvent::Step { .. } => "step",
                 TurnEvent::Card { .. } => "card",
                 TurnEvent::Ticket { .. } => "ticket",
+                TurnEvent::Grid { .. } => "grid",
                 TurnEvent::Finished { .. } => "finished",
             })
             .collect()
@@ -105,6 +106,8 @@ struct Exchange {
     unfunded: bool,
     hedge: bool,
     reject_stops: bool,
+    /// Refuse every limit order, as the exchange refuses a post-only order that would cross.
+    reject_limits: bool,
     /// Every order the exchange took, by client id, as a lookup would return it.
     history: HashMap<String, Value>,
     /// Prices that have moved away from the listing's.
@@ -144,6 +147,7 @@ impl Exchange {
             unfunded: false,
             hedge: false,
             reject_stops: false,
+            reject_limits: false,
             history: HashMap::new(),
             moved: HashMap::new(),
             lose: VecDeque::new(),
@@ -294,6 +298,53 @@ impl Exchange {
         json!(rows)
     }
 
+    /// A lookup of a cancelled order says so, as the exchange's does.
+    fn cancelled(&mut self, order: &Value) {
+        if let Some(seen) = order["clientOrderId"].as_str().and_then(|id| self.history.get_mut(id)) {
+            seen["status"] = json!("CANCELED");
+        }
+    }
+
+    /// A resting order fills in full: it leaves the book, a lookup says FILLED, and the position moves.
+    fn fill(&mut self, order_id: &str, price: &str) {
+        let at = self
+            .orders
+            .iter()
+            .position(|order| order["orderId"] == order_id.parse::<u64>().expect("an order id"))
+            .expect("a resting order");
+        let order = self.orders.remove(at);
+        let (symbol, qty) = (
+            order["symbol"].as_str().expect("symbol").to_string(),
+            dec(order["origQty"].as_str().expect("qty")),
+        );
+        let signed = if order["side"] == "BUY" { qty } else { -qty };
+        let (amount, entry) = self.positions.get(&symbol).copied().unwrap_or_default();
+        let next = amount + signed;
+        if next.is_zero() {
+            self.positions.remove(&symbol);
+        } else {
+            let entry = if amount.is_zero() { dec(price) } else { entry };
+            self.positions.insert(symbol, (next, entry));
+        }
+        if let Some(seen) = order["clientOrderId"].as_str().and_then(|id| self.history.get_mut(id)) {
+            seen["status"] = json!("FILLED");
+            seen["executedQty"] = json!(qty.to_string());
+        }
+    }
+
+    /// A resting order ends without filling, as a post-only order that would have crossed does.
+    fn expire(&mut self, order_id: &str) {
+        let at = self
+            .orders
+            .iter()
+            .position(|order| order["orderId"] == order_id.parse::<u64>().expect("an order id"))
+            .expect("a resting order");
+        let order = self.orders.remove(at);
+        if let Some(seen) = order["clientOrderId"].as_str().and_then(|id| self.history.get_mut(id)) {
+            seen["status"] = json!("EXPIRED");
+        }
+    }
+
     fn market_order(&mut self, symbol: &str, query: &HashMap<String, String>) -> (u16, Value) {
         let mark = self.price(symbol).unwrap_or_default();
         let qty = dec(&query["quantity"]);
@@ -308,11 +359,18 @@ impl Exchange {
         let id = self.next_id;
         self.next_id += 1;
         if kind != "MARKET" {
-            if self.reject_stops {
+            if kind == "LIMIT" && self.reject_limits {
+                let msg =
+                    "Due to the order could not be executed as maker, the Post Only order will be rejected.";
+                return (400, json!({"code": -5022, "msg": msg}));
+            }
+            if kind != "LIMIT" && self.reject_stops {
                 return (400, json!({"code": -2021, "msg": "Order would immediately trigger."}));
             }
+            // A limit order rests at its price; a stop or a take-profit waits for its trigger.
+            let price = query.get("price").cloned().unwrap_or_else(|| "0".to_string());
             self.orders.push(json!({"orderId": id, "clientOrderId": query["newClientOrderId"], "symbol": symbol, "side": query["side"],
-                "type": kind, "price": "0", "stopPrice": query["stopPrice"], "origQty": query["quantity"], "executedQty": "0",
+                "type": kind, "price": price, "stopPrice": query.get("stopPrice"), "origQty": query["quantity"], "executedQty": "0",
                 "reduceOnly": reduce, "status": "NEW", "time": Utc::now().timestamp_millis()}));
             let answer = json!({"orderId": id, "clientOrderId": query["newClientOrderId"], "status": "NEW", "executedQty": "0", "avgPrice": "0"});
             self.history.insert(query["newClientOrderId"].clone(), answer.clone());
@@ -598,15 +656,21 @@ impl Exchange {
                 None => self.market_order(symbol.expect("symbol"), query),
             },
             ("DELETE", "/fapi/v3/order") => {
-                let (before, id) = (self.orders.len(), query["orderId"].parse::<u64>().expect("order id"));
-                self.orders.retain(|order| order["orderId"] != id);
-                if self.orders.len() == before {
+                let id = query["orderId"].parse::<u64>().expect("order id");
+                let Some(at) = self.orders.iter().position(|order| order["orderId"] == id) else {
                     return (400, json!({"code": -2011, "msg": "Unknown order sent."}));
-                }
+                };
+                let order = self.orders.remove(at);
+                self.cancelled(&order);
                 (200, json!({"orderId": query["orderId"], "status": "CANCELED"}))
             }
             ("DELETE", "/fapi/v3/allOpenOrders") => {
-                self.orders.retain(|order| symbol.is_none_or(|s| order["symbol"] != s));
+                let (gone, kept): (Vec<Value>, Vec<Value>) =
+                    self.orders.drain(..).partition(|order| symbol.is_none_or(|s| order["symbol"] == s));
+                self.orders = kept;
+                for order in &gone {
+                    self.cancelled(order);
+                }
                 (200, json!({"code": 200, "msg": "The operation of cancel all open order is done."}))
             }
             _ => (404, json!({"code": -1, "msg": "not mocked"})),
@@ -812,6 +876,8 @@ fn kinds(cards: &[CardView]) -> Vec<&'static str> {
             CardView::Plan { .. } => "plan",
             CardView::News { .. } => "news",
             CardView::Account => "account",
+            CardView::Grid { .. } => "grid",
+            CardView::Grids { .. } => "grids",
         })
         .collect()
 }
@@ -1619,8 +1685,8 @@ async fn the_assistant_researches_with_tools_and_drafts_a_ticket_the_trader_conf
         .iter()
         .filter_map(|t| t["function"]["name"].as_str())
         .collect();
-    assert_eq!(offered.len(), 11, "no tool-server tools without a server: {offered:?}");
-    assert_eq!(offered[9..], ["search_news", "read_page"], "news is on unless the trader turns it off");
+    assert_eq!(offered.len(), 14, "no tool-server tools without a server: {offered:?}");
+    assert_eq!(offered[12..], ["search_news", "read_page"], "news is on unless the trader turns it off");
     let user = bodies[0]["messages"]
         .as_array()
         .and_then(|m| m.last())
@@ -2858,8 +2924,8 @@ async fn a_model_on_this_computer_answers_through_ollama() {
         (&json!("qwen3:8b"), &json!(true), &json!(16384))
     );
     assert_eq!(chats[0]["options"]["num_predict"], 3072, "and an output cap, so a loop ends");
-    assert_eq!(tool_names(&chats[0]).len(), 11);
-    assert_eq!(tool_names(&chats[0])[9..], ["search_news", "read_page"], "a local model reads the news too");
+    assert_eq!(tool_names(&chats[0]).len(), 14);
+    assert_eq!(tool_names(&chats[0])[12..], ["search_news", "read_page"], "a local model reads the news too");
     assert!(
         chats[0]["messages"][0]["content"].as_str().is_some_and(|rules| rules.starts_with("You are Octo"))
     );
@@ -2975,8 +3041,8 @@ async fn lm_studio_loads_the_model_with_room_for_the_assistant() {
     // A model that loops must stop short of filling its context.
     assert_eq!(chats[0]["max_tokens"], 3072);
     // A model on this computer works in a small context: shorter results, same tools, the news included.
-    assert_eq!(tool_names(&chats[0]).len(), 11);
-    assert_eq!(tool_names(&chats[0])[9..], ["search_news", "read_page"]);
+    assert_eq!(tool_names(&chats[0]).len(), 14);
+    assert_eq!(tool_names(&chats[0])[12..], ["search_news", "read_page"]);
 }
 
 #[tokio::test]
@@ -3096,9 +3162,9 @@ async fn a_model_behind_cloudflare_ai_gateway_is_proved_before_it_is_kept() {
         (&json!("openai/gpt-4.1"), &json!("ping"), &json!("auto"))
     );
     let turn: Value = serde_json::from_slice(&sent[2].body).expect("json");
-    assert_eq!(tool_names(&turn).len(), 11);
+    assert_eq!(tool_names(&turn).len(), 14);
     assert_eq!(
-        tool_names(&turn)[9..],
+        tool_names(&turn)[12..],
         ["search_news", "read_page"],
         "the news tools go through the gateway too"
     );
@@ -3965,7 +4031,7 @@ async fn news_stays_off_when_the_trader_turns_it_off_and_one_answer_cannot_searc
     assert!(turn.cards.is_empty());
     assert_eq!(turn.steps[1].preview, "Unknown tool: search_news.");
     let bodies = chat_bodies(&router.received_requests().await.expect("recorded"));
-    assert_eq!(tool_names(&bodies[2]).len(), 9);
+    assert_eq!(tool_names(&bodies[2]).len(), 12);
     let user = bodies[2]["messages"].as_array().and_then(|m| m.last()).expect("user");
     assert!(
         user["content"]
@@ -4168,4 +4234,261 @@ async fn without_the_market_list_the_news_page_still_shows_the_news() {
     let page = desk.studio.news_feed().await.expect("news page");
     assert_eq!(page.stories.len(), 3);
     assert!(page.stories.iter().all(|story| story.markets.is_empty()));
+}
+
+/// A neutral grid bot with no trigger and no stops, as the Grid bots page sends it.
+fn neutral_grid(symbol: &str, lower: &str, upper: &str, grids: u32, margin: &str) -> GridRequest {
+    GridRequest {
+        symbol: symbol.to_string(),
+        direction: GridDirection::Neutral,
+        spacing: GridSpacing::Arithmetic,
+        lower_price: lower.to_string(),
+        upper_price: upper.to_string(),
+        grids,
+        margin: margin.to_string(),
+        leverage: 3,
+        trigger_price: None,
+        stop_upper: None,
+        stop_lower: None,
+        close_on_stop: None,
+        post_only: None,
+    }
+}
+
+/// The trader's latest message in a chat request, with the desk block attached.
+fn latest_user(body: &Value) -> String {
+    let messages = body["messages"].as_array().expect("messages");
+    let found = messages.iter().rev().find(|m| m["role"] == "user").and_then(|m| m["content"].as_str());
+    found.expect("a user message").to_string()
+}
+
+#[tokio::test]
+async fn a_grid_bot_answers_only_the_fills_the_exchange_confirms() {
+    let folder = tempfile::tempdir().expect("tempdir");
+    let (desk, _server, exchange) = trading(folder.path(), None).await;
+    let studio = &desk.studio;
+
+    let started = studio.start_grid(neutral_grid("BTC", "60000", "64000", 4, "500")).await.expect("started");
+    let bot = &started.grids[0];
+    assert_eq!((bot.status, bot.active_buy_orders, bot.active_sell_orders), (GridStatus::Running, 2, 2));
+    assert_eq!(bot.last_note, "Running: 4 orders placed.");
+    assert_eq!(started.activity[0].title, "Start a BTC grid bot");
+    let order_at = |snapshot: &Snapshot, index: usize| {
+        snapshot.grids[0].levels[index].order_id.clone().expect("an order")
+    };
+
+    // The buy at 61,000 fills. The sell at 64,000 expires, as a post-only order that would have crossed does.
+    {
+        let mut venue = exchange.lock().expect("exchange");
+        venue.fill(&order_at(&started, 1), "61000");
+        venue.expire(&order_at(&started, 4));
+    }
+    let before = exchange.lock().expect("exchange").changes.len();
+    let synced = studio.sync_grids().await.expect("synced");
+    let bot = &synced.grids[0];
+    assert_eq!(
+        bot.levels.iter().map(|level| level.side).collect::<Vec<_>>(),
+        [Some(Side::Buy), None, Some(Side::Sell), Some(Side::Sell), None],
+        "the fill is answered one level up; the expired order is only taken off the grid"
+    );
+    assert_eq!(
+        bot.last_note,
+        "Placed 1 order after a fill. 1 order was cancelled or expired without filling, so its price level is empty."
+    );
+    assert_eq!(bot.matched_trades, 0, "a buy that opens inventory completes nothing yet");
+    let changes = exchange.lock().expect("exchange").changes.clone();
+    assert_eq!(changes.len(), before + 1, "one paired order, and nothing for the expired one: {changes:?}");
+    assert!(
+        changes[before].contains("side=SELL&type=LIMIT&price=62000&timeInForce=GTX&quantity=0.005"),
+        "{changes:?}"
+    );
+    assert_eq!(synced.activity[0].title, "BTC grid bot: placed 1 order");
+
+    // The trader presses Cancel all on the market. The bot sees its orders were cancelled, not filled,
+    // stops, and sends nothing more.
+    studio.cancel_all_orders("BTCUSDT").await.expect("cancelled");
+    let before = exchange.lock().expect("exchange").changes.len();
+    let synced = studio.sync_grids().await.expect("synced");
+    let bot = &synced.grids[0];
+    assert_eq!(bot.status, GridStatus::Stopped);
+    assert_eq!(
+        bot.last_note,
+        "Stopped: its 3 orders were cancelled outside the bot, so it sent nothing more."
+    );
+    assert_eq!(exchange.lock().expect("exchange").changes.len(), before);
+    assert_eq!(synced.activity[0].title, "BTC grid bot stopped: its orders were cancelled");
+}
+
+#[tokio::test]
+async fn one_market_runs_one_grid_bot_and_a_failed_launch_that_left_a_position_is_kept() {
+    let folder = tempfile::tempdir().expect("tempdir");
+    let (desk, _server, exchange) = trading(folder.path(), None).await;
+    let studio = &desk.studio;
+    studio.start_grid(neutral_grid("BTC", "60000", "64000", 4, "300")).await.expect("first");
+    let second =
+        studio.start_grid(neutral_grid("BTC", "60500", "63500", 4, "300")).await.expect_err("second");
+    assert!(second.to_string().contains("A grid bot is already running on BTC"), "{second}");
+    let preview =
+        studio.preview_grid(neutral_grid("BTC", "60500", "63500", 4, "300")).await.expect("preview");
+    assert!(preview.warnings.iter().any(|w| w.contains("already running on BTC")), "{:?}", preview.warnings);
+
+    // A long grid buys its position at market, then the exchange refuses every limit order.
+    exchange.lock().expect("exchange").reject_limits = true;
+    let long =
+        GridRequest { direction: GridDirection::Long, ..neutral_grid("ETH", "1700", "1900", 4, "300") };
+    let failed = studio.start_grid(long).await.expect_err("no orders taken");
+    assert!(failed.to_string().contains("The position is still open"), "{failed}");
+    let snapshot = studio.snapshot();
+    let kept = snapshot.grids.iter().find(|bot| bot.symbol == "ETHUSDT").expect("the bot is kept");
+    assert_eq!(kept.status, GridStatus::Error);
+    assert!(
+        kept.last_note.starts_with("Opened a 0.") && kept.last_note.contains("ETH long"),
+        "{}",
+        kept.last_note
+    );
+    assert!(exchange.lock().expect("exchange").positions.contains_key("ETHUSDT"));
+
+    // Holding a position in a market is said before a grid is started on it.
+    exchange.lock().expect("exchange").reject_limits = false;
+    let shared = studio.preview_grid(neutral_grid("ETH", "1700", "1900", 4, "300")).await.expect("preview");
+    assert!(
+        shared.warnings.iter().any(|w| w.contains("You already hold") && w.contains("closes all of it")),
+        "{:?}",
+        shared.warnings
+    );
+}
+
+#[tokio::test]
+async fn the_assistant_drafts_a_grid_bot_the_trader_starts() {
+    let folder = tempfile::tempdir().expect("tempdir");
+    let grid = json!({"symbol": "BTC", "direction": "neutral", "lower": 60000, "upper": 64000, "grids": 4, "margin_usdt": 500});
+    let mut proposed = grid.clone();
+    proposed["rationale"] = json!("BTC is ranging on the 4h; a close below 60,000 breaks the range.");
+    let router = openrouter(vec![
+        calls(&[("plan_grid", grid)]),
+        calls(&[("propose_grid", proposed.clone())]),
+        says("The grid bot is drafted. It runs only while the app is open."),
+        calls(&[("get_grids", json!({})), ("propose_grid", proposed)]),
+        says("It is running."),
+    ])
+    .await;
+    let (desk, _server, exchange) = trading(folder.path(), Some(&router)).await;
+    let studio = &desk.studio;
+    with_model(&desk, "lab/agent", false).await;
+
+    let events = Events::default();
+    let asked = "Grid BTC, neutral, 10 grids between support and resistance on the 4h, 250 USDT margin. Draft it for me to start.";
+    let snapshot = studio.ask(asked, &events).await.expect("turn");
+    let run = last_turn(&snapshot);
+    assert_eq!(kinds(&run.cards), ["grid"], "the dry run is shown; the draft is the next step");
+    let draft = snapshot.grid_draft.clone().expect("a draft waits for the trader");
+    assert_eq!(run.grid.as_ref(), Some(&draft));
+    assert!(events.kinds().contains(&"grid"));
+    assert_eq!(
+        (
+            draft.request.symbol.as_str(),
+            draft.request.lower_price.as_str(),
+            draft.request.leverage,
+            draft.preview.buy_orders,
+            draft.preview.sell_orders
+        ),
+        ("BTCUSDT", "60000", 3, 2, 2)
+    );
+    assert!(draft.rationale.contains("breaks the range"));
+    assert!(exchange.lock().expect("exchange").changes.is_empty(), "planning and drafting send nothing");
+
+    let bodies = chat_bodies(&router.received_requests().await.expect("recorded"));
+    let planned: Value = serde_json::from_str(&tool_result(&bodies[1], "plan_grid")).expect("json");
+    assert_eq!(
+        (&planned["note"], &planned["lower_price"], &planned["resting_buy_orders"]),
+        (&json!("Dry run: nothing was sent."), &json!(60000.0), &json!(2))
+    );
+    let drafted: Value = serde_json::from_str(&tool_result(&bodies[2], "propose_grid")).expect("json");
+    assert!(drafted["status"].as_str().is_some_and(|s| s.contains("does not start until they start it")));
+    assert!(latest_user(&bodies[0]).contains("pending_ticket: none\ngrid_bots: none\npending_grid: none"));
+
+    // The trader starts it. Only now does the exchange hear about it.
+    let started = studio.start_grid_draft(&draft.id).await.expect("started");
+    assert!(started.grid_draft.is_none());
+    assert_eq!(started.receipts[&draft.id], "Running: 4 orders placed.");
+    assert_eq!((started.grids[0].status, started.grids[0].symbol.as_str()), (GridStatus::Running, "BTCUSDT"));
+    assert!(!exchange.lock().expect("exchange").changes.is_empty());
+    // A draft is used up by its first start.
+    let again = studio.start_grid_draft(&draft.id).await.expect_err("used up");
+    assert!(again.to_string().contains("expired"), "{again}");
+
+    // How is it doing? The assistant reads the bots; it cannot draft a second bot on the same market.
+    let snapshot = studio.ask("How are my grid bots doing?", &Silent).await.expect("turn");
+    let run = last_turn(&snapshot);
+    assert_eq!(kinds(&run.cards), ["grids"]);
+    let read_step = run.steps.iter().find(|step| step.name == "get_grids").expect("a get_grids step");
+    assert_eq!(read_step.preview, "BTCUSDT running", "how the bots are doing stays out of the journal");
+    let bodies = chat_bodies(&router.received_requests().await.expect("recorded"));
+    let read: Value = serde_json::from_str(&tool_result(&bodies[4], "get_grids")).expect("json");
+    assert_eq!(
+        (
+            &read["grid_bots"][0]["status"],
+            &read["grid_bots"][0]["grids"],
+            &read["grid_bots"][0]["grid_profit_usdt"]
+        ),
+        (&json!("running"), &json!(4), &json!(0.0))
+    );
+    assert!(tool_result(&bodies[4], "propose_grid").contains("already running on BTC"));
+    let desk_now = latest_user(&bodies[3]);
+    assert!(
+        desk_now.contains(
+            "grid_bots: BTCUSDT neutral grid running, 60,000.00 to 64,000.00, 4 grids, 500.00 USDT at 3x"
+        ),
+        "{desk_now}"
+    );
+    assert!(snapshot.grid_draft.is_none());
+}
+
+#[tokio::test]
+async fn mainnet_grid_bots_from_the_assistant_need_the_traders_permission_and_go_stale() {
+    let folder = tempfile::tempdir().expect("tempdir");
+    let proposed = json!({"symbol": "BTC", "direction": "neutral", "lower": 60000, "upper": 64000, "grids": 4,
+        "margin_usdt": 500, "rationale": "Ranging on the 4h; wrong below 60,000."});
+    let router = openrouter(vec![
+        calls(&[("propose_grid", proposed.clone())]),
+        says("It is turned off."),
+        calls(&[("propose_grid", proposed.clone())]),
+        says("Drafted."),
+        calls(&[("propose_grid", proposed)]),
+        says("Drafted again."),
+    ])
+    .await;
+    let (server, exchange) = stand_in(Network::Mainnet).await;
+    let desk = open(folder.path(), Arc::default(), |config| {
+        config.exchange_bases.insert(Network::Mainnet, server.uri());
+        config.openrouter_base = Some(router.uri());
+    });
+    let studio = &desk.studio;
+    studio.boot().await.expect("boot");
+    studio.connect_wallet_key(key_request(Network::Mainnet)).await.expect("wallet");
+    with_model(&desk, "lab/agent", false).await;
+
+    let refused = studio.ask("Grid BTC", &Silent).await.expect("turn");
+    assert!(refused.grid_draft.is_none());
+    let bodies = chat_bodies(&router.received_requests().await.expect("recorded"));
+    assert!(tool_result(&bodies[1], "propose_grid").contains("grid bots follow the same switch"));
+
+    with_model(&desk, "lab/agent", true).await;
+    let drafted = studio.ask("Grid BTC", &Silent).await.expect("turn").grid_draft.expect("a draft");
+    assert_eq!(drafted.network, Network::Mainnet);
+    // Raising the leverage limit leaves it as it was; lowering it below the draft's leverage does not.
+    studio.save_risk(RiskRequest { max_leverage: 5, isolated: true }).expect("raised");
+    assert_eq!(studio.snapshot().grid_draft.map(|draft| draft.id), Some(drafted.id.clone()));
+    studio.save_risk(RiskRequest { max_leverage: 2, isolated: true }).expect("lowered");
+    assert!(studio.snapshot().grid_draft.is_none());
+    let stale = studio.start_grid_draft(&drafted.id).await.expect_err("stale");
+    assert!(stale.to_string().contains("expired"), "{stale}");
+
+    // Drafted again, then the permission is withdrawn: the draft goes with it.
+    studio.save_risk(RiskRequest { max_leverage: 3, isolated: true }).expect("back");
+    let again = studio.ask("Grid BTC", &Silent).await.expect("turn").grid_draft.expect("a draft");
+    with_model(&desk, "lab/agent", false).await;
+    assert!(studio.snapshot().grid_draft.is_none());
+    assert!(studio.start_grid_draft(&again.id).await.is_err());
+    assert!(exchange.lock().expect("exchange").changes.is_empty(), "nothing reached the exchange");
 }

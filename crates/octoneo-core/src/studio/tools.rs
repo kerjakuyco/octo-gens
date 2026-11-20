@@ -13,7 +13,10 @@ use rust_decimal::Decimal;
 use serde_json::{Value, json};
 
 use super::turn::Trace;
-use super::view::{CardView, MarketRow, NewsView, OrderBookView, PlanView, QuoteView, TechnicalFrame};
+use super::view::{
+    CardView, GridBotView, GridPreviewView, GridRequest, MarketRow, NewsView, OrderBookView, PlanView,
+    QuoteView, TechnicalFrame,
+};
 use super::{ANALYSIS_BARS, CARD_LEVELS, DEFAULT_LEVERAGE, Intent, Size, Studio, TicketSpec};
 use crate::assistant::tools::{
     self as t, Offered, PlanRequest, account_json, book_json, candles_json, news_json, page_json,
@@ -21,9 +24,10 @@ use crate::assistant::tools::{
 };
 use crate::assistant::{Limits, ToolHost};
 use crate::error::Result;
+use crate::grid::{GridDirection, GridSpacing};
 use crate::indicators::{MIN_BARS, analyze};
 use crate::llm::ToolCall;
-use crate::model::{Side, Timeframe};
+use crate::model::{Side, Timeframe, decimal_text};
 use crate::{bail, desk_err};
 
 const PRIVATE_PREVIEW: &str = "Private result, not kept.";
@@ -50,6 +54,112 @@ fn mover_json(row: &MarketRow) -> Value {
         "change_24h_pct": row.change_pct.map(|change| (change * 100.0).round() / 100.0),
         "volume_24h_quote": row.quote_volume24h.as_deref().map_or(Value::Null, figure),
         "funding_rate_pct": row.funding_rate_pct,
+    })
+}
+
+/// A figure the interface holds as text that may be missing.
+fn optional_figure(text: Option<&str>) -> Value {
+    text.map_or(Value::Null, figure)
+}
+
+/// A wire word such as `neutral` or `running`, as the interface spells it.
+fn word_of(value: impl serde::Serialize) -> Value {
+    serde_json::to_value(value).unwrap_or(Value::Null)
+}
+
+/// A grid bot's dry run, for the model.
+fn grid_json(preview: &GridPreviewView) -> Value {
+    json!({
+        "network": preview.network.as_str(),
+        "symbol": preview.symbol,
+        "direction": preview.direction.as_str(),
+        "spacing": word_of(preview.spacing),
+        "mark_price": figure(&preview.mark_price),
+        "lower_price": figure(&preview.lower_price),
+        "upper_price": figure(&preview.upper_price),
+        "grids": preview.grids,
+        "leverage": preview.leverage,
+        "margin_mode": if preview.isolated { "isolated" } else { "cross" },
+        "margin_usdt": figure(&preview.margin),
+        "quantity_per_order": figure(&preview.qty_per_grid),
+        "value_per_order_usdt": figure(&preview.notional_per_grid),
+        "total_value_usdt": figure(&preview.total_notional),
+        "minimum_margin_usdt": figure(&preview.min_margin),
+        "profit_per_grid_after_fees_pct": {"lowest": preview.profit_per_grid_min_pct, "highest": preview.profit_per_grid_max_pct},
+        "first_market_order": preview.initial_side.map(|side| json!({
+            "side": side.as_str(),
+            "quantity": optional_figure(preview.initial_qty.as_deref()),
+        })),
+        "resting_buy_orders": preview.buy_orders,
+        "resting_sell_orders": preview.sell_orders,
+        "estimated_liquidation_if_long": optional_figure(preview.est_liq_long.as_deref()),
+        "estimated_liquidation_if_short": optional_figure(preview.est_liq_short.as_deref()),
+        "stop_lower": optional_figure(preview.stop_lower.as_deref()),
+        "stop_upper": optional_figure(preview.stop_upper.as_deref()),
+        "warnings": preview.warnings,
+    })
+}
+
+/// One of the trader's grid bots, for the model.
+fn bot_json(bot: &GridBotView) -> Value {
+    json!({
+        "symbol": bot.symbol,
+        "direction": bot.direction.as_str(),
+        "status": word_of(bot.status),
+        "lower_price": figure(&bot.lower_price),
+        "upper_price": figure(&bot.upper_price),
+        "grids": bot.grids,
+        "margin_usdt": figure(&bot.margin),
+        "leverage": bot.leverage,
+        "mark_price": optional_figure(bot.mark_price.as_deref()),
+        "completed_grid_trades": bot.matched_trades,
+        "grid_profit_usdt": figure(&bot.realized_pnl),
+        "position_unrealized_pnl_usdt": figure(&bot.unrealized_pnl),
+        "resting_buy_orders": bot.active_buy_orders,
+        "resting_sell_orders": bot.active_sell_orders,
+        "trigger_price": optional_figure(bot.trigger_price.as_deref()),
+        "stop_lower": optional_figure(bot.stop_lower.as_deref()),
+        "stop_upper": optional_figure(bot.stop_upper.as_deref()),
+        "started_utc": bot.created_at,
+        "last_checked_utc": bot.updated_at,
+        "last_note": bot.last_note,
+    })
+}
+
+/// The grid bot a model asked about, as the desk takes it.
+fn grid_request(args: &Value, limit: u32) -> Result<GridRequest> {
+    let direction = match text(args, "direction")? {
+        "neutral" => GridDirection::Neutral,
+        "long" => GridDirection::Long,
+        "short" => GridDirection::Short,
+        other => bail!("direction must be neutral, long or short, not {other}."),
+    };
+    let spacing = match optional_text(args, "spacing").unwrap_or("arithmetic") {
+        "arithmetic" => GridSpacing::Arithmetic,
+        "geometric" => GridSpacing::Geometric,
+        other => bail!("spacing must be arithmetic or geometric, not {other}."),
+    };
+    let grids = whole(args, "grids")?.ok_or_else(|| desk_err!("Missing required argument: grids."))?;
+    let leverage = whole(args, "leverage")?.unwrap_or(limit.min(DEFAULT_LEVERAGE));
+    if leverage > limit {
+        bail!("Leverage {leverage}x is above the trader's limit of {limit}x.");
+    }
+    let price = |key: &str| required_number(args, key).map(decimal_text);
+    let stop = |key: &str| optional_number(args, key).map(|value| value.map(decimal_text));
+    Ok(GridRequest {
+        symbol: text(args, "symbol")?.to_string(),
+        direction,
+        spacing,
+        lower_price: price("lower")?,
+        upper_price: price("upper")?,
+        grids,
+        margin: price("margin_usdt")?,
+        leverage,
+        trigger_price: None,
+        stop_upper: stop("stop_upper")?,
+        stop_lower: stop("stop_lower")?,
+        close_on_stop: None,
+        post_only: None,
     })
 }
 
@@ -151,6 +261,13 @@ fn describe(name: &str, args: &Value) -> String {
             .unwrap_or_default(),
         t::ANALYZE_MARKET | t::GET_CANDLES => format!("{} {}", word("symbol"), word("timeframe")),
         t::GET_ORDER_BOOK | t::PLAN_POSITION => word("symbol"),
+        t::PLAN_GRID | t::PROPOSE_GRID => {
+            let bound = |key: &str| amount(args, key).unwrap_or_default();
+            format!("{} {} {} to {}", word("symbol"), word("direction"), bound("lower"), bound("upper"))
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ")
+        }
         t::PROPOSE_ORDER => {
             let size = amount(args, "quantity")
                 .or_else(|| amount(args, "notional_usdt").map(|value| format!("{value} USDT of")));
@@ -179,6 +296,21 @@ fn preview(name: &str, value: &Value) -> String {
             value["positions"].as_array().map_or(0, Vec::len),
             value["open_orders"].as_array().map_or(0, Vec::len)
         ),
+        // How the trader's bots are doing is kept out of the journal, as the account is.
+        t::GET_GRIDS => {
+            let bots = value["grid_bots"].as_array().map(Vec::as_slice).unwrap_or_default();
+            let listed: Vec<String> = bots
+                .iter()
+                .map(|bot| {
+                    format!(
+                        "{} {}",
+                        bot["symbol"].as_str().unwrap_or("?"),
+                        bot["status"].as_str().unwrap_or("?")
+                    )
+                })
+                .collect();
+            if listed.is_empty() { "no grid bots".to_string() } else { listed.join(", ") }
+        }
         _ => value.to_string(),
     }
 }
@@ -438,6 +570,49 @@ impl DeskTools<'_> {
         Ok(summary)
     }
 
+    async fn plan_grid(&self, args: &Value) -> Result<Value> {
+        let limit = self.studio.state().prefs.max_leverage;
+        let preview = self.studio.preview_grid(grid_request(args, limit)?).await?;
+        let mut summary = grid_json(&preview);
+        summary["note"] = json!("Dry run: nothing was sent.");
+        self.trace.card(CardView::Grid { preview: Box::new(preview) });
+        Ok(summary)
+    }
+
+    async fn propose_grid(&self, args: &Value) -> Result<Value> {
+        let limit = self.studio.state().prefs.max_leverage;
+        let request = grid_request(args, limit)?;
+        let draft = self.studio.draft_grid(request, optional_text(args, "rationale").unwrap_or("")).await?;
+        let summary = json!({
+            "status": "Grid bot drafted and shown to the trader. It does not start until they start it in the app, and it runs only while the app is open.",
+            "grid": grid_json(&draft.preview),
+        });
+        self.trace.grid(draft);
+        Ok(summary)
+    }
+
+    async fn get_grids(&self) -> Result<Value> {
+        let network = self.studio.network();
+        let bots = {
+            let state = self.studio.state();
+            self.studio.grid_views(&state)
+        };
+        if bots.is_empty() {
+            return Ok(json!({
+                "network": network.as_str(),
+                "grid_bots": [],
+                "note": format!("The trader has no grid bots on {}.", network.name()),
+            }));
+        }
+        let rows: Vec<Value> = bots.iter().map(bot_json).collect();
+        self.trace.card(CardView::Grids { bots });
+        Ok(json!({
+            "network": network.as_str(),
+            "grid_bots": rows,
+            "note": "As the app last checked them. Grid profit counts completed grid trades after estimated fees; unrealized is the whole position in that market.",
+        }))
+    }
+
     async fn search_news(&self, args: &Value) -> Result<Value> {
         let query = optional_text(args, "query").unwrap_or_default();
         if query.chars().count() > QUERY_CHARS {
@@ -508,6 +683,9 @@ impl DeskTools<'_> {
             t::GET_ACCOUNT => self.get_account().await,
             t::PLAN_POSITION => self.plan_position(args).await,
             t::PROPOSE_ORDER => self.propose_order(args).await,
+            t::PLAN_GRID => self.plan_grid(args).await,
+            t::PROPOSE_GRID => self.propose_grid(args).await,
+            t::GET_GRIDS => self.get_grids().await,
             t::SEARCH_NEWS if self.offered.web => self.search_news(args).await,
             t::READ_PAGE if self.offered.web => self.read_page(args).await,
             t::LIST_SERVER_TOOLS if self.offered.servers => self.list_server_tools(args).await,

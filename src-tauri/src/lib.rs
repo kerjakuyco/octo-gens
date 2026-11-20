@@ -22,9 +22,9 @@ use octoneo_core::mcp::{McpConnectRequest, ToolInfo};
 use octoneo_core::model::Network;
 use octoneo_core::store::{Provider, SecretStore, Theme};
 use octoneo_core::studio::view::{
-    AssistantRequest, CandleSeries, FundingRequest, FundingView, MarketRow, ModelsRequest, NewsFeedView,
-    OrderBookView, RiskRequest, Snapshot, TechnicalsView, TicketRequest, TradeView, TurnEvent, TurnSink,
-    WalletBrowserRequest, WalletKeyRequest,
+    AssistantRequest, CandleSeries, FundingRequest, FundingView, GridPreviewView, GridRequest, MarketRow,
+    ModelsRequest, NewsFeedView, OrderBookView, RiskRequest, Snapshot, TechnicalsView, TicketRequest,
+    TradeView, TurnEvent, TurnSink, WalletBrowserRequest, WalletKeyRequest,
 };
 use octoneo_core::studio::{Studio, StudioConfig};
 use tauri::http::{Response, StatusCode, header};
@@ -207,6 +207,41 @@ async fn cancel_order(studio: Desk<'_>, symbol: String, order_id: String) -> Rep
 #[tauri::command]
 async fn cancel_all_orders(studio: Desk<'_>, symbol: String) -> Reply<Snapshot> {
     studio.cancel_all_orders(&symbol).await.map_err(message)
+}
+
+#[tauri::command]
+async fn preview_grid(studio: Desk<'_>, request: GridRequest) -> Reply<GridPreviewView> {
+    studio.preview_grid(request).await.map_err(message)
+}
+
+#[tauri::command]
+async fn start_grid(studio: Desk<'_>, request: GridRequest) -> Reply<Snapshot> {
+    studio.start_grid(request).await.map_err(message)
+}
+
+#[tauri::command]
+async fn sync_grids(studio: Desk<'_>) -> Reply<Snapshot> {
+    studio.sync_grids().await.map_err(message)
+}
+
+#[tauri::command]
+async fn stop_grid(studio: Desk<'_>, id: String, close_position: bool) -> Reply<Snapshot> {
+    studio.stop_grid(&id, close_position).await.map_err(message)
+}
+
+#[tauri::command]
+async fn delete_grid(studio: Desk<'_>, id: String) -> Reply<Snapshot> {
+    studio.delete_grid(&id).map_err(message)
+}
+
+#[tauri::command]
+async fn start_grid_draft(studio: Desk<'_>, id: String) -> Reply<Snapshot> {
+    studio.start_grid_draft(&id).await.map_err(message)
+}
+
+#[tauri::command]
+async fn dismiss_grid_draft(studio: Desk<'_>) -> Reply<Snapshot> {
+    Ok(studio.dismiss_grid_draft())
 }
 
 #[tauri::command]
@@ -534,6 +569,13 @@ pub fn run() {
         close_position,
         cancel_order,
         cancel_all_orders,
+        preview_grid,
+        start_grid,
+        sync_grids,
+        stop_grid,
+        delete_grid,
+        start_grid_draft,
+        dismiss_grid_draft,
         connect_wallet_key,
         connect_wallet_browser,
         fund_wallet,

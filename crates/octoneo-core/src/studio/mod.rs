@@ -9,6 +9,7 @@
 //! Orders follow one path whoever asks for them: a ticket is drafted against
 //! the live account, shown to the trader, and sent only when they confirm it.
 
+mod grid;
 mod tools;
 mod turn;
 pub mod view;
@@ -30,6 +31,7 @@ use crate::connect;
 use crate::error::{DeskError, Result};
 use crate::exchange::signing::{Address, AgentKey};
 use crate::exchange::{ExchangeClient, Markets, OrderKind, OrderRequest, Placement, Wallet};
+use crate::grid::{GridBot, GridStatus};
 use crate::indicators::{MIN_BARS, analyze};
 use crate::instruments::{DEFAULT_SYMBOL, default_watchlist};
 use crate::llm::cloudflare::{self, Cloudflare};
@@ -261,6 +263,10 @@ struct State {
     catalog: Vec<ModelInfo>,
     /// Links from this session's news searches. The assistant may read these pages, and no others.
     sources: VecDeque<String>,
+    /// Perpetual futures grid bots persisted in the local journal.
+    grids: Vec<GridBot>,
+    /// A grid bot the assistant drafted, waiting for the trader to start it.
+    grid_draft: Option<grid::GridDraft>,
 }
 
 fn instrument(market: &Market, custom: bool) -> InstrumentView {
@@ -336,6 +342,9 @@ pub struct Studio {
     links: tokio::sync::RwLock<HashMap<String, Arc<McpLink>>>,
     state: Mutex<State>,
     work: Mutex<Work>,
+    /// Held for the whole of any grid work that sends orders, so a background look at the exchange
+    /// never interleaves with a start or a stop.
+    grid_work: tokio::sync::Mutex<()>,
     cancel: Mutex<CancellationToken>,
     notifier: Mutex<Option<Notifier>>,
 }
@@ -551,6 +560,7 @@ impl Studio {
             journal.threads(THREADS_SHOWN)?.into_iter().filter_map(thread_view).collect();
         let mut activity: VecDeque<RunView> = journal.thread::<RunView>("", ACTIVITY_SHOWN)?.into();
         activity.make_contiguous().reverse();
+        let grids: Vec<GridBot> = journal.load_grids()?;
         // Real prices by default. Nothing can be traded until a wallet is connected.
         let network = Network::parse(&prefs.network).unwrap_or(Network::Mainnet);
         let focus =
@@ -603,8 +613,11 @@ impl Studio {
                 cloudflare_token,
                 catalog: Vec::new(),
                 sources: VecDeque::new(),
+                grids,
+                grid_draft: None,
             }),
             work: Mutex::new(Work::Idle),
+            grid_work: tokio::sync::Mutex::new(()),
             cancel: Mutex::new(CancellationToken::new()),
             notifier: Mutex::new(None),
         }))
@@ -787,6 +800,8 @@ impl Studio {
                 url: p.url.clone(),
             }),
             busy: *self.work.lock().unwrap_or_else(|p| p.into_inner()) == Work::Turn,
+            grids: self.grid_views(&state),
+            grid_draft: state.grid_draft.as_ref().map(|draft| draft.view.clone()),
         }
     }
 
@@ -982,6 +997,7 @@ impl Studio {
             state.account_error.clear();
             state.feed_error.clear();
             state.draft = None;
+            state.grid_draft = None;
             state.prefs.network = network.as_str().to_string();
             state.arrange(&markets);
         }
@@ -1025,8 +1041,20 @@ impl Studio {
     }
 
     /// Re-reads balances, positions and open orders. A failure is reported in the snapshot.
+    /// When active grid bots exist on the active network, also syncs their rungs.
     pub async fn refresh_account(&self) -> Result<Snapshot> {
-        let _ = self.fetch_account(self.network()).await;
+        let network = self.network();
+        let has_active_grids = {
+            let state = self.state();
+            state.grids.iter().any(|g| {
+                g.network == network && matches!(g.status, GridStatus::Waiting | GridStatus::Running)
+            })
+        };
+        if has_active_grids {
+            let _ = self.sync_grids().await;
+            return Ok(self.snapshot());
+        }
+        let _ = self.fetch_account(network).await;
         Ok(self.snapshot())
     }
 
@@ -1342,11 +1370,24 @@ impl Studio {
         }
         {
             let mut state = self.state();
+            let mode_changed = state.prefs.isolated != request.isolated;
             state.epoch += 1;
             state.prefs.max_leverage = request.max_leverage;
             state.prefs.isolated = request.isolated;
             // A ticket drafted under the old limits no longer says what it would do.
             state.draft = None;
+            // A grid bot draft still does, unless its leverage is now above the limit or its margin mode changed.
+            let epoch = state.epoch;
+            let fits = |draft: &grid::GridDraft| {
+                draft.view.request.leverage <= request.max_leverage && !mode_changed
+            };
+            match state.grid_draft.take().filter(fits) {
+                Some(mut draft) => {
+                    draft.epoch = epoch;
+                    state.grid_draft = Some(draft);
+                }
+                None => state.grid_draft = None,
+            }
         }
         self.save_prefs()?;
         Ok(self.snapshot())
@@ -1422,6 +1463,7 @@ impl Studio {
             reasoning: String::new(),
             ms: started.elapsed().as_millis() as u64,
             ticket: None,
+            grid: None,
             cards: Vec::new(),
             usage: None,
             model: String::new(),
@@ -1909,7 +1951,7 @@ impl Studio {
             };
             let trigger = match &kind {
                 OrderKind::StopMarket { trigger } | OrderKind::TakeProfitMarket { trigger } => *trigger,
-                OrderKind::Market => Decimal::ZERO,
+                OrderKind::Market | OrderKind::Limit { .. } => Decimal::ZERO,
             };
             let order = OrderRequest {
                 symbol: symbol.to_string(),
@@ -2034,6 +2076,7 @@ impl Studio {
                 state.account = None;
                 state.account_error.clear();
                 state.draft = None;
+                state.grid_draft = None;
             }
         }
         self.save_prefs()
@@ -2301,6 +2344,7 @@ impl Studio {
                 state.account = None;
                 state.account_error.clear();
                 state.draft = None;
+                state.grid_draft = None;
             }
         }
         self.save_prefs()?;
@@ -2658,10 +2702,15 @@ impl Studio {
     fn apply_options(state: &mut State, request: &AssistantRequest) {
         state.prefs.effort = request.effort;
         state.prefs.live_tickets = request.live_tickets;
-        // A mainnet ticket the assistant drafted does not outlive the permission it was drafted under.
+        // A mainnet ticket or grid bot the assistant drafted does not outlive the permission it was drafted under.
         let withdrawn = |draft: &Draft| draft.by_assistant && draft.network == Network::Mainnet;
         if !request.live_tickets && state.draft.as_ref().is_some_and(withdrawn) {
             state.draft = None;
+        }
+        if !request.live_tickets
+            && state.grid_draft.as_ref().is_some_and(|draft| draft.view.network == Network::Mainnet)
+        {
+            state.grid_draft = None;
         }
     }
 

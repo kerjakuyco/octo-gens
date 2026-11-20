@@ -15,6 +15,8 @@ use crate::assistant::tools::Plan;
 use crate::bail;
 use crate::error::Result;
 use crate::exchange::{Premium, Tick, Trade};
+use crate::grid::{GridBot, GridLevel, profit_per_grid_pct};
+pub use crate::grid::{GridDirection, GridSpacing, GridStatus};
 use crate::indicators::{Analysis, tidy, two};
 use crate::llm::Usage;
 use crate::mcp::Transport;
@@ -524,6 +526,14 @@ pub enum CardView {
     },
     /// Carries no data: the interface shows the live account.
     Account,
+    /// A grid bot worked out as a dry run: nothing was sent. Boxed, because a preview is large.
+    Grid {
+        preview: Box<GridPreviewView>,
+    },
+    /// The trader's grid bots on the active network, as they were read.
+    Grids {
+        bots: Vec<GridBotView>,
+    },
 }
 
 impl CardView {
@@ -544,6 +554,15 @@ impl CardView {
             CardView::Plan { plan } => format!("plan {} {} {}", plan.symbol, plan.entry, plan.stop),
             CardView::News { query, .. } => format!("news {}", query.trim().to_lowercase()),
             CardView::Account => "account".to_string(),
+            CardView::Grid { preview } => format!(
+                "grid {} {} {} {} {}",
+                preview.symbol,
+                preview.direction.as_str(),
+                preview.lower_price,
+                preview.upper_price,
+                preview.grids
+            ),
+            CardView::Grids { .. } => "grids".to_string(),
         }
     }
 }
@@ -809,6 +828,9 @@ pub struct RunView {
     pub ms: u64,
     #[serde(default)]
     pub ticket: Option<TicketView>,
+    /// A grid bot this run drafted for the trader to start.
+    #[serde(default)]
+    pub grid: Option<GridDraftView>,
     /// What the assistant looked at, in the order it looked.
     #[serde(default)]
     pub cards: Vec<CardView>,
@@ -862,6 +884,208 @@ pub struct WalletNoticeView {
     pub text: String,
 }
 
+/// One price rung in a perpetual futures grid.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GridLevelView {
+    pub index: usize,
+    pub price: String,
+    pub side: Option<Side>,
+    pub order_id: Option<String>,
+    pub filled_count: u32,
+}
+
+impl From<&GridLevel> for GridLevelView {
+    fn from(level: &GridLevel) -> Self {
+        Self {
+            index: level.index,
+            price: decimal_text(level.price),
+            side: level.side,
+            order_id: level.order_id.clone(),
+            filled_count: level.filled_count,
+        }
+    }
+}
+
+/// Parameters for previewing or launching a perpetual futures grid bot. A setting left out is
+/// left out on the wire too, as the interface's optional fields are.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GridRequest {
+    pub symbol: String,
+    pub direction: GridDirection,
+    pub spacing: GridSpacing,
+    pub lower_price: String,
+    pub upper_price: String,
+    pub grids: u32,
+    pub margin: String,
+    pub leverage: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_price: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stop_upper: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stop_lower: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub close_on_stop: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub post_only: Option<bool>,
+}
+
+/// A grid bot the assistant drafted, waiting for the trader. Nothing is sent until the trader
+/// starts it, and starting it checks it again against the live price first. How starting it went
+/// is filed under its id with the ticket receipts and failures.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GridDraftView {
+    pub id: String,
+    pub network: Network,
+    /// What starting it launches.
+    pub request: GridRequest,
+    /// The dry run the draft was checked with when it was made.
+    pub preview: GridPreviewView,
+    /// Why the assistant proposed it, with the price that would prove the range wrong.
+    pub rationale: String,
+}
+
+/// Dry-run preview of a futures grid bot before any signed orders are sent.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GridPreviewView {
+    pub network: Network,
+    pub symbol: String,
+    pub base: String,
+    pub quote: String,
+    pub mark_price: String,
+    pub direction: GridDirection,
+    pub spacing: GridSpacing,
+    pub lower_price: String,
+    pub upper_price: String,
+    pub grids: u32,
+    pub leverage: u32,
+    pub isolated: bool,
+    pub margin: String,
+    pub qty_per_grid: String,
+    pub notional_per_grid: String,
+    pub total_notional: String,
+    pub min_margin: String,
+    pub profit_per_grid_min_pct: f64,
+    pub profit_per_grid_max_pct: f64,
+    pub initial_side: Option<Side>,
+    pub initial_qty: Option<String>,
+    pub est_liq_long: Option<String>,
+    pub est_liq_short: Option<String>,
+    pub buy_orders: u32,
+    pub sell_orders: u32,
+    pub trigger_price: Option<String>,
+    pub stop_upper: Option<String>,
+    pub stop_lower: Option<String>,
+    pub close_on_stop: bool,
+    pub post_only: bool,
+    pub levels: Vec<GridLevelView>,
+    pub warnings: Vec<String>,
+}
+
+/// A running or stopped perpetual futures grid bot.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GridBotView {
+    pub id: String,
+    pub network: Network,
+    pub symbol: String,
+    pub base: String,
+    pub quote: String,
+    pub direction: GridDirection,
+    pub spacing: GridSpacing,
+    pub status: GridStatus,
+    pub lower_price: String,
+    pub upper_price: String,
+    pub grids: u32,
+    pub leverage: u32,
+    pub isolated: bool,
+    pub margin: String,
+    pub qty_per_grid: String,
+    pub entry_price: String,
+    pub mark_price: Option<String>,
+    pub trigger_price: Option<String>,
+    pub stop_upper: Option<String>,
+    pub stop_lower: Option<String>,
+    pub close_on_stop: bool,
+    pub post_only: bool,
+    pub matched_trades: u32,
+    pub realized_pnl: String,
+    pub unrealized_pnl: String,
+    pub total_pnl: String,
+    pub roi_pct: Option<f64>,
+    pub profit_per_grid_min_pct: f64,
+    pub profit_per_grid_max_pct: f64,
+    pub active_buy_orders: u32,
+    pub active_sell_orders: u32,
+    pub created_at: String,
+    pub updated_at: String,
+    pub stopped_at: Option<String>,
+    pub last_note: String,
+    pub levels: Vec<GridLevelView>,
+}
+
+impl GridBotView {
+    pub fn from_bot(bot: &GridBot, mark: Option<Decimal>, unrealized: Decimal) -> Self {
+        let prices: Vec<Decimal> = bot.levels.iter().map(|lvl| lvl.price).collect();
+        let (min_pct, max_pct) = profit_per_grid_pct(&prices);
+        let total = bot.realized_pnl + unrealized;
+        let roi_pct = if bot.margin > Decimal::ZERO {
+            (total / bot.margin).checked_mul(Decimal::from(100)).and_then(|pct| pct.to_f64()).map(two)
+        } else {
+            None
+        };
+        let active_buy_orders =
+            bot.levels.iter().filter(|lvl| lvl.order_id.is_some() && lvl.side == Some(Side::Buy)).count()
+                as u32;
+        let active_sell_orders =
+            bot.levels.iter().filter(|lvl| lvl.order_id.is_some() && lvl.side == Some(Side::Sell)).count()
+                as u32;
+
+        Self {
+            id: bot.id.clone(),
+            network: bot.network,
+            symbol: bot.symbol.clone(),
+            base: bot.base.clone(),
+            quote: bot.quote.clone(),
+            direction: bot.direction,
+            spacing: bot.spacing,
+            status: bot.status,
+            lower_price: decimal_text(bot.lower_price),
+            upper_price: decimal_text(bot.upper_price),
+            grids: bot.grids,
+            leverage: bot.leverage,
+            isolated: bot.isolated,
+            margin: decimal_text(cents(bot.margin)),
+            qty_per_grid: decimal_text(bot.qty_per_grid),
+            entry_price: decimal_text(bot.entry_price),
+            mark_price: mark.map(decimal_text),
+            trigger_price: bot.trigger_price.map(decimal_text),
+            stop_upper: bot.stop_upper.map(decimal_text),
+            stop_lower: bot.stop_lower.map(decimal_text),
+            close_on_stop: bot.close_on_stop,
+            post_only: bot.post_only,
+            matched_trades: bot.matched_trades,
+            realized_pnl: decimal_text(cents(bot.realized_pnl)),
+            unrealized_pnl: decimal_text(cents(unrealized)),
+            total_pnl: decimal_text(cents(total)),
+            roi_pct,
+            profit_per_grid_min_pct: min_pct,
+            profit_per_grid_max_pct: max_pct,
+            active_buy_orders,
+            active_sell_orders,
+            created_at: stamp(bot.created_at),
+            updated_at: stamp(bot.updated_at),
+            stopped_at: bot.stopped_at.map(stamp),
+            last_note: bot.last_note.clone(),
+            levels: bot.levels.iter().map(GridLevelView::from).collect(),
+        }
+    }
+}
+
 /// Everything the user interface renders.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -895,6 +1119,10 @@ pub struct Snapshot {
     pub servers: Vec<McpView>,
     pub pending_wallet: Option<PendingWalletView>,
     pub busy: bool,
+    /// Perpetual futures grid bots managed by this desk (most recently updated first).
+    pub grids: Vec<GridBotView>,
+    /// A grid bot the assistant drafted, waiting for the trader to start or discard it.
+    pub grid_draft: Option<GridDraftView>,
 }
 
 /// `[open time ms, open, high, low, close, volume]`.
@@ -1046,6 +1274,10 @@ pub enum TurnEvent {
     },
     Ticket {
         ticket: TicketView,
+    },
+    /// The assistant drafted a grid bot; it waits in the snapshot for the trader.
+    Grid {
+        grid: GridDraftView,
     },
     Finished {
         run: RunView,

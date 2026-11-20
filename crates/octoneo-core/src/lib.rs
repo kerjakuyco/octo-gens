@@ -8,6 +8,7 @@ pub mod assistant;
 pub mod connect;
 pub mod error;
 pub mod exchange;
+pub mod grid;
 pub mod indicators;
 pub mod instruments;
 pub mod llm;

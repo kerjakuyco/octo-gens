@@ -278,6 +278,11 @@ pub enum Placement {
 #[derive(Clone, Debug, PartialEq)]
 pub enum OrderKind {
     Market,
+    /// Resting limit order used by grid bots. `post_only` uses `GTX` so it never crosses the spread as a taker.
+    Limit {
+        price: Decimal,
+        post_only: bool,
+    },
     /// Closes at market once the mark price reaches the trigger, limiting a loss.
     StopMarket {
         trigger: Decimal,
@@ -1132,6 +1137,11 @@ impl ExchangeClient {
         let mut pairs = vec![("symbol", order.symbol.clone()), ("side", order.side.venue().to_string())];
         match &order.kind {
             OrderKind::Market => pairs.push(("type", "MARKET".to_string())),
+            OrderKind::Limit { price, post_only } => {
+                pairs.push(("type", "LIMIT".to_string()));
+                pairs.push(("price", decimal_text(*price)));
+                pairs.push(("timeInForce", if *post_only { "GTX" } else { "GTC" }.to_string()));
+            }
             OrderKind::StopMarket { trigger } | OrderKind::TakeProfitMarket { trigger } => {
                 let kind = if matches!(order.kind, OrderKind::StopMarket { .. }) {
                     "STOP_MARKET"

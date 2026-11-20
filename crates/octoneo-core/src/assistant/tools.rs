@@ -23,6 +23,9 @@ pub const GET_MOVERS: &str = "get_movers";
 pub const GET_ACCOUNT: &str = "get_account";
 pub const PLAN_POSITION: &str = "plan_position";
 pub const PROPOSE_ORDER: &str = "propose_order";
+pub const PLAN_GRID: &str = "plan_grid";
+pub const PROPOSE_GRID: &str = "propose_grid";
+pub const GET_GRIDS: &str = "get_grids";
 pub const SEARCH_NEWS: &str = "search_news";
 pub const READ_PAGE: &str = "read_page";
 pub const LIST_SERVER_TOOLS: &str = "list_server_tools";
@@ -50,6 +53,26 @@ fn tool(name: &str, description: &str, properties: Value, required: &[&str]) -> 
             "parameters": {"type": "object", "properties": properties, "required": required, "additionalProperties": false},
         },
     })
+}
+
+/// The settings of a grid bot, as `plan_grid` and `propose_grid` take them.
+fn grid_properties(symbol: &Value, rationale: bool) -> Value {
+    let mut properties = json!({
+        "symbol": symbol,
+        "direction": {"type": "string", "enum": ["neutral", "long", "short"], "description": "neutral starts flat; long buys a position at the start and sells it off as the price rises; short is the mirror. Neutral unless the trader asked for a direction."},
+        "lower": {"type": "number", "description": "Lower bound: a support level analyze_market reported, as it is."},
+        "upper": {"type": "number", "description": "Upper bound: a resistance level analyze_market reported, as it is."},
+        "grids": {"type": "integer", "minimum": 2, "maximum": 50, "description": "Number of steps between the bounds."},
+        "margin_usdt": {"type": "number", "description": "Margin the bot may use, in USDT, as the trader gave it."},
+        "leverage": {"type": "integer", "description": "Leverage. Default is the smaller of 3 and the trader's limit; never above the limit in <desk>."},
+        "spacing": {"type": "string", "enum": ["arithmetic", "geometric"], "description": "Equal price steps (the default) or equal percentage steps."},
+        "stop_lower": {"type": "number", "description": "Optional price below the range at which the bot stops."},
+        "stop_upper": {"type": "number", "description": "Optional price above the range at which the bot stops."},
+    });
+    if rationale {
+        properties["rationale"] = json!({"type": "string", "description": "One sentence shown with the draft: why this range, and the price that would prove it wrong."});
+    }
+    properties
 }
 
 /// Tool definitions in the Chat Completions format. The web tools and the
@@ -129,6 +152,24 @@ pub fn schemas(offered: Offered) -> Vec<Value> {
                 "rationale": {"type": "string", "description": "One sentence shown on the ticket: why this trade, and the level that proves it wrong."},
             }),
             &["symbol", "action", "rationale"],
+        ),
+        tool(
+            PLAN_GRID,
+            "Dry run of a grid bot on one market: the price levels between the lower and upper bounds, the order size on each level, the margin it uses, the estimated profit of one grid step after fees, estimated liquidation prices, and warnings. Nothing is sent. Take the bounds from the support and resistance analyze_market reported; the price must sit between them. Call it before propose_grid.",
+            grid_properties(&symbol, false),
+            &["symbol", "direction", "lower", "upper", "grids", "margin_usdt"],
+        ),
+        tool(
+            PROPOSE_GRID,
+            "Draft a grid bot for the trader to look over and start in the app. This does not start the bot, and you will not learn whether they start it. It replaces a grid bot already waiting. Takes the same settings as plan_grid, plus a one-sentence rationale that names the price that would prove the range wrong.",
+            grid_properties(&symbol, true),
+            &["symbol", "direction", "lower", "upper", "grids", "margin_usdt", "rationale"],
+        ),
+        tool(
+            GET_GRIDS,
+            "The trader's grid bots on the active network: market, direction, status, range, number of grids, margin and leverage, completed grid trades and their profit, the unrealized profit or loss of the market's position, the orders resting on each side, and the latest note. Read-only: it does not touch the bots. Use it when the trader asks how their grid bots are doing.",
+            json!({}),
+            &[],
         ),
     ];
     if offered.web {
@@ -656,7 +697,10 @@ mod tests {
                 GET_MOVERS,
                 GET_ACCOUNT,
                 PLAN_POSITION,
-                PROPOSE_ORDER
+                PROPOSE_ORDER,
+                PLAN_GRID,
+                PROPOSE_GRID,
+                GET_GRIDS
             ]
         );
         let everything = schemas(Offered { web: true, servers: true });
@@ -706,6 +750,14 @@ mod tests {
         let propose = core.iter().find(|t| t["function"]["name"] == PROPOSE_ORDER).expect("propose_order");
         let description = propose["function"]["description"].as_str().expect("description");
         assert!(description.contains("does not place the order") && description.contains("stop_loss"));
+        // Likewise a grid bot: the assistant drafts it, the trader starts it.
+        let grid = core.iter().find(|t| t["function"]["name"] == PROPOSE_GRID).expect("propose_grid");
+        let description = grid["function"]["description"].as_str().expect("description");
+        assert!(description.contains("does not start the bot") && description.contains("rationale"));
+        let planned = core.iter().find(|t| t["function"]["name"] == PLAN_GRID).expect("plan_grid");
+        assert!(planned["function"]["description"].as_str().is_some_and(|d| d.contains("Nothing is sent")));
+        // No tool can start, stop or change a bot.
+        assert!(all.iter().all(|n| !n.contains("start") && !n.contains("stop")));
         // No tool exists that could place, cancel or move anything.
         assert!(all.iter().all(|n| !n.contains("place")
             && !n.contains("cancel")

@@ -298,6 +298,10 @@ impl Journal {
         // A deleted conversation is overwritten, not left behind in the file's free pages.
         db.pragma_update(None, "secure_delete", "ON")?;
         db.execute("CREATE TABLE IF NOT EXISTS runs (seq INTEGER PRIMARY KEY, entry TEXT NOT NULL)", [])?;
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS grids (id TEXT PRIMARY KEY, updated_at TEXT NOT NULL, data TEXT NOT NULL)",
+            [],
+        )?;
         Ok(Self { db: Mutex::new(db) })
     }
 
@@ -370,6 +374,33 @@ impl Journal {
         }
         let db = self.db.lock().unwrap_or_else(|p| p.into_inner());
         db.execute(&format!("DELETE FROM runs WHERE {THREAD} = ?1"), params![thread])?;
+        Ok(())
+    }
+
+    /// Inserts or replaces one persisted grid bot record.
+    pub fn save_grid<T: Serialize>(&self, id: &str, updated_at: &str, grid: &T) -> Result<()> {
+        let text = serde_json::to_string(grid)
+            .map_err(|error| crate::desk_err!("The grid bot could not be saved: {error}."))?;
+        let db = self.db.lock().unwrap_or_else(|p| p.into_inner());
+        db.execute(
+            "INSERT OR REPLACE INTO grids (id, updated_at, data) VALUES (?1, ?2, ?3)",
+            params![id, updated_at, text],
+        )?;
+        Ok(())
+    }
+
+    /// Loads all persisted grid bots, most recently updated first.
+    pub fn load_grids<T: for<'de> Deserialize<'de>>(&self) -> Result<Vec<T>> {
+        let db = self.db.lock().unwrap_or_else(|p| p.into_inner());
+        let mut statement = db.prepare("SELECT data FROM grids ORDER BY updated_at DESC")?;
+        let rows = statement.query_map([], |row| row.get::<_, String>(0))?;
+        Ok(rows.filter_map(|row| row.ok()).filter_map(|text| serde_json::from_str(&text).ok()).collect())
+    }
+
+    /// Deletes one persisted grid bot record.
+    pub fn delete_grid(&self, id: &str) -> Result<()> {
+        let db = self.db.lock().unwrap_or_else(|p| p.into_inner());
+        db.execute("DELETE FROM grids WHERE id = ?1", params![id])?;
         Ok(())
     }
 }

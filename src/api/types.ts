@@ -21,6 +21,9 @@ export type Provider = "none" | "openrouter" | "cloudflare" | "ollama" | "lmstud
 export type Effort = "auto" | "low" | "medium" | "high";
 export type Theme = "system" | "light" | "dark";
 export type Trend = "uptrend" | "downtrend" | "mixed" | "unknown";
+export type GridDirection = "neutral" | "long" | "short";
+export type GridSpacing = "arithmetic" | "geometric";
+export type GridStatus = "waiting" | "running" | "stopped" | "error";
 
 /** A perpetual market on the watchlist. */
 export interface InstrumentView {
@@ -200,7 +203,11 @@ export type CardView =
   | { kind: "movers"; rows: MarketRow[] }
   | { kind: "plan"; plan: PlanView }
   | { kind: "news"; query: string; articles: NewsView[] }
-  | { kind: "account" };
+  | { kind: "account" }
+  /** A grid bot the assistant worked out as a dry run: nothing was sent. */
+  | { kind: "grid"; preview: GridPreviewView }
+  /** The trader's grid bots on the active network, as the assistant read them. */
+  | { kind: "grids"; bots: GridBotView[] };
 
 /**
  * Where a story comes from: the crypto newsrooms, or the economy and the stock market
@@ -469,6 +476,8 @@ export interface RunView {
   ms: number;
   /** Ticket drafted by this run, if any. */
   ticket: TicketView | null;
+  /** Grid bot drafted by this run, if any. */
+  grid: GridDraftView | null;
   /** What the assistant looked at, in the order it looked. */
   cards: CardView[];
   usage: UsageView | null;
@@ -510,6 +519,91 @@ export interface WalletNoticeView {
   text: string;
 }
 
+/** One price rung in a perpetual futures grid. */
+export interface GridLevelView {
+  index: number;
+  price: string;
+  side: Side | null;
+  orderId: string | null;
+  filledCount: number;
+}
+
+/** Dry-run preview of a perpetual futures grid bot before any signed orders are sent. */
+export interface GridPreviewView {
+  network: Network;
+  symbol: string;
+  base: string;
+  quote: string;
+  markPrice: string;
+  direction: GridDirection;
+  spacing: GridSpacing;
+  lowerPrice: string;
+  upperPrice: string;
+  grids: number;
+  leverage: number;
+  isolated: boolean;
+  margin: string;
+  qtyPerGrid: string;
+  notionalPerGrid: string;
+  totalNotional: string;
+  minMargin: string;
+  profitPerGridMinPct: number;
+  profitPerGridMaxPct: number;
+  initialSide: Side | null;
+  initialQty: string | null;
+  estLiqLong: string | null;
+  estLiqShort: string | null;
+  buyOrders: number;
+  sellOrders: number;
+  triggerPrice: string | null;
+  stopUpper: string | null;
+  stopLower: string | null;
+  closeOnStop: boolean;
+  postOnly: boolean;
+  levels: GridLevelView[];
+  warnings: string[];
+}
+
+/** Live or stopped perpetual futures grid bot shown in the Grid Bots workspace. */
+export interface GridBotView {
+  id: string;
+  network: Network;
+  symbol: string;
+  base: string;
+  quote: string;
+  direction: GridDirection;
+  spacing: GridSpacing;
+  status: GridStatus;
+  lowerPrice: string;
+  upperPrice: string;
+  grids: number;
+  leverage: number;
+  isolated: boolean;
+  margin: string;
+  qtyPerGrid: string;
+  entryPrice: string;
+  markPrice: string | null;
+  triggerPrice: string | null;
+  stopUpper: string | null;
+  stopLower: string | null;
+  closeOnStop: boolean;
+  postOnly: boolean;
+  matchedTrades: number;
+  realizedPnl: string;
+  unrealizedPnl: string;
+  totalPnl: string;
+  roiPct: number | null;
+  profitPerGridMinPct: number;
+  profitPerGridMaxPct: number;
+  activeBuyOrders: number;
+  activeSellOrders: number;
+  createdAt: string;
+  updatedAt: string;
+  stoppedAt: string | null;
+  lastNote: string;
+  levels: GridLevelView[];
+}
+
 /** Everything the UI renders. Most commands return a fresh copy. */
 export interface Snapshot {
   version: string;
@@ -543,6 +637,8 @@ export interface Snapshot {
   activity: RunView[];
   /** Ticket awaiting confirmation, if any. */
   draft: TicketView | null;
+  /** Grid bot the assistant drafted, waiting for the trader to start or discard it. */
+  gridDraft: GridDraftView | null;
   /** Outcome text by ticket id for tickets submitted this session. */
   receipts: Record<string, string>;
   /**
@@ -556,6 +652,8 @@ export interface Snapshot {
   pendingWallet: PendingWalletView | null;
   /** An assistant turn is running. */
   busy: boolean;
+  /** Perpetual futures grid bots managed on the active network (newest first). */
+  grids: GridBotView[];
 }
 
 /** `[openTimeMs, open, high, low, close, volume]`, oldest first. */
@@ -605,6 +703,40 @@ export interface TicketRequest {
   reduceOnly?: boolean;
   stopLoss?: string;
   takeProfit?: string;
+}
+
+/** Parameters for previewing or launching a perpetual futures grid bot. */
+export interface GridRequest {
+  symbol: string;
+  direction: GridDirection;
+  spacing: GridSpacing;
+  lowerPrice: string;
+  upperPrice: string;
+  grids: number;
+  margin: string;
+  leverage: number;
+  triggerPrice?: string;
+  stopUpper?: string;
+  stopLower?: string;
+  closeOnStop?: boolean;
+  postOnly?: boolean;
+}
+
+/**
+ * A grid bot the assistant drafted, waiting for the trader. Nothing is sent until the trader starts it
+ * with `startGridDraft`, which checks it again against the live price first. How starting it went is
+ * filed under its id in `Snapshot.receipts`, or in `Snapshot.failures` when it was refused.
+ */
+export interface GridDraftView {
+  /** Pass it to `startGridDraft`. */
+  id: string;
+  network: Network;
+  /** What starting it launches. */
+  request: GridRequest;
+  /** The dry run the draft was checked with when it was made. */
+  preview: GridPreviewView;
+  /** Why the assistant proposed it, in a sentence, with the price that would prove it wrong. */
+  rationale: string;
 }
 
 /** Connect with an API wallet created on the exchange's own API wallet page. */
@@ -691,6 +823,8 @@ export type TurnEvent =
   /** Something the assistant looked at; append it to the run's cards. */
   | { type: "card"; card: CardView }
   | { type: "ticket"; ticket: TicketView }
+  /** The assistant drafted a grid bot; it waits in `Snapshot.gridDraft` for the trader. */
+  | { type: "grid"; grid: GridDraftView }
   | { type: "finished"; run: RunView };
 
 /** Details of a newer GitHub Release discovered by the desktop updater. */
@@ -752,6 +886,23 @@ export interface Backend {
   closePosition(symbol: string): Promise<Snapshot>;
   cancelOrder(symbol: string, orderId: string): Promise<Snapshot>;
   cancelAllOrders(symbol: string): Promise<Snapshot>;
+  /** Computes a dry-run preview of a perpetual futures grid bot without submitting orders. */
+  previewGrid(request: GridRequest): Promise<GridPreviewView>;
+  /** Launches a confirmed perpetual futures grid bot on the active network. */
+  startGrid(request: GridRequest): Promise<Snapshot>;
+  /** Reconciles active grid bots against live exchange open orders and mark prices. */
+  syncGrids(): Promise<Snapshot>;
+  /** Stops an active grid bot, cancelling its resting orders and optionally closing the market position. */
+  stopGrid(id: string, closePosition: boolean): Promise<Snapshot>;
+  /** Removes a stopped or errored grid bot from local history. */
+  deleteGrid(id: string): Promise<Snapshot>;
+  /**
+   * Starts the grid bot the assistant drafted, once the trader has looked it over. The draft is checked
+   * again against the live price and the account first, and is used up by its first start.
+   */
+  startGridDraft(id: string): Promise<Snapshot>;
+  /** Discards the grid bot the assistant drafted. */
+  dismissGridDraft(): Promise<Snapshot>;
   connectWalletKey(request: WalletKeyRequest): Promise<Snapshot>;
   /** Starts a browser approval. The snapshot's `pendingWallet.url` is opened in the browser by the core; the result arrives through `onSnapshot`. */
   connectWalletBrowser(request: WalletBrowserRequest): Promise<Snapshot>;
