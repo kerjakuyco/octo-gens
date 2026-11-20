@@ -38,7 +38,7 @@ const PLATFORMS = [
   },
 ];
 
-const platform = (p) => `<section class="platform" aria-labelledby="platform-${p.id}">
+const platform = (p) => `<section class="platform" data-platform="${p.id}" aria-labelledby="platform-${p.id}">
 <h2 class="platform-name" id="platform-${p.id}">${p.name}</h2>
 <p class="platform-detail">${p.detail}</p>
 <ul class="platform-files">
@@ -53,7 +53,10 @@ ${p.note ? `<p class="platform-note">${p.note}</p>` : ""}
 <p class="platform-names">${p.files.map(([name]) => `<code>${esc(name)}</code>`).join("")}</p>
 </section>`;
 
-const INSTALLERS = `<div class="platforms" id="download">
+// Every system's installers are in the page as built, for crawlers, phones and browsers without the
+// script. On a computer whose system it can tell, site.js puts that system first and folds the others
+// under "Other platforms".
+const INSTALLERS = `<div class="platforms" id="download" data-installers>
 ${PLATFORMS.map(platform).join("\n")}
 </div>
 <p class="platforms-note">Every installer is built from this repository by GitHub Actions, and the ${out(RELEASE, "release page")} lists each file’s <span class="nowrap">SHA-256</span> checksum.</p>`;

@@ -200,6 +200,86 @@
     }
   }
 
+  /* -------------------------------------------------------------- download */
+
+  // The download page is built listing every system's installers: what a crawler, a phone, a tablet
+  // or a browser without this script shows. On a computer whose system it can tell, that system's
+  // installer comes first as the one card, and the others fold away, closed, under "Other platforms".
+  const installers = document.querySelector("[data-installers]");
+  if (installers) {
+    const system = detectSystem();
+    if (system) arrange(installers, system);
+    // Only some browsers say a Mac's chip, and only when asked. An Intel Mac cannot run the disk
+    // image, so for one the card leads with building from source.
+    if (system === "macos" && navigator.userAgentData?.getHighEntropyValues) {
+      navigator.userAgentData
+        .getHighEntropyValues(["architecture"])
+        .then((values) => {
+          if (values.architecture === "x86") leadWithSource(installers);
+        })
+        .catch(() => {});
+    }
+  }
+
+  /** "windows", "macos" or "linux" for a computer, or null for a phone, a tablet or anything unclear. */
+  function detectSystem() {
+    const data = navigator.userAgentData;
+    const agent = navigator.userAgent || "";
+    if (data?.mobile || /Android|iPhone|iPad|iPod|Mobile/i.test(agent)) return null;
+    const named = data?.platform || navigator.platform || "";
+    // An iPad asks for the desktop site as a Mac; a Mac with a touch screen is one.
+    if (/Mac/i.test(named) && navigator.maxTouchPoints > 1) return null;
+    if (/^Win/i.test(named)) return "windows";
+    if (/^Mac|macOS/i.test(named)) return "macos";
+    if (/Linux/i.test(named)) return "linux";
+    if (named) return null;
+    if (/Windows/i.test(agent)) return "windows";
+    if (/Macintosh|Mac OS X/i.test(agent)) return "macos";
+    if (/Linux|X11/i.test(agent)) return "linux";
+    return null;
+  }
+
+  function arrange(container, system) {
+    const cards = [...container.querySelectorAll("[data-platform]")];
+    const mine = cards.find((card) => card.dataset.platform === system);
+    if (!mine) return;
+    const heading = mine.querySelector(".platform-name");
+    heading.textContent = `Download for ${heading.textContent}`;
+    // The first file stays the button; the system's other files become quiet links beneath it.
+    for (const link of [...mine.querySelectorAll(".platform-files a")].slice(1)) link.className = "platform-alt";
+    mine.classList.add("platform-mine");
+    container.dataset.detected = system;
+
+    const others = document.createElement("details");
+    others.className = "platforms-other";
+    const summary = document.createElement("summary");
+    summary.textContent = "Other platforms";
+    const grid = document.createElement("div");
+    grid.className = "platforms-other-grid";
+    for (const card of cards) if (card !== mine) grid.append(card);
+    others.append(summary, grid);
+    container.after(others);
+  }
+
+  function leadWithSource(container) {
+    const mine = container.querySelector('.platform-mine[data-platform="macos"]');
+    if (!mine) return;
+    const files = mine.querySelector(".platform-files");
+    const image = files.querySelector("a");
+    const build = document.createElement("a");
+    build.className = "button button-brand";
+    build.href = "#build";
+    build.textContent = "Build from source";
+    const item = document.createElement("li");
+    item.append(build);
+    files.prepend(item);
+    image.className = "platform-alt";
+    image.textContent = "Disk image for Apple silicon (.dmg)";
+    const note = mine.querySelector(".platform-note");
+    if (note) mine.querySelector(".platform-detail").after(note);
+    mine.dataset.intel = "true";
+  }
+
   /* --------------------------------------------------------------- preview */
 
   // The preview of the assistant opens on its first conversation, finished. Picking a prompt, or

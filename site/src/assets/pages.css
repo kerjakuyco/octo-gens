@@ -937,6 +937,147 @@
   white-space: nowrap;
 }
 
+/* With the visitor's system known, site.js leaves its card alone in the grid, centred, with the one
+   button and the system's other files as quiet links, and folds the other systems under "Other
+   platforms". Without the script all three cards stay side by side. */
+.platforms[data-detected] {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 34rem;
+  margin-inline: auto;
+}
+
+.platform-mine {
+  align-items: center;
+  padding: 36px 32px 28px;
+  text-align: center;
+}
+
+.platform-mine .platform-files {
+  justify-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.platform-mine .platform-files .button {
+  width: auto;
+  min-width: 15rem;
+}
+
+.platform-mine .platform-names {
+  justify-items: center;
+}
+
+.platform-mine[data-intel] .platform-note {
+  margin-top: 14px;
+  color: var(--text-2);
+  font-size: 0.9375rem;
+}
+
+.platform-alt {
+  color: var(--text-2);
+  font-size: 0.9375rem;
+  text-decoration: underline;
+  text-decoration-color: var(--line-2);
+  text-underline-offset: 4px;
+  transition: color 0.2s, text-decoration-color 0.2s;
+}
+
+.platform-alt:hover {
+  color: var(--text);
+  text-decoration-color: currentColor;
+}
+
+.platforms-other {
+  max-width: 34rem;
+  margin: 14px auto 0;
+}
+
+.platforms-other > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+  margin-inline: auto;
+  padding: 10px 16px;
+  border-radius: var(--pill);
+  color: var(--text-2);
+  font-size: 0.9375rem;
+  list-style: none;
+  cursor: pointer;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.platforms-other > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* A chevron that points down while closed and up while open. */
+.platforms-other > summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-top: -3px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.platforms-other[open] > summary::after {
+  margin-top: 3px;
+  transform: rotate(-135deg);
+}
+
+.platforms-other > summary:hover {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.platforms-other > summary:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.platforms-other-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.platforms-other[open] .platforms-other-grid {
+  animation: platforms-open 0.24s ease;
+}
+
+@keyframes platforms-open {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .platforms-other > summary::after,
+  .platform-alt {
+    transition: none;
+  }
+
+  .platforms-other[open] .platforms-other-grid {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .platforms-other-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .platform-mine {
+    padding: 28px 20px 22px;
+  }
+}
+
 /* The first launch, on each system: two numbered sequences side by side. */
 .launch-steps {
   display: grid;
