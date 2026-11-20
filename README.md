@@ -11,7 +11,7 @@ OctoNeo is a desktop AI trading assistant for perpetual futures on a decentralis
 - **Market data in depth.** A screener of every market and a page for each one: a chart with moving averages, Bollinger bands and support and resistance, the order book and latest trades, funding history and open interest, and technical readings on four timeframes.
 - **The news, read for you.** Ask why a market is moving. The assistant reads the latest headlines from crypto newsrooms, Yahoo Finance and the Federal Reserve, says who reported what and how long ago, and lists the headlines with links. Ask about a share or a commodity the exchange lists and it reads the news filed under that ticker too. It works with every model, and needs no key.
 - **A news page.** The newest stories from the same newsrooms, laid out like a magazine with their pictures. Narrow it to your watchlist, to crypto or to the economy, or to one newsroom, and open a market from the story that names it. A story opens right inside the app.
-- **A trading journal.** Log each trade with its setup, a short checklist, your thesis and the lesson. See your win rate, your best setup and how often you kept to your rules, and ask the assistant to review it. **Account** reads like a portfolio: equity, free margin, exposure and funding carry at a glance.
+- **A trading journal.** Log each trade, or a grid bot once it stops, with its setup, a short checklist, your thesis and the lesson. See your win rate, your best setup and how often you kept to your rules, and ask the assistant to review it. **Account** shows your equity, free margin, exposure and funding at a glance, with your grid bots' orders marked beside your own.
 - **Grid bots.** Pick a price range and a grid bot buys low and sells high inside it, with orders waiting on both sides. Set one up on **Grid bots**, or ask the assistant to draft one for you to start.
 - **You stay in control.** The assistant can only draft: a ticket, or a grid bot. Nothing reaches the exchange until you confirm it, and the assistant may not draft for mainnet until you allow it. A grid bot you start keeps to the range and the size you gave it.
 - **Your wallet, your funds.** Your wallet approves a separate trade-only key for the app. The app never sees your wallet's key, and the key it holds cannot withdraw.
@@ -144,9 +144,9 @@ Type `/` in the message box, or press **Commands** under it, for what the assist
 - **Stop-loss and take-profit.** They are placed right after the entry as reduce-only orders that trigger on the mark price. A stop beyond the estimated liquidation price is refused, because liquidation would come first. If the exchange refuses one after the entry has filled, the ticket says so plainly.
 - **Closing.** Ask the assistant, or press **Close** on a position under **Account** or on the market's page. Either drafts a ticket for the whole position. Confirming it also cancels the reduce-only orders left on that position. One order never flips a long into a short.
 
-**Account** shows equity, positions with the exchange's liquidation prices, and open orders. It is read from the exchange again every 15 seconds while the window is in view. **Activity** lists what the app did on the exchange: each order and cancellation, step by step.
+**Account** shows equity, positions with the exchange's liquidation prices, and open orders, with a grid bot's orders marked as its own. Cancelling one of a bot's orders asks first, because a bot whose orders are all gone stops; you can stop the bot instead. It is read from the exchange again every 15 seconds while the window is in view. **Activity** lists what the app did on the exchange, by day: each order and cancellation step by step, deposits and withdrawals, and what each grid bot did.
 
-![Positions and their protective orders](docs/images/account-dark.png)
+![Account: the summary, the grid bots at work, and positions with their stop-loss and take-profit](docs/images/account-dark.png)
 
 [docs/exchange.md](docs/exchange.md) describes exactly what the app sends to the exchange and how it signs.
 

@@ -4,6 +4,11 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## Unreleased
 
+### Changed
+
+- **Account, redesigned.** Plain names (equity, free margin, exposure, funding over the next eight hours) and calmer cards. A position a grid bot trades says so and links to the bot. Open orders mark a bot's orders and filter by whose they are, and cancelling a bot's order, or every order in its market, asks first: you can cancel only your own, cancel them all, or stop the bot instead. A line under the summary shows your bots at work, and **Ask AI** fills `/portfolio` rather than sending anything.
+- **Activity, redesigned.** Two views. **What the app did** is a timeline by day of orders, tickets, deposits and withdrawals and grid bot events, filtered by kind and network, each opening to the steps behind it. **Journal** holds your entries with a plain form, filters, search and how each setup did. A stopped grid bot can be logged in the journal, and **Grid bot** is a setup of its own. **Review with AI** fills `/journal`.
+
 ## 0.9.0
 
 Grid bots, on their own page and in the chat, and commands in the message box for trading, research and analysis.
