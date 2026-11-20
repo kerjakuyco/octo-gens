@@ -109,12 +109,12 @@ The Worker's name in the dashboard must be `octoneo`, the name in `wrangler.json
 
 ## Pictures
 
-The screenshots in `src/assets/shots/` are of the app's interface running in a browser against its built-in mock: a fictional account and a fictional model, nothing real. The News page's newsrooms, stories and pictures are the mock's too: invented stories from invented newsrooms, with abstract pictures the mock draws. Each is saved in light and dark as `<name>-<light|dark>-<pixel width>.webp`, and the build turns the dark ones into `<picture>` elements: the site is dark only. It publishes only the pictures a page shows; the light copies and the pictures no page uses stay in the folder for later. Pictures sit in the text column of the feature pages, 760 pixels wide at most. A picture named `<name>-phone` replaces `<name>` on screens up to 640 pixels wide, where a whole window or dialog would shrink its text past reading: it is the same page in a narrow window, which the app lays out for its width. Settings and the order form are taken whole, each dialog at the height of its content.
+The screenshots in `src/assets/shots/` are of the app's interface running in a browser against its built-in mock: a fictional account and a fictional model, nothing real. The News page's newsrooms, stories and pictures are the mock's too: invented stories from invented newsrooms, with abstract pictures the mock draws. So are the entries in the trading journal (`journal`): the interface shows its invented sample trades only in a browser, and the desktop app starts with an empty journal. Captions say these are samples. Each is saved in light and dark as `<name>-<light|dark>-<pixel width>.webp`, and the build turns the dark ones into `<picture>` elements: the site is dark only. It publishes only the pictures a page shows; the light copies and the pictures no page uses stay in the folder for later. Pictures sit in the text column of the feature pages, 760 pixels wide at most. A picture named `<name>-phone` replaces `<name>` on screens up to 640 pixels wide, where a whole window or dialog would shrink its text past reading: it is the same page in a narrow window, which the app lays out for its width. Settings and the order form are taken whole, each dialog at the height of its content. Account and the trading journal end below their second card, and below the first on a phone, with the cards after it hidden.
 
 | Page | Pictures |
 | --- | --- |
 | Assistant | `turn-btc`, `settings-tools` |
-| Markets | `markets`, `market`, `structure`, `tab-book`, `tab-funding`, `tab-technicals`, `tab-watchlist`, `order-form`, `account` |
+| Markets | `markets`, `market`, `structure`, `tab-book`, `tab-funding`, `tab-technicals`, `tab-watchlist`, `order-form`, `account`, `journal` |
 | News | `news-page`, `settings-tools` |
 | Wallet | `wallet-connect`, `wallet-deposit`, `wallet-withdraw` |
 | Safety | `settings-trading` |

@@ -110,6 +110,28 @@ async function fitBelow(page, view, selector, gap = 28) {
   await sleep(600);
 }
 
+/** Hides the chats in the sidebar that its foot cuts, and a day's heading left with none. */
+const tidySidebar = `(() => {
+  const list = document.querySelector(".sidebar-threads");
+  if (!list) return;
+  const edge = list.getBoundingClientRect().bottom;
+  for (const section of list.querySelectorAll(".thread-section")) {
+    const rows = [...section.querySelectorAll(".thread-row")];
+    for (const row of rows) if (row.getBoundingClientRect().bottom > edge) row.style.visibility = "hidden";
+    if (rows.every((row) => row.style.visibility === "hidden")) section.style.visibility = "hidden";
+  }
+})()`;
+
+/**
+ * Makes the window end below the first `count` cards of a list, and hides the cards after them, so
+ * the picture ends on the page's own background instead of on the edge of the next card.
+ */
+const endAfter = (cards, count) => async (page, view) => {
+  await page.evaluate(`[...document.querySelectorAll(${JSON.stringify(cards)})].slice(${count}).forEach((n) => (n.style.visibility = "hidden"))`);
+  await fitBelow(page, view, `${cards}:nth-child(${count})`, 24);
+  await page.evaluate(tidySidebar);
+};
+
 /**
  * A market's page: ETH, opened from its position under Account the way a trader would, so Back
  * reads Account. The mock holds a long there with a stop-loss and a take-profit, which the page
@@ -149,13 +171,18 @@ const tabCard = `document.querySelector(".market-detail-card")`;
 const tabContentHeight = `(() => Math.floor(${tabCard}.getBoundingClientRect().height - 2))()`;
 
 const SHOTS = [
-  // Whole windows, each with the narrow window a phone shows instead: the screener, and the account.
+  // Whole windows, each with the narrow window a phone shows instead. The screener ends between rows.
+  { name: "markets", query: "page=markets", scales: [1, 2], window: WINDOW, prepare: async (page) => page.evaluate(hideCut(WINDOW.height)) },
+  { name: "markets-phone", query: "page=markets", window: PHONE, prepare: async (page) => page.evaluate(hideCut(PHONE.height)) },
+  // Account and the trading journal under Activity: the summary at the top, then two positions or
+  // two journal entries, one on a phone. The mock's journal holds invented sample entries; the
+  // desktop app starts with an empty journal.
   ...[
-    { name: "markets", query: "page=markets" },
-    { name: "account", query: "page=account&seed=conversation&positions=1" },
-  ].flatMap(({ name, query }) => [
-    { name, query, scales: [1, 2], window: WINDOW, prepare: async (page) => page.evaluate(hideCut(WINDOW.height)) },
-    { name: `${name}-phone`, query, window: PHONE, prepare: async (page) => page.evaluate(hideCut(PHONE.height)) },
+    { name: "account", query: "page=account&seed=conversation&positions=1", cards: ".positions > li" },
+    { name: "journal", query: "page=activity&seed=conversation&positions=1", cards: ".journal-cards > li" },
+  ].flatMap(({ name, query, cards }) => [
+    { name, query, scales: [1, 2], window: WINDOW, prepare: endAfter(cards, 2), clip: viewport },
+    { name: `${name}-phone`, query, window: PHONE, prepare: endAfter(cards, 1), clip: viewport },
   ]),
   // The News page: the masthead, the filters and the lead stories, down to the end of the stories
   // beside the lead. On a phone the stories beside it go under it, so that picture ends with the lead.

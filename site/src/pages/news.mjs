@@ -17,7 +17,7 @@ const ANSWER = ui({
   className: "ui-chat",
   label:
     "A sample answer in OctoNeo to Any news on BTC and ETH?: a line saying it checked the news, a news card with six headlines from invented newsrooms, each with its newsroom and age, from 38 minutes to 6 hours old, and a short answer naming who reported what.",
-  caption: "Sample headlines from invented newsrooms, from the app’s built-in mock. OctoNeo itself reads eight real publishers.",
+  caption: "Sample headlines from invented newsrooms, from the app’s built-in mock. OctoNeo itself reads seven real publishers.",
   body: `<div class="ui-bar">
 <span class="ui-bar-start"><span class="ui-model">Lantern 2 Large${icon("chevronDown", 14)}</span>${chip("Sample")}</span>
 <span class="ui-bar-end">${network("Testnet")}</span>
@@ -45,21 +45,21 @@ export default {
   path: "/news/",
   title: "News | OctoNeo",
   description:
-    "OctoNeo's News page lays out the newest stories from eight publishers like a magazine and opens each one inside the app. The assistant reads the same feeds to explain a move. No key, no account, and one switch turns it off.",
+    "OctoNeo's News page lays out the newest stories from seven publishers like a magazine and opens each one inside the app. The assistant reads the same feeds to explain a move. No key, no account, and one switch turns it off.",
   render: (ctx) =>
     docPage({
       path: "/news/",
-      title: "Eight newsrooms, without leaving the app",
-      lead: "The News page lays out the newest stories from eight publishers like a magazine, and a story opens right inside the window. Ask why a market is moving, and the assistant reads the same feeds, says who reported what and how long ago, and lists the headlines with links. Neither needs a key or an account, and one switch turns both off.",
+      title: "Seven newsrooms, without leaving the app",
+      lead: "The News page lays out the newest stories from seven publishers like a magazine, and a story opens right inside the window. Ask why a market is moving, and the assistant reads the same feeds, says who reported what and how long ago, and lists the headlines with links. Neither needs a key or an account, and one switch turns both off.",
       visual: ANSWER,
       sections: [
         {
           id: "page",
           title: "The News page",
-          lead: "News in the sidebar lays out the newest stories from the eight publishers like a magazine: a lead story with a large picture, the next ones beside it, a grid of stories with their pictures, then the remaining headlines in brief.",
+          lead: "News in the sidebar lays out the newest stories from the seven publishers like a magazine: a lead story with a large picture, the next ones beside it, a grid of stories with their pictures, then the remaining headlines in brief.",
           body: `${ctx.figure("news-page", {
   alt: "The News page in OctoNeo beside the sidebar: the date, when the stories were read and Refresh; the filters Top stories, Watchlist, Crypto and Macro, and a menu of publishers; a lead story from Tidewire about bitcoin options with a large abstract picture, its summary, its age and a BTC chip; and beside it two stories, from Tidal Reserve Bank and Kelp Desk, each with its picture.",
-  caption: "The News page. The newsrooms, their stories and the abstract pictures are invented by the app’s built-in mock; the app reads the eight publishers listed below.",
+  caption: "The News page. The newsrooms, their stories and the abstract pictures are invented by the app’s built-in mock; the app reads the seven publishers listed below.",
   kind: "inset",
 })}
 ${facts([
@@ -82,8 +82,8 @@ ${facts([
         },
         {
           id: "publishers",
-          title: "Eight publishers",
-          lead: "The News page and the assistant read the public RSS feeds of eight publishers, and no other source of news. Together the feeds hold the last day or two of news, about 300 articles.",
+          title: "Seven publishers",
+          lead: "The News page and the assistant read the public RSS feeds of seven publishers, and no other source of news. Together the feeds hold the last day or two of news, about 300 articles.",
           body: table({
             head: ["Publisher", "Feed"],
             stack: true,
@@ -92,7 +92,6 @@ ${facts([
               ["Cointelegraph", code("https://cointelegraph.com/rss")],
               ["The Block", code("https://www.theblock.co/rss.xml")],
               ["Decrypt", code("https://decrypt.co/feed")],
-              ["The Defiant", code("https://thedefiant.io/feed")],
               ["crypto.news", code("https://crypto.news/feed/")],
               ["Federal Reserve press releases", code("https://www.federalreserve.gov/feeds/press_all.xml")],
               ["Yahoo Finance", `${code("https://feeds.finance.yahoo.com/rss/2.0/headline")}, by ticker`],
@@ -137,7 +136,7 @@ ${facts([
         {
           id: "privacy",
           title: "Privacy, and turning it off",
-          body: `<p>With web search on, the app downloads the publishers’ feeds, the pictures of the stories on the News page and the articles the assistant reads, from your computer. The publishers see a request from your network address, as any site you visit does, and an article you open on the News page loads in the app’s browser view as the publisher made it. What you type is not sent to them, except the ticker of a share, a fund or a commodity you ask about, which goes to Yahoo Finance.</p>
+          body: `<p>With web search on, the app downloads the public feeds of the seven publishers, the pictures of the stories on the News page and the articles the assistant reads, from your computer. The publishers see a request from your network address, as any site you visit does, and an article you open on the News page loads in the app’s browser view as the publisher made it. What you type is not sent to them, except the ticker of a share, a fund or a commodity you ask about, which goes to Yahoo Finance.</p>
 <p>Turn <strong>Web search</strong> off in Settings under Tools. The news tools are then not offered to the model at all, the News page reads nothing and offers to turn it back on, and nothing is downloaded. While it is on, one answer makes at most four news searches and reads at most four pages.</p>
 ${ctx.figure("settings-tools", {
   alt: "Settings open on Tools: the Web search switch, on, which lets the assistant read news feeds and web pages you share, and an attached tool server.",

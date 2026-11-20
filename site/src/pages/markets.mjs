@@ -230,7 +230,7 @@ export default {
   path: "/markets/",
   title: "Markets and orders | OctoNeo",
   description:
-    "A screener of every market, a page for each one with its chart, readings, order book and funding, and how an OctoNeo ticket becomes an order.",
+    "A screener of every market, a page for each one with its chart, readings, order book and funding, how an OctoNeo ticket becomes an order, your account and your trading journal.",
   render: (ctx) =>
     docPage({
       path: "/markets/",
@@ -359,13 +359,39 @@ ${literal("entry × (1 ∓ (1 / leverage − maintenance margin))", "How the est
         },
         {
           id: "account",
-          title: "Account and activity",
-          body: `<p><strong>Account</strong> shows your equity, your positions with the exchange’s liquidation prices, and your open orders, read from the exchange again every 15 seconds while the window is in view. <strong>Activity</strong> lists what the app did on the exchange: each order and cancellation, step by step, and each deposit and withdrawal.</p>
-${ctx.figure("account", {
-  alt: "The Account page on testnet: equity, available margin, margin used, unrealized profit and loss, wallet balance, three positions with size, value, entry, mark, liquidation and margin, and open orders below.",
-  caption: "Account, with three open positions on testnet. Sample data from the app’s built-in mock.",
+          title: "Your account, as a portfolio",
+          lead: "Account opens with your equity, free collateral and margin, directional exposure and estimated funding carry, and how much of your margin is in use. It is read from the exchange again every 15 seconds while the window is in view.",
+          body: `${ctx.figure("account", {
+  alt: "The Account page on testnet beside the sidebar. At the top, the wallet’s address, isolated margin with a 10x leverage limit and a trade-only key, and Deposit, Withdraw, AI Risk Check, Refresh and Place Order. Four cards: equity of 9,990.59 USDT with the wallet balance and unrealized profit and loss; 7,300.78 USDT of free collateral, with 2,689.81 USDT, 26.9% of equity, in use as margin; directional exposure, split between long and short; and the estimated funding carry, with two of three positions holding a stop-loss. Tabs for positions, open orders, collateral and the journal, then two positions, a SOL short at 3x and an ETH long at 5x, each with its size, value, entry, mark and liquidation prices and margin, its stop-loss, and for ETH a take-profit and the reward to risk, with buttons to log it in the journal, add to it, trim it by half and close it.",
+  caption: "Account on testnet: the summary, then each position with its stop-loss and take-profit. Sample data from the app’s built-in mock.",
   kind: "inset",
-})}`,
+})}
+${facts([
+  ["Summary", "Equity, with the wallet balance and the unrealized profit or loss. Free collateral, with the margin in use as a share of equity and the effective leverage: what your positions are worth against your equity. Directional exposure, your longs against your shorts. And the estimated funding carry, what your positions pay or receive at the current funding rates, with how many of them have a stop-loss."],
+  ["Positions", "Filter by side, and sort by size, unrealized profit, return on margin or nearness to liquidation. Each position shows its size, value, entry, mark and liquidation prices and margin, and its stop-loss and take-profit with the reward to risk between them. Close drafts a ticket for the whole position, two more buttons open the order form to add to it or to trim it by half, and Journal starts an entry for it in your trading journal."],
+  ["Open orders", "Filter by market, and sort by market, type, price, distance from the mark price, quantity or time. Cancel one order, or every order in a market."],
+  ["Collateral", "Listed by asset: the balance, what is free and what is held as margin. Beside it, your wallet, the trade-only key the app trades with, when its approval expires, and Deposit and Withdraw."],
+  ["Ask the assistant", "With a model connected, a button asks the assistant to review your positions, your margin and your liquidation risk."],
+], "facts-wide")}`,
+        },
+        {
+          id: "journal",
+          title: "A trading journal",
+          lead: "Activity keeps a journal of your trades. Log one from a position under Account, from a fill in the history, or from scratch. Starting from a position or a fill, the app enters what it knows: the market, the side, the leverage, the entry and the size.",
+          body: `${ctx.figure("journal", {
+  alt: "The Activity page on testnet beside the sidebar, open on the trading journal. At the top, filters for the network, and Export MD, AI Coach Review and Log Trade. Four cards: 466.10 USDT of logged profit and loss; a win rate of 66.7% over three closed trades; 93% of the checklist kept; and Liquidity Sweep as the top setup. Tabs for the journal, the history and the setups, filters by outcome and setup, and a search. Then two sample entries, both still open: an ETH long at 5x on a trend follow and a SOL short at 3x on support and resistance, each with its planned reward to risk, three of three rules kept, its profit or loss, its thesis and its review, and AI Critique, Trade and Edit.",
+  caption: "The trading journal under Activity, with invented sample entries from the app’s built-in mock. In the desktop app the journal starts empty.",
+  kind: "inset",
+})}
+${facts([
+  ["An entry", "The market, the side, the leverage and the outcome; the setup; the entry and exit, the size, the profit or loss and the reward to risk you planned. A three-point checklist asks whether you respected the stop, sized within your risk and followed the plan, and two notes hold your thesis and the lesson."],
+  ["Setups", "Seven: trend follow, breakout, mean reversion, funding carry, support and resistance, liquidity sweep, and macro and news."],
+  ["Summary", "The profit and loss you logged, your win rate, your best setup and how often you kept to your rules. A tab beside the journal compares your setups."],
+  ["Filters", "By outcome, setup and network, or search the market, the setup and your notes."],
+  ["Review", "With a model connected, ask the assistant to review one entry, with its notes, or the journal's figures: win rate, profit and loss, profit factor, how often you kept to your rules and your best setup."],
+], "facts-wide")}
+<p>Beside the journal, Activity lists what the app did on the exchange: each order and cancellation, step by step, and each deposit and withdrawal. Positions, open orders, the journal and the history come a page at a time.</p>
+<p>The journal starts empty. It is kept on your computer in the app window’s own storage, not in the data folder that holds your conversations, and it is not encrypted. It reaches a model only when you ask the assistant to review it, in that message. <a href="/safety/#data">Where the rest of your data lives</a>.</p>`,
         },
         {
           id: "errors",

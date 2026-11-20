@@ -8,7 +8,7 @@ import { esc, icon } from "./site.mjs";
 
 const SAMPLE_NOTE =
   "Sample conversation on testnet, the exchange’s practice network with test funds. The model and the account are fictional; the figures are illustrative, not live prices.";
-const NEWS_NOTE = "Sample headlines from invented newsrooms. OctoNeo itself reads eight real publishers.";
+const NEWS_NOTE = "Sample headlines from invented newsrooms. OctoNeo itself reads seven real publishers.";
 
 const SPARK_ETH =
   "0.0,20.0 1.9,16.6 3.9,15.2 5.8,16.3 7.7,12.8 9.7,9.2 11.6,10.0 13.5,6.9 15.4,9.3 17.4,7.3 19.3,7.1 21.2,4.7 23.2,6.6 25.1,8.3 27.0,5.0 29.0,2.0 30.9,2.5 32.8,4.7 34.8,7.8 36.7,8.2 38.6,10.6 40.6,8.1 42.5,9.2 44.4,8.0 46.3,3.5 48.3,4.3 50.2,2.9 52.1,4.7 54.1,5.7 56.0,8.3";

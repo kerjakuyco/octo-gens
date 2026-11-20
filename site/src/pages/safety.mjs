@@ -126,6 +126,7 @@ ${reference("Eight risks from the model, web pages and tool servers, and what gu
             rows: [
               ["Conversations, activity, preferences", `Windows ${code("%LOCALAPPDATA%\\Octo Gens\\")}<br>macOS ${code("~/Library/Application Support/Octo Gens/")}<br>Linux ${code("~/.local/share/octo-gens/")}`],
               ["API wallet keys, OpenRouter key, Cloudflare API token", `Your system keychain, under ${code("org.octogens.desktop")}`],
+              ["Your trading journal (what you log under Activity)", "The app window’s own storage on your computer, not the folder above"],
               ["Positions, balances, orders", "On the exchange. The app reads them and keeps no copy between launches."],
               ["Story pictures on the News page", "In memory: the last 64, up to 32 MB. Nothing is kept between launches."],
               ["An article you open", "Its cookies and storage, in memory and only while it is open."],
@@ -134,9 +135,10 @@ ${reference("Eight risks from the model, web pages and tool servers, and what gu
 <p>The folder and the keychain entry keep the name the app had before it was called OctoNeo, so an existing installation keeps its wallet, settings and conversations.</p>
 <ul class="checks">
 <li>With a cloud model, your messages and what the assistant reads for them, including the account summary, go to that provider. With Ollama or LM Studio they stay on your computer.</li>
-<li>With web search on, the app downloads the public feeds of eight publishers, the pictures of the stories on the News page, and the articles the assistant reads. What you type is not sent to them, except the ticker of a share, a fund or a commodity, which goes to Yahoo Finance.</li>
+<li>With web search on, the app downloads the public feeds of seven publishers, the pictures of the stories on the News page, and the articles the assistant reads. What you type is not sent to them, except the ticker of a share, a fund or a commodity, which goes to Yahoo Finance.</li>
 <li>An article you open on the News page is loaded by the in-app browser view with the publisher’s own scripts and ads, and keeps no cookies once you close it.</li>
 <li>The journal keeps your conversations, which can include account figures the assistant quoted. Deleting a conversation removes it from the journal.</li>
+<li>Your trading journal is kept as you typed it, not encrypted. It reaches a model only when you ask the assistant to review it, in that message.</li>
 </ul>
 ${reference("Environment variables, meant for tests", table({
   head: ["Environment variable", "Effect"],
@@ -154,6 +156,7 @@ ${reference("Environment variables, meant for tests", table({
           body: `<ul class="checks">
 <li><strong>Anyone who can run programs as you can use the key.</strong> Software running under your user account can ask the keychain for it, or drive the app. The key cannot withdraw, but it can trade.</li>
 <li><strong>The journal is not encrypted.</strong> It keeps your conversations and what the assistant quoted, which can include account figures, and anything you paste into a message. It never contains the keys the app holds.</li>
+<li><strong>Your trading journal is not encrypted either.</strong> What you log under Activity is kept in the app window’s own storage on your computer. It reaches a model only when you ask the assistant to review it.</li>
 <li><strong>A cloud model sees what you ask it.</strong> Your messages, the tool results it gathers and the account summary in each message go to the provider you chose: OpenRouter, or Cloudflare and the provider behind your gateway.</li>
 <li><strong>News publishers see that you read them.</strong> When the app downloads their feeds, the pictures of their stories and the articles the assistant reads, they see your network address, as any site you visit does. An article you open on the News page loads as the publisher made it, with its own scripts, trackers and ads, as in a browser.</li>
 <li><strong>The news can be wrong.</strong> A headline is one newsroom’s report. The assistant is told to say who reported it and when, and not to trade on it, but it cannot check it.</li>

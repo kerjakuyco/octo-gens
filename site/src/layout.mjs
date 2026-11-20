@@ -51,10 +51,10 @@ ${social.join("\n")}
  */
 const PRODUCT = [
   ["/assistant/", "Researches with tools and drafts tickets you confirm."],
-  ["/markets/", "Every market, the chart, the order book and orders."],
+  ["/markets/", "Every market, orders, your account and a trading journal."],
   ["/wallet/", "A trade-only key that cannot withdraw."],
   ["/models/", "OpenRouter, Cloudflare AI Gateway, Ollama or LM Studio."],
-  ["/news/", "Stories from eight publishers, read in the app."],
+  ["/news/", "Stories from seven publishers, read in the app."],
 ];
 const PROJECT = ["/safety/", "/open-source/"];
 
@@ -174,7 +174,7 @@ ${nav}
   <div class="wrap">
     <div class="footer-legal">
       <p>OctoNeo is not financial advice. Trading perpetual futures carries risk.</p>
-      <p>OctoNeo is open source under the <a href="${doc("LICENSE")}">GPL-3.0-only license</a>. OpenRouter, Cloudflare, Ollama, LM Studio, MetaMask, Rabby, TradingView, CoinDesk, Cointelegraph, The Block, Decrypt, The Defiant, crypto.news and Yahoo Finance are trademarks of their owners. OctoNeo is an independent project and is not affiliated with or endorsed by any of them.</p>
+      <p>OctoNeo is open source under the <a href="${doc("LICENSE")}">GPL-3.0-only license</a>. OpenRouter, Cloudflare, Ollama, LM Studio, MetaMask, Rabby, TradingView, CoinDesk, Cointelegraph, The Block, Decrypt, crypto.news and Yahoo Finance are trademarks of their owners. OctoNeo is an independent project and is not affiliated with or endorsed by any of them.</p>
     </div>
   </div>
 </footer>`;

@@ -230,7 +230,8 @@ ${shell([
             head: ["Version", "What changed"],
             stack: true,
             rows: [
-              ["0.7.0", "A News page that lays out the newsrooms’ stories like a magazine, and opens a story inside the app. The order form and Settings were redesigned, the app says when a newer version is out, and the icon is now white on near-black."],
+              ["0.8.0", "A trading journal on the Activity page, which the assistant reviews when you ask, and an Account page that reads like a portfolio. Long lists come a page at a time, the news no longer includes a publisher whose articles need a subscription, and long chat titles fit the sidebar."],
+              ["0.7.0","A News page that lays out the newsrooms’ stories like a magazine, and opens a story inside the app. The order form and Settings were redesigned, the app says when a newer version is out, and the icon is now white on near-black."],
               ["0.6.0", "A page for each market in place of the market panel: chart overlays, readings on trend, volatility and trading flow, and your position and orders in that market. The sidebar was redesigned, and conversations can be filtered by title."],
               ["0.5.0", "The app is now called OctoNeo. A chat-first interface, four ways to connect a model, a screener, the order book, funding and technical readings, the news, and deposits and withdrawals in the app. Every message is answered by a model."],
               ["0.4.0", "Perpetual futures on a decentralized exchange from your own web3 wallet, on mainnet and testnet: a trade-only key, an Account page, leverage and margin held to your limits, stop-loss and take-profit."],
