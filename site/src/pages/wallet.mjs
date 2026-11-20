@@ -1,4 +1,4 @@
-import { callout, code, doc, docPage, facts, icon, literal, out, reference, table, ui, uiButton } from "../site.mjs";
+import { code, doc, docPage, facts, icon, literal, out, reference, table, ui, uiButton } from "../site.mjs";
 
 const APPROVAL = `user=<your wallet>&nonce=<microseconds>&agentName=OctoNeo&agentAddress=<API wallet>
 &expired=<milliseconds>&signatureChainId=56
@@ -126,8 +126,7 @@ ${reference("The four steps of an approval, and what crosses the page", `<ol cla
           id: "deposit",
           title: "Deposit from your wallet",
           lead: "Deposit and Withdraw are in Settings under Wallet, and on the Account page. Each opens a page the app serves on your computer, in the browser where your wallet is, like the approval does. You never have to visit the exchange’s site.",
-          body: `${callout(`<p><strong>Not yet tried on the live exchange, on either network:</strong> orders, deposits sent from a wallet and withdrawals. Orders and withdrawals have been checked against a stand-in that follows the exchange’s API documentation, and deposits by simulating them on their chains without sending them. Practice on testnet, then start small.</p>`)}
-${table({
+          body: `${table({
             head: ["Direction", "What your wallet does", "What the app does"],
             stack: true,
             rows: [

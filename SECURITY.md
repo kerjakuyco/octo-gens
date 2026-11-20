@@ -40,7 +40,7 @@ Fixes are released for the latest version only.
 - **Never type a seed phrase or your wallet's private key into OctoNeo**, or into any chat. The app never needs them.
 - Read what your wallet asks you to sign. The approval must say `canWithdraw=false`. A withdrawal must name your own address as its destination, and the amount you typed. A deposit must go to the vault listed in [docs/exchange.md](docs/exchange.md#depositing).
 - Choose a short approval period, and remove the API wallet on the exchange's API wallet page when you stop using the app on a computer.
-- Keep the leverage limit low, and practise on testnet first.
+- Keep the leverage limit low.
 - Attach only tool servers you trust. A local command runs with your user's permissions.
 - Give a Cloudflare API token only the *Workers AI Read* permission. The app needs nothing more.
 - Keep the app up to date.

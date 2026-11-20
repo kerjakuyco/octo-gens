@@ -57,14 +57,6 @@ export function icon(name, size = 18, className = "") {
   return `<svg class="icon${className ? ` ${className}` : ""}" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICONS[name]}</svg>`;
 }
 
-/**
- * Something to read before acting. Its words say what it is; the dot beside them only marks its
- * kind: amber for what has not been tried on the live exchange, red for the risk of trading.
- */
-export function callout(html, tone = "warn") {
-  return `<div class="callout" data-tone="${tone}" role="note"><span class="callout-dot" aria-hidden="true"></span><div class="callout-body">${html}</div></div>`;
-}
-
 /** Inline code. */
 export const code = (text) => `<code>${esc(text)}</code>`;
 
@@ -177,7 +169,7 @@ function docClose(path) {
   return `<section class="page-close" aria-labelledby="page-close-title">
   <div class="wrap">
     <h2 id="page-close-title">Start with a question</h2>
-    <p>Download OctoNeo, connect a model and ask “BTC outlook”. When you are ready to trade, start on testnet.</p>
+    <p>Download OctoNeo, connect a model and ask “BTC outlook”. When you are ready to trade, connect your wallet.</p>
     ${actions()}
   </div>
 </section>`;
@@ -188,10 +180,9 @@ function docClose(path) {
  * the app drawn in HTML (`visual`); then sections beside an index of them, the next page, and the
  * closing band. `sections` is a list of { id, title, lead, body }; the index names each section by
  * its heading. Where there is no room beside the text, the index is folded above it. `meta` is a
- * short line under the actions; `buttons` replaces the two actions; `notice`, such as a callout,
- * stands under the picture, before the text.
+ * short line under the actions; `buttons` replaces the two actions.
  */
-export function docPage({ path, title, lead, meta = "", buttons = actions(), visual = "", notice = "", sections }) {
+export function docPage({ path, title, lead, meta = "", buttons = actions(), visual = "", sections }) {
   const index = sections.map((s) => `<li><a href="#${s.id}">${s.title}</a></li>`).join("\n");
   return `<div class="page-head">
   <div class="wrap page-intro">
@@ -201,7 +192,6 @@ export function docPage({ path, title, lead, meta = "", buttons = actions(), vis
     ${meta ? `<p class="page-meta">${meta}</p>` : ""}
   </div>
   ${visual ? `<div class="wrap page-visual">${visual}</div>` : ""}
-  ${notice ? `<div class="wrap page-notice">${notice}</div>` : ""}
 </div>
 <div class="wrap doc">
   <nav class="toc" aria-labelledby="toc-title">

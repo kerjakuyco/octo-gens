@@ -1,4 +1,4 @@
-import { TRADINGVIEW, callout, chip, code, doc, docPage, facts, icon, literal, network, out, reference, table, ui, uiButton } from "../site.mjs";
+import { TRADINGVIEW, chip, code, doc, docPage, facts, icon, literal, network, out, reference, table, ui, uiButton } from "../site.mjs";
 
 const chartBy = `Chart by ${out(TRADINGVIEW, "TradingView")}.`;
 
@@ -312,8 +312,7 @@ ${ctx.figure("tab-watchlist", { alt: "The Watchlist tab: markets with price, 24h
           id: "orders",
           title: "How a ticket becomes an order",
           lead: "Every order starts as a ticket: what it does to your position, its value, the margin it needs and an estimated liquidation price. Ask the assistant for one, or use Trade on a market’s page, which needs no model.",
-          body: `${callout(`<p><strong>Not yet tried on the live exchange, on either network:</strong> orders, deposits sent from a wallet and withdrawals. Orders and withdrawals have been checked against a stand-in that follows the exchange’s API documentation, and deposits by simulating them on their chains without sending them. Practice on testnet, then start small.</p>`)}
-<h3>Checked before you see it</h3>
+          body: `<h3>Checked before you see it</h3>
 ${reference("Seven checks, and what happens when one fails", table({
   head: ["Check", "If it fails"],
   stack: true,
@@ -380,7 +379,7 @@ ${ctx.figure("account", {
         },
         {
           id: "testnet",
-          title: "Practice on testnet",
+          title: "Mainnet and testnet",
           body: `<p>Switch to <strong>Testnet</strong> at the top of the window for the same order flow with test funds. Each network has its own wallet, its own market list and its own clock, so switching never mixes them, and a ticket that is waiting expires when you switch.</p>`,
         },
       ],

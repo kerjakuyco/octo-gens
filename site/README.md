@@ -43,7 +43,7 @@ tools/              Scripts that take the screenshots and render the share pictu
 
 Every page works without JavaScript. The one script, `src/assets/site.js`, opens the Product menu and the menu on narrow screens, marks the section being read in the page index, plays the Assistant card on the home page once when it comes into view, and plays the demo's answers when a prompt is picked; it respects reduced motion.
 
-The look is monochrome and dark only: near-black, white and grey text, hairlines, a white pill for the main action and a dark pill for the second. Colour means something: green and red for up and down, amber for testnet and warnings, and the brand blue only on the "New" chip at the top of the home page. The pictures of the app on the home page and at the top of each feature page are drawn in HTML and CSS, not screenshots.
+The look is monochrome and dark only: near-black, white and grey text, hairlines, a white pill for the main action and a dark pill for the second. Colour means something: green and red for up and down, amber for testnet and real funds, and the brand blue only on the "New" chip at the top of the home page. The pictures of the app on the home page and at the top of each feature page are drawn in HTML and CSS, not screenshots.
 
 ### The demo and the sample figures
 

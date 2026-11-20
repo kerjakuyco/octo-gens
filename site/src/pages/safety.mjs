@@ -1,4 +1,4 @@
-import { ADVISORY, callout, chip, code, doc, docPage, icon, network, out, reference, table, ui, uiButton, uiFacts } from "../site.mjs";
+import { ADVISORY, chip, code, doc, docPage, icon, network, out, reference, table, ui, uiButton, uiFacts } from "../site.mjs";
 
 const risks = (rows) => table({ head: ["Risk", "Protection"], stack: true, rows });
 
@@ -57,10 +57,6 @@ export default {
       title: "Built so the assistant cannot trade without you",
       lead: "OctoNeo holds a key that can trade on your account, so the rules that matter are enforced in code rather than requested in a prompt. They hold whatever the model says.",
       visual: TICKET,
-      notice: callout(
-        `<p><strong>OctoNeo is early software and not financial advice.</strong> Perpetual futures are leveraged: a position can be liquidated and lose its whole margin quickly. Practice on testnet first, and trade on mainnet only with money you can afford to lose.</p>`,
-        "risk",
-      ),
       sections: [
         {
           id: "can",
@@ -152,7 +148,6 @@ ${reference("Environment variables, meant for tests", table({
           id: "limits",
           title: "Limits you should know",
           body: `<ul class="checks">
-<li><strong>Orders, deposits sent from a wallet and withdrawals are not yet tried on the live exchange, on either network.</strong> Orders and withdrawals have been checked against a stand-in that follows the exchange’s API documentation, and deposits by simulating them on their chains without sending them. Practice on testnet, then start small.</li>
 <li><strong>Anyone who can run programs as you can use the key.</strong> Software running under your user account can ask the keychain for it, or drive the app. The key cannot withdraw, but it can trade.</li>
 <li><strong>The journal is not encrypted.</strong> It keeps your conversations and what the assistant quoted, which can include account figures, and anything you paste into a message. It never contains the keys the app holds.</li>
 <li><strong>A cloud model sees what you ask it.</strong> Your messages, the tool results it gathers and the account summary in each message go to the provider you chose: OpenRouter, or Cloudflare and the provider behind your gateway.</li>
@@ -174,7 +169,7 @@ ${reference("Environment variables, meant for tests", table({
 <li><strong>Never type a seed phrase or your wallet’s private key into OctoNeo</strong>, or into any chat. The app never needs them.</li>
 <li>Read what your wallet asks you to sign. The approval must say ${code("canWithdraw=false")}. A withdrawal must name your own address as its destination, and the amount you typed. A deposit must go to the vault listed in ${out(doc("docs/exchange.md", "depositing"), "docs/exchange.md")}.</li>
 <li>Choose a short approval period, and remove the API wallet on the exchange’s API wallet page when you stop using the app on a computer.</li>
-<li>Keep the leverage limit low, and practice on testnet first.</li>
+<li>Keep the leverage limit low.</li>
 <li>Attach only tool servers you trust. A local command runs with your user’s permissions.</li>
 <li>Give a Cloudflare API token only the Workers AI Read permission. The app needs nothing more.</li>
 <li>Keep the app up to date. Fixes are released for the latest version only.</li>

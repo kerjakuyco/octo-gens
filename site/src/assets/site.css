@@ -3,7 +3,7 @@
  *
  * Near-black and monochrome: white type, a few greys, hairline borders, and no light effects.
  * Colour appears only where it means something: green and red for up and down, gains and losses,
- * inside the drawings of the app; amber for testnet and for what to read before acting; and the
+ * inside the drawings of the app; amber for testnet and for real funds, as the app marks them; and the
  * brand blue once, on the small "New" chip in the home page's hero.
  * Type is the system's own face; no font files are loaded. Headings are large, at weight 500, with
  * tight tracking. Buttons are full pills, cards have generous radii, and almost nothing moves.
@@ -316,53 +316,6 @@ strong {
 }
 
 /* --------------------------------------------------------- shared pieces */
-
-/* Something to read before acting. Its words say what it is, opening in bold; the dot (or the alert
-   sign) and the hairline only mark its kind: amber for what has not been tried on the live
-   exchange, the default, and red (data-tone="risk") for the risk of trading. */
-.callout {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: 14px;
-  padding: 16px 20px 16px 18px;
-  border: 1px solid color-mix(in srgb, var(--warn) 28%, transparent);
-  border-radius: var(--radius-2);
-  background: color-mix(in srgb, var(--warn) 5%, var(--bg));
-  color: var(--text-2);
-  font-size: 0.9375rem;
-  line-height: 1.6;
-}
-
-.callout-dot {
-  width: 8px;
-  height: 8px;
-  margin-top: calc(0.8em - 4px);
-  border-radius: 50%;
-  background: var(--warn);
-}
-
-.callout:is([data-tone="risk"], [data-tone="down"]) {
-  border-color: color-mix(in srgb, var(--down) 28%, transparent);
-  background: color-mix(in srgb, var(--down) 5%, var(--bg));
-}
-
-.callout:is([data-tone="risk"], [data-tone="down"]) .callout-dot {
-  background: var(--down);
-}
-
-.callout-body > * + * {
-  margin-top: 8px;
-}
-
-.callout p {
-  color: var(--text-2);
-}
-
-.callout strong {
-  color: var(--text);
-  font-weight: 600;
-}
 
 /* A link to read more, with an arrow after it. */
 .more a {
@@ -2606,10 +2559,6 @@ html:not(.js) .nav-item-label {
 
 .trust-item .more {
   margin-top: 4px;
-}
-
-.trust .callout {
-  margin-top: 56px;
 }
 
 /* -------------------------------------------------------------- get started */

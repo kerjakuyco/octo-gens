@@ -1,5 +1,5 @@
 import { SPARK_BTC, demo, scenario } from "../demo.mjs";
-import { REPO, RELEASES, VERSION, callout, esc, icon } from "../site.mjs";
+import { REPO, RELEASES, VERSION, esc, icon } from "../site.mjs";
 
 /**
  * Every word on the home page, in the order it appears, from the copy deck; the preview of the app
@@ -62,19 +62,15 @@ const COPY = {
     },
     {
       id: "testnet",
-      title: "Practice on testnet first",
-      text: "Testnet is the exchange’s practice network: the same order flow, with test funds that have no value. OctoNeo opens on mainnet, where funds are real. When you are ready to trade, switch to Testnet at the top of the window.",
+      title: "Trade on mainnet or testnet",
+      text: "OctoNeo opens on mainnet. Testnet, the exchange’s practice network, has the same order flow with test funds. Switch between them at the top of the window.",
       more: { href: "/download/#start", text: "After you install" },
     },
   ],
-  // The status of the live exchange, kept in view as the feature pages keep it. The risk line is in
-  // the footer of every page.
-  status:
-    "<strong>Not yet tried on the live exchange, on either network:</strong> orders, deposits sent from a wallet, and withdrawals. Orders and withdrawals have been checked against a stand-in that follows the exchange’s API documentation, and deposits simulated on their chains without being sent. Start small.",
 
   start: {
     title: "Start with a question",
-    text: "Download OctoNeo, connect a model and ask “BTC outlook”. When you are ready to trade, start on testnet.",
+    text: "Download OctoNeo, connect a model and ask “BTC outlook”. When you are ready to trade, connect your wallet.",
     cards: [
       {
         id: "start-download",
@@ -342,7 +338,6 @@ ${COPY.trust
   )
   .join("\n")}
     </div>
-    ${callout(`<p>${COPY.status}</p>`)}
   </div>
 </div>
 

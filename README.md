@@ -13,10 +13,7 @@ OctoNeo is a desktop AI trading assistant for perpetual futures on a decentralis
 - **You stay in control.** The assistant can only draft a ticket. Nothing reaches the exchange until you confirm it, and the assistant may not draft mainnet tickets until you allow it.
 - **Your wallet, your funds.** Your wallet approves a separate trade-only key for the app. The app never sees your wallet's key, and the key it holds cannot withdraw.
 - **Deposit and withdraw without leaving.** Both start in the app and are confirmed by your own wallet. You never have to visit the exchange's site.
-- **Practice first.** Switch to the testnet for the same order flow with test funds.
-
-> [!WARNING]
-> OctoNeo is early software and not financial advice. Perpetual futures are leveraged: a position can be liquidated and lose its whole margin quickly. Practise on testnet first, and trade on mainnet only with money you can afford to lose.
+- **Mainnet and testnet.** Trade on mainnet, or switch to the testnet for the same order flow with test funds.
 
 ## Install
 
@@ -26,7 +23,7 @@ The app opens on **mainnet** prices. Market data needs no wallet, no account and
 
 1. [Connect a model](#connect-a-model). The first launch asks for one.
 2. Ask **BTC outlook**. The answer comes with the readings it is based on.
-3. Switch to **Testnet** at the top and [connect a wallet](#connect-a-wallet).
+3. [Connect a wallet](#connect-a-wallet). To trade with test funds, switch to **Testnet** at the top.
 4. Ask **Long 0.01 BTC**. The assistant picks a stop-loss, says where it put it, and drafts a ticket. Review it, then place the order. Ask **Close my BTC** to exit.
 
 `Ctrl+K` (Windows, Linux) or `Cmd+K` (macOS) puts the cursor in the message box, and `Ctrl+B` or `Cmd+B` shows or hides the sidebar. `Esc` stops a running answer.
@@ -188,3 +185,5 @@ Bug reports, ideas and pull requests are welcome. Start with [CONTRIBUTING.md](C
 ## License
 
 [GPL-3.0-only](LICENSE). Third-party notices are in [NOTICE.md](NOTICE.md).
+
+OctoNeo is not financial advice. Trading perpetual futures carries risk.

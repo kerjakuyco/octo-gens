@@ -173,7 +173,7 @@ ${nav}
   </div>
   <div class="wrap">
     <div class="footer-legal">
-      <p><strong>OctoNeo is early software and not financial advice.</strong> Perpetual futures are leveraged: a position can be liquidated and lose its whole margin quickly. Practice on testnet first, and trade on mainnet only with money you can afford to lose.</p>
+      <p>OctoNeo is not financial advice. Trading perpetual futures carries risk.</p>
       <p>OctoNeo is open source under the <a href="${doc("LICENSE")}">GPL-3.0-only license</a>. OpenRouter, Cloudflare, Ollama, LM Studio, MetaMask, Rabby, TradingView, CoinDesk, Cointelegraph, The Block, Decrypt, The Defiant, crypto.news and Yahoo Finance are trademarks of their owners. OctoNeo is an independent project and is not affiliated with or endorsed by any of them.</p>
     </div>
   </div>

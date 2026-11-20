@@ -208,7 +208,7 @@ ${shell([
           body: `${facts([
             ["Report or suggest", `Open an ${out(ISSUES, "issue")} with the issue templates.`],
             ["Fix something", "Issues labeled good first issue are a good start."],
-            ["Check against the exchange", `${out(doc("docs/exchange.md", "checking-against-the-exchange"), "docs/exchange.md")} says what has and has not been verified on the live service.`],
+            ["Check against the exchange", `${out(doc("docs/exchange.md", "checking-against-the-exchange"), "docs/exchange.md")} explains how a change is tested against the exchange.`],
             ["Improve the assistant", `${out(doc("docs/assistant.md"), "docs/assistant.md")} covers the prompt and the tools.`],
           ], "facts-wide")}
 <h3>What a pull request must keep</h3>

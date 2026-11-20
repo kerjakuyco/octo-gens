@@ -1,12 +1,12 @@
 /*
  * Feature pages: the centered head, the picture of the app drawn in HTML, the "On this page" index,
- * sections, tables, facts, callouts, reference <details>, code, figures, the next page, the closing
- * band, the download and the 404 page. Loaded after site.css, which defines the tokens, the header,
- * the footer and the shared buttons.
+ * sections, tables, facts, reference <details>, code, figures, the next page, the closing band, the
+ * download and the 404 page. Loaded after site.css, which defines the tokens, the header, the footer
+ * and the shared buttons.
  *
  * Monochrome: near-black, white text, greys and hairlines. Color only where it means something:
- * green and red for up and down inside the drawn app, amber for testnet and for what has not been
- * tried, red for risk. Every value is a token from site.css.
+ * green and red for up and down inside the drawn app, amber for testnet and for real funds. Every
+ * value is a token from site.css.
  */
 
 /* ------------------------------------------------------------- page head */
@@ -77,20 +77,6 @@
 
 .page-visual {
   margin-top: 72px;
-}
-
-.page-notice {
-  display: grid;
-  justify-items: center;
-  margin-top: 40px;
-}
-
-/* ----------------------------------------------------------------- callouts */
-
-/* The callout's look, and its dot, are site.css's. Here it only keeps to a reading width. */
-:is(.page-notice, .doc) .callout {
-  max-width: 46rem;
-  text-align: left;
 }
 
 /* --------------------------------------------------------- the page's body */
@@ -296,8 +282,8 @@
   margin-top: 20px;
 }
 
-.doc-section > :is(.table-wrap, .table-along, .table-across, .facts, .shot, .code, .code-window, .callout, .tab-figures, .layers, .steps-list, .checks, .launch-steps),
-.doc-section > :is(.table-wrap, .table-along, .table-across, .facts, .shot, .code, .code-window, .callout, .tab-figures, .layers, .steps-list, .checks, .launch-steps) + * {
+.doc-section > :is(.table-wrap, .table-along, .table-across, .facts, .shot, .code, .code-window, .tab-figures, .layers, .steps-list, .checks, .launch-steps),
+.doc-section > :is(.table-wrap, .table-along, .table-across, .facts, .shot, .code, .code-window, .tab-figures, .layers, .steps-list, .checks, .launch-steps) + * {
   margin-top: 32px;
 }
 

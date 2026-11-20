@@ -66,7 +66,7 @@ ${items.map((item) => `<li>${item}</li>`).join("\n")}
 export default {
   path: "/download/",
   title: "Download OctoNeo",
-  description: `Download OctoNeo ${VERSION} for Windows, macOS or Linux, or build it from source. What to expect at the first launch, and how to start on testnet.`,
+  description: `Download OctoNeo ${VERSION} for Windows, macOS or Linux, or build it from source. What to expect at the first launch, and how to start.`,
   render: () =>
     docPage({
       path: "/download/",
@@ -151,7 +151,7 @@ ${steps([
           body: `<ol class="steps-list">
 <li><strong><a href="/models/">Connect a model.</a></strong> The first launch asks for one.</li>
 <li><strong>Ask “BTC outlook”.</strong> The answer comes with the readings it is based on.</li>
-<li><strong>Switch to Testnet</strong> at the top, and <a href="/wallet/">connect a wallet</a>. Deposit test funds before the first trade: the exchange serves an account only after its first deposit.</li>
+<li><strong><a href="/wallet/">Connect a wallet.</a></strong> Deposit before the first trade: the exchange serves an account only after its first deposit. To trade with test funds, switch to Testnet at the top.</li>
 <li><strong>Ask “Long 0.01 BTC”.</strong> The assistant picks a stop-loss, says where it put it, and drafts a ticket. Review it, then place the order. Ask “Close my BTC” to exit.</li>
 </ol>
 ${facts([
