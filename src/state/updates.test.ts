@@ -25,13 +25,13 @@ describe("desktop updates", () => {
   it("checks, skips, un-skips on manual check, downloads with progress, and installs cleanly", async () => {
     const { state, storage } = await startWith("?speed=0&history=0&update=available");
     await vi.waitFor(() => expect(state.app.get().update.status).toBe("available"));
-    expect(state.app.get().update.info?.version).toBe("0.10.0");
+    expect(state.app.get().update.info?.version).toBe("0.11.0");
     expect(state.app.get().update.info?.canInstall).toBe(true);
     expect(state.hasVisibleUpdate(state.app.get().update)).toBe(true);
 
     // Skipping hides the sidebar reminder and persists the skipped version.
-    state.skipUpdate("0.10.0");
-    expect(storage.get("octogens.skippedUpdate")).toBe("0.10.0");
+    state.skipUpdate("0.11.0");
+    expect(storage.get("octogens.skippedUpdate")).toBe("0.11.0");
     expect(state.hasVisibleUpdate(state.app.get().update)).toBe(false);
 
     // An explicit manual check un-skips the version so the trader can act on it.

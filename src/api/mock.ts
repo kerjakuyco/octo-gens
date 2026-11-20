@@ -1398,7 +1398,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
     if (focused && !quotes[focused.symbol]) quotes[focused.symbol] = quote(focused);
     const wallet = wallets[network];
     return {
-      version: "0.9.0",
+      version: "0.10.0",
       network,
       focus: focus[network],
       feedError: "",
@@ -3759,16 +3759,16 @@ export function createMockBackend(options: MockOptions = {}): Backend {
           throw new Error("Could not reach GitHub Releases.");
         }
         if (mode === "upToDate") {
-          return { status: "upToDate", currentVersion: "0.9.0", releaseUrl: releasesUrl };
+          return { status: "upToDate", currentVersion: "0.10.0", releaseUrl: releasesUrl };
         }
         return {
           status: "available",
-          version: "0.10.0",
-          currentVersion: "0.9.0",
+          version: "0.11.0",
+          currentVersion: "0.10.0",
           date: "2026-12-18T00:00:00Z",
           notes:
-            "### What's new in 0.10.0\n- Redesigned cross-platform sidebar with inline chat filter.\n- Full-width Market Details workspace with toggleable EMA, Bollinger, S/R, and live order overlays.\n- Semi-automatic updates backed by signed GitHub Releases.",
-          releaseUrl: `${releasesUrl}/tag/v0.10.0`,
+            "### What's new in 0.11.0\n- Redesigned cross-platform sidebar with inline chat filter.\n- Full-width Market Details workspace with toggleable EMA, Bollinger, S/R, and live order overlays.\n- Semi-automatic updates backed by signed GitHub Releases.",
+          releaseUrl: `${releasesUrl}/tag/v0.11.0`,
           canInstall: mode !== "manual",
         };
       }),
