@@ -4,14 +4,25 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## Unreleased
 
+## 0.7.0
+
+A News page lays out the newsrooms' stories like a magazine, and a story opens right inside the app. The order form and Settings were redesigned, the app now tells you when a newer version is out, and the icon is black.
+
 ### Added
 
 - **A News page.** **News** in the sidebar lays out the newest stories from the eight newsrooms like a magazine: a lead story, the next ones beside it, a grid with each story's picture, then the remaining headlines. Narrow it to your watchlist, to crypto or to the economy, or to one newsroom. Each story says who published it and how long ago, and names the markets it is about; pick one to open its page.
 - **Read an article without leaving the app.** A story opens in a browser view inside the window, with a way back to the news, a reload button and **Open in browser**. The view cannot reach the app's commands and keeps no cookies once you close it.
+- **Update notices.** OctoNeo checks GitHub for a newer release when it starts. When one is out, a note in the sidebar and **Settings**, **About & Updates** show its release notes and link to the download. You can skip a version.
 
 ### Changed
 
+- **The order form, redesigned.** Pick **Buy / Long** or **Sell / Short**, set the size in the coin or in USDT, or as 25, 50, 75 or 100% of your available margin (of the position, for an order that only reduces it), choose leverage on a slider with presets, and add a take-profit and a stop-loss in one place. A summary shows the notional value, the initial margin and the estimated entry and liquidation prices before you confirm the order.
+- **Settings, regrouped.** `Cmd+,` (`Ctrl+,` on Windows and Linux) opens Settings, now in groups: Assistant (Models, Tools), Exchange (Wallets, Risk & Trading) and App (General, About & Updates). General holds the theme, with a preview of each, and the chart's defaults.
 - **A new app icon.** The white octopus now sits on near-black, the colour of the website, in place of blue.
+
+### Fixed
+
+- On macOS the window buttons sat low and crowded **New chat**. They now line up with the top bar.
 
 ## 0.6.0
 
