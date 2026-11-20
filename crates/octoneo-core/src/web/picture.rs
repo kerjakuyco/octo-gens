@@ -48,8 +48,9 @@ fn avif(bytes: &[u8]) -> bool {
     let size = u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize;
     // The main brand, then a version, then the brands the file is also compatible with.
     let compatible = bytes.get(16..size.min(bytes.len())).unwrap_or_default();
+    let (brands, _) = compatible.as_chunks::<4>();
     std::iter::once(&bytes[8..12])
-        .chain(compatible.chunks_exact(4))
+        .chain(brands.iter().map(|brand| brand.as_slice()))
         .any(|brand| brand == b"avif" || brand == b"avis")
 }
 
