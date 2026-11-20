@@ -89,7 +89,7 @@ pnpm tauri signer generate -w ~/.tauri/octoneo.key
 - **Money is exact.** Use `rust_decimal::Decimal` for prices, quantities and balances. Floats are for indicators only.
 - **Errors are for the trader.** A `DeskError` is shown as-is. Say what went wrong and what to do next. Never put a secret in one.
 - **The assistant cannot trade.** Do not add a tool that places, changes or cancels an order, and do not weaken the checks listed under *Safeguards* in [docs/assistant.md](docs/assistant.md). Pull requests that do will not be merged.
-- **A model answers, or nothing does.** There are no rule-based replies and no typed commands. Do not add a path that answers a message without the connected model.
+- **A model answers, or nothing does.** There are no rule-based replies. The commands in the message box only write a message for the model (`src/lib/commands.ts`). Do not add a path, or a command, that answers or acts without the connected model.
 - **The app's key never moves funds.** The API wallet is approved for perpetual trading only. A deposit is a transaction the trader's own wallet sends, and a withdrawal is signed by that wallet, in their browser, every time. Do not add a request the API wallet signs that moves funds, do not give the assistant a tool for it, and never ask for a wallet's own key or seed phrase.
 - **Secrets stay in the keychain.** Nothing secret goes in preferences, the journal, logs, snapshots or errors.
 - **The contract stays in step.** If you change a type in `src/api/types.ts` or `crates/octoneo-core/src/studio/view.rs`, change the other. `tests/contract.rs` will tell you if you missed one.

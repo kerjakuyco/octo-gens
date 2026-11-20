@@ -6,13 +6,14 @@ OctoNeo is a desktop AI trading assistant for perpetual futures on a decentralis
 
 ![The assistant answering "BTC outlook", with the price, the 4h reading and the order book it read shown as cards above its answer](docs/images/assistant-dark.png)
 
-- **Just ask.** "BTC outlook", "Top movers", "Long ETH, 1% risk". The assistant plans its own research and shows what it read as cards under the answer: prices, a technical reading, the order book, a position plan.
+- **Just ask, or use a command.** "BTC outlook", "Top movers", "Long ETH, 1% risk". Or type `/` for commands that trade, research and analyse: pick the market, the risk and the leverage, and the command writes the message. The assistant plans its own research and shows what it read as cards under the answer: prices, a technical reading, the order book, a position plan.
 - **Bring your own model.** OpenRouter, Cloudflare AI Gateway, or a model on your own computer with Ollama or LM Studio.
 - **Market data in depth.** A screener of every market and a page for each one: a chart with moving averages, Bollinger bands and support and resistance, the order book and latest trades, funding history and open interest, and technical readings on four timeframes.
 - **The news, read for you.** Ask why a market is moving. The assistant reads the latest headlines from crypto newsrooms, Yahoo Finance and the Federal Reserve, says who reported what and how long ago, and lists the headlines with links. Ask about a share or a commodity the exchange lists and it reads the news filed under that ticker too. It works with every model, and needs no key.
 - **A news page.** The newest stories from the same newsrooms, laid out like a magazine with their pictures. Narrow it to your watchlist, to crypto or to the economy, or to one newsroom, and open a market from the story that names it. A story opens right inside the app.
 - **A trading journal.** Log each trade with its setup, a short checklist, your thesis and the lesson. See your win rate, your best setup and how often you kept to your rules, and ask the assistant to review it. **Account** reads like a portfolio: equity, free margin, exposure and funding carry at a glance.
-- **You stay in control.** The assistant can only draft a ticket. Nothing reaches the exchange until you confirm it, and the assistant may not draft mainnet tickets until you allow it.
+- **Grid bots.** Pick a price range and a grid bot buys low and sells high inside it, with orders waiting on both sides. Set one up on **Grid bots**, or ask the assistant to draft one for you to start.
+- **You stay in control.** The assistant can only draft: a ticket, or a grid bot. Nothing reaches the exchange until you confirm it, and the assistant may not draft for mainnet until you allow it. A grid bot you start keeps to the range and the size you gave it.
 - **Your wallet, your funds.** Your wallet approves a separate trade-only key for the app. The app never sees your wallet's key, and the key it holds cannot withdraw.
 - **Deposit and withdraw without leaving.** Both start in the app and are confirmed by your own wallet. You never have to visit the exchange's site.
 - **Mainnet and testnet.** Trade on mainnet, or switch to the testnet for the same order flow with test funds.
@@ -28,7 +29,7 @@ The app opens on **mainnet** prices. Market data needs no wallet, no account and
 3. [Connect a wallet](#connect-a-wallet). To trade with test funds, switch to **Testnet** at the top.
 4. Ask **Long 0.01 BTC**. The assistant picks a stop-loss, says where it put it, and drafts a ticket. Review it, then place the order. Ask **Close my BTC** to exit.
 
-`Ctrl+K` (Windows, Linux) or `Cmd+K` (macOS) puts the cursor in the message box, and `Ctrl+B` or `Cmd+B` shows or hides the sidebar. `Esc` stops a running answer.
+`Ctrl+K` (Windows, Linux) or `Cmd+K` (macOS) puts the cursor in the message box, `/` outside a text field opens its [commands](#commands), and `Ctrl+B` or `Cmd+B` shows or hides the sidebar. `Esc` stops a running answer.
 
 ## Connect a model
 
@@ -107,12 +108,29 @@ A market's page opens from **Markets**, from a market named in an answer, or fro
 | Draft a ticket for you to confirm, with a stop-loss | Call tool-server tools that are not marked read-only |
 | Read recent headlines from crypto newsrooms, Yahoo Finance and the Federal Reserve, and the article behind one | Read a page it was not given: only its news results and links you paste |
 | Call read-only tools of a tool server you attached | Answer without a model: there are no canned replies |
+| Work out a grid bot as a dry run, draft it for you to start, and read how your bots are doing | Start, stop or change a grid bot |
 
 ![Headlines the assistant read, with who reported each one and how long ago](docs/images/news-light.png)
 
 Conversations are kept in the sidebar, where you can filter them by title. Open one to read it again with what the assistant read at the time, or delete it.
 
 How the assistant is instructed, every tool it has, and how each provider is handled is documented in [docs/assistant.md](docs/assistant.md).
+
+### Commands
+
+Type `/` in the message box, or press **Commands** under it, for what the assistant is asked most. Pick one, set what it asks for, add anything else in your own words, and send. The box shows, word for word, the message the command will send. A command only writes the message: the assistant answers it as if you had typed it, and a trade still ends in a ticket you confirm.
+
+| | Commands | What you set |
+| --- | --- | --- |
+| Trade | `/long`, `/short`, `/plan`, `/close`, `/reduce`, `/grid` | The market, the risk, the leverage and a take-profit at the next level; for `/reduce`, how much of the position; for `/grid`, the direction, the timeframe whose levels bound the range, the number of grids and the margin |
+| Research | `/outlook`, `/why`, `/news`, `/movers`, `/watchlist`, `/funding` | The market |
+| Analysis | `/technicals`, `/levels`, `/book`, `/compare` | The market, the timeframe, a second market to compare |
+| Account | `/portfolio`, `/journal`, `/bots` | Nothing: they read your account, your journal and your grid bots |
+
+- **Name a market with `$`.** Type `$` and the first letters of a market, or press **Market**, to pick it from a list with its price and its move today. In a command, it sets the command's market.
+- **What a command needs.** One that reads your account needs a connected wallet, the news needs web search, and `/journal` needs a trade in your journal. The box says what is missing, with a button to fix it.
+- **Next steps.** Under an answer, suggestions pick up where it left off: trade the market it read, or read what it has not yet. A trade suggestion fills the box for you to look over; it is never sent by itself.
+- **Keys.** `↑` and `↓` move through a list and `Enter` or `Tab` picks. `Esc` or `Backspace` in an empty box takes a command out. In an empty box, `↑` brings back your earlier messages in the chat.
 
 ## How orders work
 
@@ -121,7 +139,7 @@ How the assistant is instructed, every tool it has, and how each provider is han
 - **Tickets.** Every order starts as a ticket: what it does to your position, its value, the margin it needs and an estimated liquidation price. It is checked against your live account before you see it, and sent only when you confirm. A mainnet ticket also asks you to tick an acknowledgement.
 - **Two ways to draft one.** Ask the assistant, or use **Trade** on a market's page, which needs no model.
 - **Checked twice.** When you confirm, the app reads your position and the mark price again. If either has moved away from what the ticket says, nothing is sent and you draft a fresh one.
-- **Market orders.** Tickets are market orders, sized in the asset or by value. Limit orders are not supported yet.
+- **Market orders.** Tickets are market orders, sized in the asset or by value. [Grid bots](#grid-bots) are the one place the app uses limit orders.
 - **Leverage and margin.** A new position uses the leverage on the ticket, up to your limit, and isolated margin unless you choose cross. A new installation limits leverage to 3x; you can raise the limit to 50x in **Settings** under *Trading*. An existing position keeps the leverage and margin mode it has.
 - **Stop-loss and take-profit.** They are placed right after the entry as reduce-only orders that trigger on the mark price. A stop beyond the estimated liquidation price is refused, because liquidation would come first. If the exchange refuses one after the entry has filled, the ticket says so plainly.
 - **Closing.** Ask the assistant, or press **Close** on a position under **Account** or on the market's page. Either drafts a ticket for the whole position. Confirming it also cancels the reduce-only orders left on that position. One order never flips a long into a short.
@@ -132,13 +150,33 @@ How the assistant is instructed, every tool it has, and how each provider is han
 
 [docs/exchange.md](docs/exchange.md) describes exactly what the app sends to the exchange and how it signs.
 
+## Grid bots
+
+A grid bot splits a price range into levels and keeps an order waiting at each one: buys below the price, sells above it. When a buy fills, it places a sell one level up; when that sells, it buys again one level down. Each buy and its sell is a completed trade, which earns the gap between two levels less the fees. A grid suits a market that moves sideways. In a strong trend the price leaves the range, and the bot is left holding what it bought or sold on the way.
+
+| Setting | What it does |
+| --- | --- |
+| Direction | **Neutral** starts with no position. **Long** buys a position first and sells it off as the price climbs the range; **Short** sells first and buys it back as the price falls |
+| Range and grids | The lowest and highest price and how many steps lie between them: even steps in price, or even steps in percent |
+| Margin and leverage | How much of your balance the bot uses, at a leverage up to your limit |
+| Start price | Optional: the bot waits until the price reaches it, then places its orders |
+| Stop below, stop above | Optional: prices outside the range at which the bot stops, and can close its position |
+
+- **Look first, then start.** **Grid bots** works the bot out as a dry run before anything is sent: each order's size and value, the profit per completed trade, the estimated liquidation price, and anything worth knowing first. On mainnet you tick an acknowledgement before it starts.
+- **From the chat.** Ask for a grid, or use `/grid`. The assistant reads the market's levels, works the bot out as a dry run and drafts it in the conversation, where you start it or discard it. Starting checks the draft against the live price again. `/bots` asks how your bots are doing.
+- **While the app is open.** A bot places its replacement orders and watches its stop prices while OctoNeo is open. Its waiting orders stay on the exchange when you close the app, and it catches up with what filled when you open it again.
+- **One bot per market.** A bot shares the market's position with anything else you trade there, so stopping it with its position closed closes all of it.
+- **Orders cancelled elsewhere.** An order the bot did not see fill, such as one you cancelled under **Account**, is never counted as a fill. A bot whose orders are all gone stops.
+
+[docs/exchange.md](docs/exchange.md#grid-bots) describes the orders a bot sends and how it keeps track of them.
+
 ## Your data
 
 Everything stays on your computer.
 
 | What | Where |
 | --- | --- |
-| Conversations, activity, preferences | Windows `%LOCALAPPDATA%\Octo Gens\`, macOS `~/Library/Application Support/Octo Gens/`, Linux `~/.local/share/octo-gens/` |
+| Conversations, activity, grid bots, preferences | Windows `%LOCALAPPDATA%\Octo Gens\`, macOS `~/Library/Application Support/Octo Gens/`, Linux `~/.local/share/octo-gens/` |
 | API wallet keys, OpenRouter key, Cloudflare API token | Your system keychain, under `org.octogens.desktop` |
 | Your trading journal (what you log under **Activity**) | The app window's own storage on your computer, not the folder above |
 

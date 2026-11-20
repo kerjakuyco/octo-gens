@@ -4,6 +4,19 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## Unreleased
 
+### Added
+
+- **Grid bots.** **Grid bots** in the sidebar sets up a bot that buys low and sells high inside a price range, with limit orders waiting on both sides: Neutral, Long or Short, even steps in price or in percent, up to 50 grids, margin and leverage up to your limit, an optional start price, and stop prices outside the range. A dry run shows each order's size and value, the profit per completed trade and the estimated liquidation price before anything is sent. Your bots show their completed trades and profit and loss, and stop with or without closing their position. A bot places its replacement orders and watches its stop prices while the app is open; its waiting orders stay on the exchange when the app is closed. Only an order the exchange reports as filled counts as a fill, so a bot whose orders were cancelled elsewhere stops instead of trading on.
+- **Grid bots in the chat.** Ask the assistant for a grid, or use `/grid`: it reads the market's levels, works the bot out as a dry run and drafts it in the conversation, where you start it or discard it. `/bots` asks how your bots are doing, and **Ask AI** on a market's page can plan one.
+- **Commands in the message box.** Type `/`, or press **Commands** under the box, for what the assistant is asked most, in four groups: trade (`/long`, `/short`, `/plan`, `/close`, `/reduce`), research (`/outlook`, `/why`, `/news`, `/movers`, `/watchlist`, `/funding`), analysis (`/technicals`, `/levels`, `/book`, `/compare`) and your account (`/portfolio`, `/journal`). Pick one and set what it takes as chips beside it: the market, the risk, the leverage up to your limit, a take-profit at the next level, the timeframe, or how much of a position to close. Add anything else in your own words; the box shows, word for word, the message the command will send. A command only writes the message, so the assistant answers it as if you had typed it, and a trade still ends in a ticket you confirm. The box says what a command is missing, such as a wallet or web search, with a button to fix it, and shows the network you are on while you set up a trade. `/` anywhere outside a text field opens the commands.
+- **Name a market with `$`.** Type `$` and a few letters, or press **Market** under the box, to pick a market from a list with its price and its move today. For `/close` and `/reduce` the list holds only your open positions, with their size and profit or loss.
+- **Next steps under an answer.** Suggestions pick up where an answer left off: trade the market it read, or read what it has not yet, such as the news or the order book. A trade suggestion fills the box for you to look over; it is never sent by itself.
+- **Your earlier messages.** `↑` in an empty box brings back what you asked earlier in the conversation.
+
+### Changed
+
+- **A livelier conversation.** The commands and the market list open and close smoothly, a new message rises into place, the line that says what the assistant is doing shimmers while it works, and a button takes you back to the latest message when you have scrolled up. With reduced motion turned on in your system, nothing moves.
+
 ## 0.8.0
 
 A trading journal on the Activity page, and an Account page that reads like a portfolio. The news no longer includes a publisher whose articles need a subscription, and long chat titles fit the sidebar.

@@ -21,8 +21,8 @@ Each network has its own API origin and its own site. Both are constants at the 
 | `GET /fapi/v3/account`, `positionRisk`, `openOrders`, `balance` | Yes | Equity, positions and open orders |
 | `GET /fapi/v3/multiAssetsMargin` | Yes | Whether the account is in Multi-Assets mode, where only cross margin exists |
 | `POST /fapi/v3/marginType`, `POST /fapi/v3/leverage` | Yes | Setting up a market before a new position opens |
-| `POST /fapi/v3/order` | Yes | Market orders, and the stop-loss and take-profit that follow them |
-| `GET /fapi/v3/order` | Yes | Looking an order up by its client id when its answer was lost |
+| `POST /fapi/v3/order` | Yes | Market orders, the stop-loss and take-profit that follow them, and grid bots' limit orders |
+| `GET /fapi/v3/order` | Yes | Looking an order up by its client id: when its answer was lost, and when a grid bot's order has left the book |
 | `DELETE /fapi/v3/order`, `DELETE /fapi/v3/allOpenOrders` | Yes | Cancelling orders |
 | `POST /fapi/v3/registerAndApproveAgent` | By your wallet | Approving the app's API wallet, once |
 | `GET` deposit assets, withdraw assets (site API) | No | What can be deposited and withdrawn, on which networks |
@@ -195,6 +195,25 @@ A ticket can wait while you read it, and the market does not. So when you confir
 The receipt says what happened, including what did not: an order that only partly filled, a stop-loss the exchange did not confirm (the position may then be open without it), or orders that could not be cancelled.
 
 The estimated liquidation price on a ticket is `entry × (1 ∓ (1 / leverage − maintenance margin))`. It ignores fees, funding and the exchange's margin tiers, so it is a guide to how much room a stop has. The exchange's own figure appears under **Account** once the position is open. No estimate is shown for cross margin, where liquidation depends on the whole account.
+
+## Grid bots
+
+A grid bot is worked out as a dry run first, from the market's rules and its mark price: the price levels, rounded to the tick size; one size for every order, rounded down to the quantity step and large enough for the smallest order at the lowest level; the margin it needs at the chosen leverage, keeping 5% back for fees and price movement; the profit per completed trade after an assumed 0.02% maker fee each way; and an estimated liquidation price for isolated margin. Leverage must be within your limit. Nothing is sent for a dry run.
+
+Starting a bot sends, in this order:
+
+1. **The market's settings.** The margin mode and the leverage, as for a ticket.
+2. **The first position**, for a Long or Short bot only: a market order for as much as the orders on the other side of the price will later sell off or buy back.
+3. **The orders.** A limit order at every level but the one nearest the price, buys below it and sells above it, as `LIMIT` with `timeInForce` `GTX` (maker only, refused rather than filled at once) or `GTC`. Their client ids start with `ong_`, followed by the bot, the level and a sequence number.
+
+A bot with a start price places nothing until the mark price reaches it. An order the exchange refuses is skipped, and the bot's note says how many were. If the first position filled but no order was accepted, the bot is kept with an error and a note saying what is open, so it can be stopped.
+
+While the app is open, each read of the account (every 15 seconds while the window is in view) also brings each bot up to date:
+
+- **An order has left the book.** The app asks the exchange for it by its client id. Only an order reported `FILLED` counts as a fill: the bot then places the opposite order one level away, and a sell or buy that closes an earlier one counts as a completed trade. An order that was cancelled or expired leaves its level empty. When every order of a bot is gone without filling, as after **Cancel all**, the bot stops and sends nothing. A lookup that fails is tried again on the next read.
+- **The stop prices.** When the mark price reaches the stop below or the stop above, the bot cancels its orders one by one and, if you chose to, closes the position in that market with a reduce-only market order.
+
+Stopping a bot by hand does the same. Only one bot may run in a market, and it shares that market's one net position with anything else you trade there.
 
 ## Errors
 
