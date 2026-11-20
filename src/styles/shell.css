@@ -124,10 +124,11 @@
 
 /*
  * The macOS app draws its window buttons over the top-left corner: keep that corner clear.
- * The buttons are centred on the bar (`trafficLightPosition` in tauri.conf.json: the window
- * library centres them in a strip as tall as a button plus `y`, so `y` is the bar's height
- * less a button's 14). Newer macOS draws them larger and further apart, so leave a generous
- * gap past the green zoom button before TopBar controls begin.
+ * The buttons are centred on the bar by `trafficLightPosition` in tauri.conf.json. The window
+ * library makes a strip as tall as a button plus `y`, and macOS keeps the buttons a fixed
+ * distance above its bottom, so each point of `y` moves them one point down: `y: 28` centres
+ * them on the 52px bar (measured on macOS 26). Newer macOS draws them larger and further
+ * apart, so leave a generous gap past the green zoom button before TopBar controls begin.
  */
 :root[data-platform="macos"] .sidebar-head,
 :root[data-platform="macos"] .topbar[data-inset="true"] {
