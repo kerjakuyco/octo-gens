@@ -7,6 +7,7 @@ import "./styles/shell.css";
 import "./styles/chat.css";
 import "./styles/market.css";
 import "./styles/pages.css";
+import "./styles/news.css";
 import "./styles/settings.css";
 
 const root = document.getElementById("root");

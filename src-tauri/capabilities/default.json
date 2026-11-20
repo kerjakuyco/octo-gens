@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "What the main window may do: call the app's own commands, be dragged by its own header, and open https links in the browser.",
-  "windows": ["main"],
+  "description": "What the interface may do: call the app's own commands, drag the window by its own header, and open https links in the browser. It names the interface's web view, not the window, so the article view inside the same window gets none of it.",
+  "webviews": ["main"],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",

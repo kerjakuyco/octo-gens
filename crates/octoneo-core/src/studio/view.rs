@@ -20,7 +20,7 @@ use crate::llm::Usage;
 use crate::mcp::Transport;
 use crate::model::{Account, Candle, Market, Network, OrderBook, Quote, Side, cents, decimal_text};
 use crate::store::{Effort, Provider, Theme};
-use crate::web::Article;
+use crate::web::{Article, Coins, Desk, Front, Story};
 
 /// Daily closes kept on a quote that is stored with an answer: enough for a sparkline.
 const CARD_CLOSES: usize = 30;
@@ -412,6 +412,88 @@ impl From<&Article> for NewsView {
             url: article.url.clone(),
             published: article.published.map(|at| at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
         }
+    }
+}
+
+/// Where a story comes from: the crypto newsrooms, or the economy and the stock market.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum NewsDesk {
+    Crypto,
+    Macro,
+}
+
+impl From<Desk> for NewsDesk {
+    fn from(desk: Desk) -> Self {
+        match desk {
+            Desk::Crypto => NewsDesk::Crypto,
+            Desk::Macro => NewsDesk::Macro,
+        }
+    }
+}
+
+/// One story on the News page.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoryView {
+    pub title: String,
+    /// The publisher.
+    pub source: String,
+    pub url: String,
+    /// When it was published, as RFC 3339 in UTC, if the publisher said.
+    pub published: Option<String>,
+    pub summary: String,
+    /// The `https` address of the story's picture. The interface asks the core for it.
+    pub image: Option<String>,
+    pub topics: Vec<String>,
+    /// Markets on the active network the story is about, e.g. `BTCUSDT`.
+    pub markets: Vec<String>,
+    pub desk: NewsDesk,
+}
+
+impl StoryView {
+    fn new(story: Story, markets: Vec<String>) -> Self {
+        let Story { article, desk } = story;
+        Self {
+            published: article.published.map(stamp),
+            title: article.title,
+            source: article.source,
+            url: article.url,
+            summary: article.summary,
+            image: article.image,
+            topics: article.topics,
+            markets,
+            desk: desk.into(),
+        }
+    }
+}
+
+/// The News page: the newest stories from every publisher.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewsFeedView {
+    /// Newest first; stories without a time come last.
+    pub stories: Vec<StoryView>,
+    /// Every publisher read, in a fixed order.
+    pub publishers: Vec<String>,
+    /// Publishers that could not be reached on the last read.
+    pub missing: Vec<String>,
+    /// When the stories were read, as RFC 3339 in UTC.
+    pub read_at: String,
+}
+
+impl NewsFeedView {
+    /// The page, with each story tied to the markets of `coins` it names.
+    pub(crate) fn new(front: Front, coins: &Coins) -> Self {
+        let stories = front
+            .stories
+            .into_iter()
+            .map(|story| {
+                let markets = coins.named_in(&story.article);
+                StoryView::new(story, markets)
+            })
+            .collect();
+        Self { stories, publishers: front.publishers, missing: front.missing, read_at: stamp(front.read_at) }
     }
 }
 

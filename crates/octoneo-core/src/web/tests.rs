@@ -436,3 +436,323 @@ async fn headlines_filed_under_a_ticker_stand_in_when_no_newsroom_answers() {
     // A question about something else still says that the newsrooms are out of reach.
     assert_eq!(web.search("bitcoin", &[]).await.expect_err("down").0, "Down did not send its news (503).");
 }
+
+fn titles(front: &Front) -> Vec<&str> {
+    front.stories.iter().map(|story| story.article.title.as_str()).collect()
+}
+
+#[tokio::test]
+async fn the_front_page_shows_every_story_once_newest_first_and_who_did_not_answer() {
+    let server = MockServer::start().await;
+    let link = |route: &str| format!("{}{route}", server.uri());
+    let picture = format!("<enclosure url=\"{}\" type=\"image/jpeg\"/>", link("/pictures/btc.jpg"));
+    serve(
+        &server,
+        "/desk/rss",
+        rss(&[
+            item("Bitcoin slides 12% through its 200-week average", &link("/desk/btc"), "", 6, &picture),
+            item("Solana says account rent could fall 86%", &link("/desk/sol"), "", 4, ""),
+            // The same headline again, under a link the publisher tagged.
+            item("Bitcoin slides 12% through its 200-week average", &link("/desk/btc?ref=rss"), "", 3, ""),
+            format!(
+                "<item><title>A note that gives no time</title><link>{}</link></item>",
+                link("/desk/note")
+            ),
+        ]),
+    )
+    .await;
+    serve(
+        &server,
+        "/block/rss",
+        rss(&[
+            item("Miner that sold its last BTC warns on cash", &link("/block/miner"), "", 7, ""),
+            // Another publisher's link: the same story, whatever its headline here.
+            item("Bitcoin falls through a long average", &link("/desk/btc"), "", 5, ""),
+            // Another publisher's headline that happens to read the same is its own story.
+            item("Solana says account rent could fall 86%", &link("/block/sol"), "", 2, ""),
+        ]),
+    )
+    .await;
+    serve(
+        &server,
+        "/fed/rss",
+        rss(&[item("Minutes of the Federal Open Market Committee", &link("/fed/minutes"), "", 5, "")]),
+    )
+    .await;
+    serve(&server, "/down/rss", ResponseTemplate::new(503)).await;
+    let web = web(
+        &server,
+        &[
+            ("Desk", "/desk/rss"),
+            ("Block", "/block/rss"),
+            ("Federal Reserve", "/fed/rss"),
+            ("Down", "/down/rss"),
+        ],
+    );
+
+    let before = Utc::now();
+    let front = web.front().await.expect("front page");
+    assert_eq!(
+        titles(&front),
+        [
+            "Miner that sold its last BTC warns on cash",
+            "Bitcoin slides 12% through its 200-week average",
+            "Minutes of the Federal Open Market Committee",
+            "Solana says account rent could fall 86%",
+            "Solana says account rent could fall 86%",
+            "A note that gives no time",
+        ]
+    );
+    let story = &front.stories[1];
+    assert_eq!(
+        (story.article.url.as_str(), story.article.image.as_deref()),
+        (link("/desk/btc").as_str(), Some(link("/pictures/btc.jpg").as_str()))
+    );
+    assert_eq!(front.stories[4].article.source, "Block");
+    // The Federal Reserve and Yahoo Finance report on the economy; the newsrooms on crypto.
+    let desks: Vec<Desk> = front.stories.iter().map(|story| story.desk).collect();
+    assert_eq!(desks, [Desk::Crypto, Desk::Crypto, Desk::Macro, Desk::Crypto, Desk::Crypto, Desk::Crypto]);
+    assert_eq!(desk_of(YAHOO), Desk::Macro);
+    // Who was read, who did not answer that read, and when it was made.
+    assert_eq!(front.publishers, ["Desk", "Block", "Federal Reserve", "Down"]);
+    assert_eq!(front.missing, ["Down"]);
+    assert!(before <= front.read_at && front.read_at <= Utc::now(), "{}", front.read_at);
+
+    // The page and the assistant's searches share one read, kept for a few minutes.
+    assert_eq!(web.front().await.expect("again"), front);
+    assert_eq!(web.search("miner", &[]).await.expect("search").len(), 1);
+    assert_eq!((hits(&server, "/desk/rss").await, hits(&server, "/down/rss").await), (1, 1));
+}
+
+#[tokio::test]
+async fn the_front_page_holds_the_newest_hundred_and_twenty_stories() {
+    let server = MockServer::start().await;
+    let mut feeds = Vec::new();
+    for (feed, name) in ["A", "B", "C"].into_iter().enumerate() {
+        // Every story a minute older than the one before, across the three feeds in turn.
+        let items: Vec<String> = (0..60)
+            .map(|n| {
+                let minutes = 23 * 60 + 59 - (feed * 60 + n);
+                format!(
+                    "<item><title>{name} story {n}</title><link>{}/{name}/{n}</link>\
+                     <pubDate>Thu, 19 Nov 2026 {:02}:{:02}:00 GMT</pubDate></item>",
+                    server.uri(),
+                    minutes / 60,
+                    minutes % 60
+                )
+            })
+            .collect();
+        let route = format!("/{name}/rss");
+        serve(&server, &route, rss(&items)).await;
+        feeds.push((name, route));
+    }
+    let feeds: Vec<(&str, &str)> = feeds.iter().map(|(name, route)| (*name, route.as_str())).collect();
+    let front = web(&server, &feeds).front().await.expect("front page");
+    assert_eq!(front.stories.len(), 120);
+    assert_eq!((titles(&front)[0], titles(&front)[119]), ("A story 0", "B story 59"));
+    assert!(front.stories.iter().all(|story| story.article.source != "C"), "the oldest stories are left out");
+}
+
+#[tokio::test]
+async fn when_nobody_answers_the_last_stories_stand_in_and_every_publisher_is_missing() {
+    let server = MockServer::start().await;
+    let link = format!("{}/desk/btc", server.uri());
+    // The newsroom answers once, then goes down.
+    Mock::given(method("GET"))
+        .and(path("/desk/rss"))
+        .respond_with(rss(&[item("Bitcoin slides 12% through its 200-week average", &link, "", 6, "")]))
+        .up_to_n_times(1)
+        .mount(&server)
+        .await;
+    serve(&server, "/desk/rss", ResponseTemplate::new(503)).await;
+    serve(&server, "/block/rss", ResponseTemplate::new(503)).await;
+    let mut web = web(&server, &[("Desk", "/desk/rss"), ("Block", "/block/rss")]);
+
+    let first = web.front().await.expect("front page");
+    assert_eq!((first.stories.len(), first.missing.as_slice()), (1, ["Block".to_string()].as_slice()));
+
+    // What was read goes stale and is read again; nobody answers. The stories read before are
+    // shown, with when they were read, and no publisher is said to have answered.
+    web.fresh = Duration::ZERO;
+    let again = web.front().await.expect("the last stories");
+    assert_eq!(again.stories, first.stories);
+    assert_eq!(again.read_at, first.read_at);
+    assert_eq!(again.missing, ["Desk", "Block"]);
+    assert_eq!(hits(&server, "/desk/rss").await, 2);
+    // The assistant's search is answered from them too.
+    assert_eq!(web.search("bitcoin", &[]).await.expect("search").len(), 1);
+
+    // Stories too old to stand in are not shown; the trader is told why.
+    web.kept = Duration::ZERO;
+    assert_eq!(web.front().await.expect_err("too old").0, "Desk did not send its news (503).");
+}
+
+fn article(title: &str, summary: &str, topics: &[&str]) -> Article {
+    Article {
+        title: title.to_string(),
+        source: "Desk".to_string(),
+        url: "https://desk.example.com/a".to_string(),
+        published: None,
+        summary: summary.to_string(),
+        topics: topics.iter().map(|topic| (*topic).to_string()).collect(),
+        body: None,
+        image: None,
+    }
+}
+
+#[test]
+fn a_story_is_about_the_markets_whose_coins_it_names() {
+    let coins = Coins::new([
+        ("BTCUSDT", "BTC"),
+        ("ETHUSDT", "ETH"),
+        ("SOLUSDT", "SOL"),
+        ("LINKUSDT", "LINK"),
+        ("1000PEPEUSDT", "1000PEPE"),
+        ("AIUSDT", "AI"),
+        ("UPUSDT", "UP"),
+        ("XAUUSD1", "XAU"),
+    ]);
+    let about =
+        |title: &str, summary: &str, topics: &[&str]| coins.named_in(&article(title, summary, topics));
+    // By name or by ticker, in the headline, a topic or the summary.
+    assert_eq!(about("Bitcoin slides 12%", "", &[]), ["BTCUSDT"]);
+    assert_eq!(about("Funds sell", "Spot ETH funds lost $399M.", &[]), ["ETHUSDT"]);
+    assert_eq!(about("Funds sell", "", &["Ethereum"]), ["ETHUSDT"]);
+    assert_eq!(about("Gold and silver slide", "", &[]), ["XAUUSD1"]);
+    // Named in the headline first, then in the order of the market list.
+    assert_eq!(
+        about("Solana rallies", "Bitcoin and ether held steady.", &[]),
+        ["SOLUSDT", "BTCUSDT", "ETHUSDT"]
+    );
+    // "link" is a word, and Chainlink, or LINK in capitals, is the coin.
+    assert_eq!(about("Analysts link the selloff to rate fears", "", &[]), Vec::<String>::new());
+    assert_eq!(about("Chainlink whale accumulates $2.16M", "", &[]), ["LINKUSDT"]);
+    assert_eq!(about("Whales buy LINK", "", &[]), ["LINKUSDT"]);
+    // A coin by the thousand is that coin; everyday words and the news's own abbreviations are not coins.
+    assert_eq!(about("PEPE jumps 30%", "", &[]), ["1000PEPEUSDT"]);
+    assert_eq!(about("AI agents go rogue as US stocks fall", "Prices went up.", &[]), Vec::<String>::new());
+    // A story is tied to no more than a few markets.
+    let bases = ["AAA", "BBB", "CCC", "DDD", "EEE", "FFF", "GGG", "HHH", "III", "JJJ"];
+    let symbols: Vec<String> = bases.iter().map(|base| format!("{base}USDT")).collect();
+    let many = Coins::new(symbols.iter().map(String::as_str).zip(bases));
+    let roundup = article(&format!("{} all rally today", bases.join(" ")), "", &[]);
+    assert_eq!(many.named_in(&roundup), ["AAAUSDT", "BBBUSDT", "CCCUSDT", "DDDUSDT", "EEEUSDT", "FFFUSDT"]);
+    // Without a market list a story is tied to none.
+    assert_eq!(Coins::default().named_in(&article("Bitcoin slides 12%", "", &[])), Vec::<String>::new());
+}
+
+const JPEG: &[u8] = &[0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, b'J', b'F', b'I', b'F', 0x00, 0x01, 0x01];
+const PNG: &[u8] = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\0\x01\0\0\0\x01\x08\x06\0\0\0";
+
+fn served(bytes: &[u8], kind: &str) -> ResponseTemplate {
+    ResponseTemplate::new(200).set_body_raw(bytes.to_vec(), kind)
+}
+
+#[tokio::test]
+async fn only_a_picture_the_front_page_offered_is_fetched_and_only_if_it_is_one() {
+    let server = MockServer::start().await;
+    let link = |route: &str| format!("{}{route}", server.uri());
+    let pictured = |n: usize, route: &str| {
+        let enclosure = format!("<enclosure url=\"{}\" type=\"image/jpeg\"/>", link(route));
+        item(
+            &format!("Story number {n} with a picture"),
+            &link(&format!("/story/{n}")),
+            "",
+            10 - n as u32,
+            &enclosure,
+        )
+    };
+    let routes = [
+        "/pictures/a.jpg",
+        "/pictures/b.png",
+        "/pictures/c.svg",
+        "/pictures/d.jpg",
+        "/pictures/e.jpg",
+        "/pictures/f.jpg",
+        "/pictures/g.jpg",
+    ];
+    serve(
+        &server,
+        "/rss",
+        rss(&routes.iter().enumerate().map(|(n, route)| pictured(n, route)).collect::<Vec<_>>()),
+    )
+    .await;
+    let mut huge = JPEG.to_vec();
+    huge.resize(PICTURE_LIMIT + 1, 0);
+    for (route, response) in [
+        ("/pictures/a.jpg", served(JPEG, "image/jpeg")),
+        // A server may not say what it sends, or may say something else.
+        ("/pictures/b.png", served(PNG, "application/octet-stream")),
+        (
+            "/pictures/c.svg",
+            served(b"<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>", "image/png"),
+        ),
+        (
+            "/pictures/d.jpg",
+            served(b"<!doctype html><html><body>Just a moment...</body></html>", "image/jpeg"),
+        ),
+        ("/pictures/e.jpg", served(&huge, "image/jpeg")),
+        ("/pictures/f.jpg", ResponseTemplate::new(404)),
+        (
+            "/pictures/g.jpg",
+            ResponseTemplate::new(302).insert_header("location", "ftp://files.example.com/g.jpg"),
+        ),
+    ] {
+        serve(&server, route, response).await;
+    }
+    let web = web(&server, &[("Desk", "/rss")]);
+    let unknown = "That picture is not one the News page showed.";
+
+    // Before the page has been given a picture, none is fetched.
+    assert_eq!(web.picture(&link("/pictures/a.jpg")).await.expect_err("not offered yet").0, unknown);
+    assert_eq!(hits(&server, "/pictures/a.jpg").await, 0);
+    let front = web.front().await.expect("front page");
+    assert_eq!(front.stories[0].article.image.as_deref(), Some(link("/pictures/a.jpg").as_str()));
+
+    let first = web.picture(&link("/pictures/a.jpg")).await.expect("jpeg");
+    assert_eq!(first, Picture { content_type: "image/jpeg".to_string(), bytes: JPEG.to_vec() });
+    // Shown again, it comes from memory; the part after `#` changes nothing.
+    assert_eq!(web.picture(&format!("{}#top", link("/pictures/a.jpg"))).await.expect("again"), first);
+    assert_eq!(hits(&server, "/pictures/a.jpg").await, 1);
+    // What a picture is, its first bytes say, whatever the server says.
+    let png = web.picture(&link("/pictures/b.png")).await.expect("png");
+    assert_eq!((png.content_type.as_str(), png.bytes.as_slice()), ("image/png", PNG));
+
+    let refused = async |route: &str| web.picture(&link(route)).await.expect_err(route).0;
+    assert_eq!(refused("/pictures/c.svg").await, "127.0.0.1 sent something that is not a picture.");
+    assert_eq!(refused("/pictures/d.jpg").await, "127.0.0.1 sent something that is not a picture.");
+    assert_eq!(refused("/pictures/e.jpg").await, "127.0.0.1 sent a picture too large to show.");
+    assert_eq!(refused("/pictures/f.jpg").await, "127.0.0.1 did not send the picture (404).");
+    assert_eq!(
+        refused("/pictures/g.jpg").await,
+        "127.0.0.1 sends this picture somewhere that cannot be read."
+    );
+    // An address the page was not given as a picture, a story's own page among them, is never asked for.
+    for other in [link("/story/0"), link("/pictures/z.jpg"), "file:///etc/passwd".to_string(), String::new()]
+    {
+        assert_eq!(web.picture(&other).await.expect_err(&other).0, unknown);
+    }
+    assert_eq!((hits(&server, "/story/0").await, hits(&server, "/pictures/z.jpg").await), (0, 0));
+}
+
+#[test]
+fn only_a_public_https_page_is_a_link_to_open() {
+    assert_eq!(
+        public_link(" https://www.coindesk.com/markets/2026/11/19/a-story?utm_source=rss#top ")
+            .expect("public"),
+        "https://www.coindesk.com/markets/2026/11/19/a-story?utm_source=rss"
+    );
+    let refused = "That is not a public web page. Only https links to public sites can be read.";
+    for address in [
+        "http://www.coindesk.com/markets",
+        "https://127.0.0.1/",
+        "https://localhost/admin",
+        "https://router.lan/",
+        "https://user:secret@example.com/",
+        "javascript:alert(1)",
+        "file:///etc/passwd",
+        "",
+    ] {
+        assert_eq!(public_link(address).expect_err(address).0, refused);
+    }
+}

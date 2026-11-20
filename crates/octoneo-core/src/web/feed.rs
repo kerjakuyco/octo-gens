@@ -2,6 +2,8 @@
 
 use chrono::{DateTime, Utc};
 use roxmltree::{Document, Node};
+use scraper::Html;
+use url::Url;
 
 use super::guard::Guard;
 use super::page::plain;
@@ -19,6 +21,9 @@ const BODY_MIN_CHARS: usize = 600;
 const BODY_CHARS: usize = 12_000;
 /// Articles read from one feed: its newest.
 const ARTICLES: usize = 60;
+/// Endings of picture files. A `media:content` that says nothing else about
+/// itself is a picture when its file says so.
+const PICTURE_ENDINGS: [&str; 6] = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"];
 
 /// One news article, as its publisher's feed describes it.
 #[derive(Clone, Debug, PartialEq)]
@@ -34,6 +39,8 @@ pub struct Article {
     pub topics: Vec<String>,
     /// The article itself, when the feed carries it whole.
     pub body: Option<String>,
+    /// Where the story's picture is, when the feed names one at an ordinary public https address.
+    pub image: Option<String>,
 }
 
 fn named(node: &Node<'_, '_>, name: &str) -> bool {
@@ -48,6 +55,66 @@ fn field(item: Node<'_, '_>, name: &str) -> Option<String> {
     item.children().find(|child| named(child, name)).map(text_of).filter(|text| !text.trim().is_empty())
 }
 
+/// Where `raw` leads, read against the story's own link, if that is an ordinary public https address.
+fn address(raw: &str, link: &Url, guard: Guard) -> Option<Url> {
+    let raw = raw.trim();
+    // Nothing, or only a place in the story's own page, leads back to the story, not to a picture.
+    if raw.is_empty() || raw.starts_with('#') {
+        return None;
+    }
+    guard.parse(link.join(raw).ok()?.as_str()).ok()
+}
+
+/// Whether a `type` names a picture: `image/jpeg`, or `image/*` as some feeds write it.
+/// An SVG is drawn by code, not shown as a picture.
+fn picture_kind(kind: Option<&str>) -> bool {
+    let kind = kind.unwrap_or_default().trim().to_ascii_lowercase();
+    kind.starts_with("image/") && !kind.starts_with("image/svg")
+}
+
+/// What Media RSS gives a story: the first `media:content` that is a picture, loose or inside a
+/// `media:group`, else the first `media:thumbnail`.
+fn media(item: Node<'_, '_>, link: &Url, guard: Guard) -> Option<Url> {
+    let offered = |name: &'static str| {
+        item.descendants()
+            .filter(move |node| named(node, name))
+            .filter_map(move |node| Some((node, address(node.attribute("url")?, link, guard)?)))
+    };
+    let picture = |(node, url): &(Node<'_, '_>, Url)| {
+        let path = url.path().to_ascii_lowercase();
+        node.attribute("medium").is_some_and(|medium| medium.trim().eq_ignore_ascii_case("image"))
+            || picture_kind(node.attribute("type"))
+            || PICTURE_ENDINGS.iter().any(|ending| path.ends_with(ending))
+    };
+    offered("content").find(picture).or_else(|| offered("thumbnail").next()).map(|(_, url)| url)
+}
+
+/// An enclosure that is a picture. A feed also encloses sound and video.
+fn enclosure(item: Node<'_, '_>, link: &Url, guard: Guard) -> Option<Url> {
+    item.children()
+        .filter(|node| named(node, "enclosure") && picture_kind(node.attribute("type")))
+        .find_map(|node| address(node.attribute("url")?, link, guard))
+}
+
+/// The first `<img>` in a piece of HTML that leads somewhere usable. One that is
+/// a pixel wide counts visits; it is not a picture.
+fn inline(html: &str, link: &Url, guard: Guard) -> Option<Url> {
+    if !html.as_bytes().windows(4).any(|four| four.eq_ignore_ascii_case(b"<img")) {
+        return None;
+    }
+    let fragment = Html::parse_fragment(html);
+    fragment
+        .tree
+        .root()
+        .descendants()
+        .filter_map(|node| node.value().as_element())
+        .filter(|element| element.name() == "img")
+        .filter(|img| {
+            ["width", "height"].iter().all(|side| !matches!(img.attr(side).map(str::trim), Some("0" | "1")))
+        })
+        .find_map(|img| address(img.attr("src")?, link, guard))
+}
+
 fn article(item: Node<'_, '_>, source: &str, guard: Guard) -> Option<Article> {
     let title = clip(&squeeze(&plain(&field(item, "title")?)), TITLE_CHARS);
     // A link that is not an ordinary public page is not offered to the model at all.
@@ -58,8 +125,11 @@ fn article(item: Node<'_, '_>, source: &str, guard: Guard) -> Option<Article> {
     let published = field(item, "pubDate")
         .and_then(|text| DateTime::parse_from_rfc2822(text.trim()).ok())
         .map(|at| at.with_timezone(&Utc));
-    let summary = field(item, "description")
-        .map(|text| clip(&squeeze(&plain(&text)), SUMMARY_CHARS))
+    let description = field(item, "description");
+    let encoded = field(item, "encoded");
+    let summary = description
+        .as_deref()
+        .map(|text| clip(&squeeze(&plain(text)), SUMMARY_CHARS))
         // Some feeds repeat the headline as the summary, which says nothing more.
         .filter(|summary| !summary.eq_ignore_ascii_case(&title))
         .unwrap_or_default();
@@ -70,11 +140,28 @@ fn article(item: Node<'_, '_>, source: &str, guard: Guard) -> Option<Article> {
         .filter(|topic| !topic.is_empty())
         .take(TOPICS)
         .collect();
-    let body = field(item, "encoded")
-        .map(|html| plain(&html))
+    // Feeds name a story's picture in several ways. The ones made for it come first, then the
+    // first picture in the summary, then the first in the article.
+    let image = media(item, &url, guard)
+        .or_else(|| enclosure(item, &url, guard))
+        .or_else(|| description.as_deref().and_then(|html| inline(html, &url, guard)))
+        .or_else(|| encoded.as_deref().and_then(|html| inline(html, &url, guard)))
+        .map(String::from);
+    let body = encoded
+        .as_deref()
+        .map(plain)
         .filter(|text| text.chars().count() >= BODY_MIN_CHARS)
         .map(|text| clip(&text, BODY_CHARS));
-    Some(Article { title, source: source.to_string(), url: url.into(), published, summary, topics, body })
+    Some(Article {
+        title,
+        source: source.to_string(),
+        url: url.into(),
+        published,
+        summary,
+        topics,
+        body,
+        image,
+    })
 }
 
 /// The articles of one feed, in the feed's own order (newest first, by custom).
@@ -173,6 +260,87 @@ mod tests {
         let whole = articles[2].body.as_deref().expect("body");
         assert_eq!(whole.lines().count(), 8);
         assert!(whole.starts_with("Paragraph number 0 of a story"));
+    }
+
+    /// One story for each way the publishers' feeds name a picture, and for what is passed over.
+    const PICTURES: &str = r##"<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <item><title>By medium</title><link>https://wire.example.com/a</link>
+      <media:content url="https://cdn.example.com/a.jpg?fm=jpg&amp;w=800" medium="image"/>
+      <media:thumbnail url="https://cdn.example.com/a-small.jpg"/></item>
+    <item><title>By kind, after a video</title><link>https://wire.example.com/b</link>
+      <media:content url="https://cdn.example.com/b.mp4" type="video/mp4" medium="video"/>
+      <media:content url="https://cdn.example.com/b" type="image/*"/></item>
+    <item><title>By its file, relative</title><link>https://wire.example.com/news/c</link>
+      <media:content url="/covers/c.webp"/></item>
+    <item><title>In a group</title><link>https://wire.example.com/d</link>
+      <media:group><media:content url="https://cdn.example.com/d.png" type="image/png"/></media:group></item>
+    <item><title>A thumbnail</title><link>https://wire.example.com/e</link>
+      <media:content url="https://cdn.example.com/e.mp3" type="audio/mpeg"/>
+      <enclosure url="https://cdn.example.com/e-enclosed.png" type="image/png" length="1"/>
+      <media:thumbnail url="https://cdn.example.com/e.jpg" width="1280"/></item>
+    <item><title>An enclosure</title><link>https://wire.example.com/f</link>
+      <enclosure url="https://cdn.example.com/f.mp3" type="audio/mpeg" length="1"/>
+      <enclosure url="https://cdn.example.com/f.webp" type="image/jpg" length="1"/>
+      <description><![CDATA[<img src="https://cdn.example.com/f-inline.jpg"><p>A summary.</p>]]></description></item>
+    <item><title>In the summary</title><link>https://wire.example.com/news/2026/g</link>
+      <description><![CDATA[<img src="https://feeds.example.com/count.gif" width="1" height="1"><p style="float:right"><img src="../img/g.jpg" alt="x"></p><p>A summary long enough to be a paragraph of its own.</p>]]></description>
+      <content:encoded><![CDATA[<p><img src="https://cdn.example.com/g-article.jpg"></p>]]></content:encoded></item>
+    <item><title>In the article</title><link>https://wire.example.com/h</link>
+      <description>A summary without a picture.</description>
+      <content:encoded><![CDATA[<p>The article.</p><IMG SRC="//cdn.example.com/h.gif">]]></content:encoded></item>
+    <item><title>Plain http first, then https</title><link>https://wire.example.com/i</link>
+      <media:content url="http://cdn.example.com/i.jpg" medium="image"/>
+      <media:thumbnail url="https://cdn.example.com/i.jpg"/></item>
+    <item><title>Nothing usable</title><link>https://wire.example.com/j</link>
+      <media:content url="http://cdn.example.com/j.jpg" medium="image"/>
+      <media:content url="" medium="image"/>
+      <enclosure url="https://localhost/j.png" type="image/png"/>
+      <enclosure url="https://cdn.example.com/j.svg" type="image/svg+xml"/>
+      <description><![CDATA[<img src="data:image/png;base64,iVBORw0KGgo="><img src="#top"><img alt="no address">]]></description></item>
+    <item><title>No picture at all</title><link>https://wire.example.com/k</link></item>
+  </channel>
+</rss>"##;
+
+    #[test]
+    fn a_story_takes_the_first_picture_its_feed_names_at_a_public_https_address() {
+        let articles = parse(PICTURES, "Example Wire", Guard::Public).expect("feed");
+        let pictures: Vec<(&str, Option<&str>)> =
+            articles.iter().map(|article| (article.title.as_str(), article.image.as_deref())).collect();
+        assert_eq!(
+            pictures,
+            [
+                // Media RSS: a picture by its medium, by its kind, or by its file, and it comes first.
+                ("By medium", Some("https://cdn.example.com/a.jpg?fm=jpg&w=800")),
+                ("By kind, after a video", Some("https://cdn.example.com/b")),
+                ("By its file, relative", Some("https://wire.example.com/covers/c.webp")),
+                ("In a group", Some("https://cdn.example.com/d.png")),
+                // A thumbnail is preferred to an enclosure, and an enclosure to a picture in the text.
+                ("A thumbnail", Some("https://cdn.example.com/e.jpg")),
+                ("An enclosure", Some("https://cdn.example.com/f.webp")),
+                // In the summary: a counter one pixel wide is passed over, and a relative address
+                // is read against the story's link. The summary comes before the article.
+                ("In the summary", Some("https://wire.example.com/news/img/g.jpg")),
+                ("In the article", Some("https://cdn.example.com/h.gif")),
+                // What is not public https is passed over for the next picture, or for none.
+                ("Plain http first, then https", Some("https://cdn.example.com/i.jpg")),
+                ("Nothing usable", None),
+                ("No picture at all", None),
+            ]
+        );
+        // The picture is only a picture: the summary and the article read as before.
+        assert_eq!(articles[6].summary, "A summary long enough to be a paragraph of its own.");
+        assert_eq!(articles[5].summary, "A summary.");
+
+        // Outside tests a picture on this computer is refused like a link to it; a stand-in may serve one.
+        let local = "<rss><channel><item><title>Local</title><link>http://127.0.0.1:4010/a</link>\
+            <enclosure url=\"/pictures/a.png\" type=\"image/png\"/></item></channel></rss>";
+        let stand_in = parse(local, "Example Wire", Guard::Open).expect("feed");
+        assert_eq!(stand_in[0].image.as_deref(), Some("http://127.0.0.1:4010/pictures/a.png"));
+        let public = "<rss><channel><item><title>Local</title><link>https://wire.example.com/a</link>\
+            <enclosure url=\"https://127.0.0.1/a.png\" type=\"image/png\"/></item></channel></rss>";
+        assert_eq!(parse(public, "Example Wire", Guard::Public).expect("feed")[0].image, None);
     }
 
     #[test]

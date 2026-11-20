@@ -27,6 +27,7 @@ import { InstrumentMark } from "../market/InstrumentMark";
 
 const TITLES: Record<Exclude<Page, "chat" | "market">, string> = {
   markets: "Markets",
+  news: "News",
   account: "Account",
   activity: "Activity",
 };
@@ -34,6 +35,7 @@ const TITLES: Record<Exclude<Page, "chat" | "market">, string> = {
 const BACK_LABELS: Record<Exclude<Page, "market">, string> = {
   chat: "Chat",
   markets: "Markets",
+  news: "News",
   account: "Account",
   activity: "Activity",
 };

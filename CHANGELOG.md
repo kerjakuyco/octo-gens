@@ -4,6 +4,11 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## Unreleased
 
+### Added
+
+- **A News page.** **News** in the sidebar lays out the newest stories from the eight newsrooms like a magazine: a lead story, the next ones beside it, a grid with each story's picture, then the remaining headlines. Narrow it to your watchlist, to crypto or to the economy, or to one newsroom. Each story says who published it and how long ago, and names the markets it is about; pick one to open its page.
+- **Read an article without leaving the app.** A story opens in a browser view inside the window, with a way back to the news, a reload button and **Open in browser**. The view cannot reach the app's commands and keeps no cookies once you close it.
+
 ### Changed
 
 - **A new app icon.** The white octopus now sits on near-black, the colour of the website, in place of blue.

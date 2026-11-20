@@ -9,6 +9,7 @@
 
 import { isDesktop, loadBackend } from "../api";
 import type {
+  ArticleEvent,
   AssistantRequest,
   Backend,
   McpConnectRequest,
@@ -35,9 +36,11 @@ import { networkName } from "../lib/network";
 import { devParams } from "./dev";
 import { createStore, useStore } from "./store";
 
-export type Page = "chat" | "markets" | "market" | "account" | "activity";
+export type Page = "chat" | "markets" | "market" | "news" | "account" | "activity";
 export type SettingsTab = "models" | "wallet" | "trading" | "tools" | "appearance" | "about";
 export type MarketTab = "book" | "funding" | "technicals" | "watchlist";
+/** Which stories the News page shows: all of them, those about watched markets, or one desk. */
+export type NewsFilter = "top" | "watchlist" | "crypto" | "macro";
 
 export interface ChartOverlays {
   ema: boolean;
@@ -132,6 +135,8 @@ export interface AppState {
   marketTab: MarketTab;
   chartTimeframe: Timeframe;
   chartOverlays: ChartOverlays;
+  /** The News page's filter. Remembered between launches. */
+  newsFilter: NewsFilter;
   settings: SettingsState | null;
   trade: TradeState | null;
   /** Desktop release update check, download progress, and install readiness. */
@@ -141,6 +146,7 @@ export interface AppState {
 }
 
 const MARKET_TABS: readonly MarketTab[] = ["book", "funding", "technicals", "watchlist"];
+const NEWS_FILTERS: readonly NewsFilter[] = ["top", "watchlist", "crypto", "macro"];
 const TIMEFRAMES: readonly Timeframe[] = ["15m", "1h", "4h", "1d"];
 const DEFAULT_OVERLAYS: ChartOverlays = {
   ema: true,
@@ -202,6 +208,7 @@ export const app = createStore<AppState>({
   marketTab: MARKET_TABS.find((tab) => tab === remembered("tab")) ?? "book",
   chartTimeframe: TIMEFRAMES.find((tf) => tf === remembered("timeframe")) ?? "4h",
   chartOverlays: rememberedOverlays(),
+  newsFilter: NEWS_FILTERS.find((filter) => filter === remembered("news")) ?? "top",
   settings: null,
   trade: null,
   update: {
@@ -285,6 +292,7 @@ export async function start(): Promise<void> {
     const patch: Partial<AppState> = { phase: "ready", snapshot, page: dev.page ?? "chat" };
     if (dev.sidebar !== undefined) patch.sidebarOpen = dev.sidebar;
     if (dev.tab) patch.marketTab = dev.tab;
+    if (dev.news) patch.newsFilter = dev.news;
     if (dev.settings || dev.setup) patch.settings = { tab: dev.settings ?? "models", setup: dev.setup ?? null };
     if (dev.dialog === "trade") patch.trade = { ticket: null };
     app.set(patch);
@@ -392,6 +400,11 @@ export function closeDrawer(): void {
 export function setMarketTab(tab: MarketTab): void {
   remember("tab", tab);
   app.set({ marketTab: tab });
+}
+
+export function setNewsFilter(filter: NewsFilter): void {
+  remember("news", filter);
+  app.set({ newsFilter: filter });
 }
 
 export function setChartTimeframe(timeframe: Timeframe): void {
@@ -648,6 +661,18 @@ export function switchModel(provider: ProviderView): Promise<boolean> {
 
 export function openExternal(url: string): void {
   request((api) => api.openExternal(url)).catch((error: unknown) => notify(errorText(error), "error"));
+}
+
+/* ------------------------------------------------------------------- news */
+
+/** An address for an `<img>` of a story's picture, which the core fetches; empty when there is none to show. */
+export function pictureSrc(image: string | null): string {
+  return image && backend ? backend.pictureSrc(image) : "";
+}
+
+/** Follows the in-app article view's loading, title and address. Returns an unsubscribe function. */
+export function onArticle(listener: (event: ArticleEvent) => void): () => void {
+  return backend ? backend.onArticle(listener) : () => {};
 }
 
 /* ---------------------------------------------------------------- updates */

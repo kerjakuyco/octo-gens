@@ -47,14 +47,14 @@ use crate::store::{
     CLOUDFLARE_SECRET, Journal, LEVERAGE_LIMIT, ModelChoice, OPENROUTER_SECRET, Prefs, Provider, SecretStore,
     Theme, ThreadRow, WalletPref, agent_secret,
 };
-use crate::web::Web;
+use crate::web::{Coins, Picture, Web};
 use crate::{bail, desk_err};
 use view::{
     AccountView, AssistantRequest, AssistantView, CandleSeries, CardView, FundingRequest, FundingView,
-    InstrumentView, MarketRow, McpView, ModelsRequest, OrderBookView, PendingWalletView, ProviderView,
-    QuoteView, RiskRequest, RiskView, RunStatus, RunView, Snapshot, StepStatus, StepView, TechnicalFrame,
-    TechnicalsView, ThreadView, TicketRequest, TicketView, TradeView, WalletBrowserRequest, WalletKeyRequest,
-    WalletNoticeView, WalletTask, WalletView,
+    InstrumentView, MarketRow, McpView, ModelsRequest, NewsFeedView, OrderBookView, PendingWalletView,
+    ProviderView, QuoteView, RiskRequest, RiskView, RunStatus, RunView, Snapshot, StepStatus, StepView,
+    TechnicalFrame, TechnicalsView, ThreadView, TicketRequest, TicketView, TradeView, WalletBrowserRequest,
+    WalletKeyRequest, WalletNoticeView, WalletTask, WalletView,
 };
 
 /// Turns of the open conversation kept in memory and sent to the interface.
@@ -78,6 +78,8 @@ const FUNDING_DAYS: i64 = 14;
 pub(crate) const ANALYSIS_BARS: usize = 240;
 /// Said whenever a chat is asked for with no model to answer it.
 const NO_MODEL: &str = "Connect a model first.";
+/// Said whenever the news is asked for while the trader keeps it off.
+const NEWS_OFF: &str = "Web search is off. Turn it on in Settings, under Tools, to read the news.";
 /// Daily history is re-read this often; in between, only prices are refreshed.
 const HISTORY_TTL: Duration = Duration::from_secs(600);
 /// Candles sent to the chart.
@@ -1244,6 +1246,39 @@ impl Studio {
 
     pub(crate) async fn page(&self, url: &str) -> Result<crate::web::Page> {
         self.web.read(url).await
+    }
+
+    /// Nothing is read from publishers while the trader keeps web search off.
+    fn news_on(&self) -> Result<()> {
+        if !self.state().prefs.web_search {
+            bail!("{NEWS_OFF}");
+        }
+        Ok(())
+    }
+
+    /// The News page: the newest stories from every publisher, each with the
+    /// markets on the active network it is about.
+    pub async fn news_feed(&self) -> Result<NewsFeedView> {
+        self.news_on()?;
+        let client = self.client(self.network());
+        // The market list is usually held already; when it is not, it is read while the feeds are.
+        let (markets, front) = tokio::join!(client.markets(), self.web.front());
+        let front = front?;
+        // Without the list of markets no story can be tied to one, and the news is still worth reading.
+        let coins = markets
+            .map(|markets| {
+                Coins::new(markets.one_per_asset().into_iter().map(|m| (m.symbol.as_str(), m.base.as_str())))
+            })
+            .unwrap_or_default();
+        Ok(NewsFeedView::new(front, &coins))
+    }
+
+    /// The picture of a story on the News page, for the interface, which has no
+    /// network access of its own. Only a picture the page was given in this
+    /// session is fetched, and only while web search is on.
+    pub async fn news_picture(&self, address: &str) -> Result<Picture> {
+        self.news_on()?;
+        self.web.picture(address).await
     }
 
     /// Notes links the assistant was shown, so that it may read them.

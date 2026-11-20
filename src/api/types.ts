@@ -202,6 +202,64 @@ export type CardView =
   | { kind: "news"; query: string; articles: NewsView[] }
   | { kind: "account" };
 
+/**
+ * Where a story comes from: the crypto newsrooms, or the economy and the stock market
+ * (the Federal Reserve's press releases and Yahoo Finance's market news).
+ */
+export type NewsDesk = "crypto" | "macro";
+
+/** One story on the News page, as its publisher's feed describes it. */
+export interface StoryView {
+  title: string;
+  /** The publisher, e.g. `CoinDesk`. */
+  source: string;
+  /** An `https` link to the article. Open it with `openArticle`, or `openExternal`. */
+  url: string;
+  /** ISO-8601 UTC time it was published, when the publisher said. */
+  published: string | null;
+  /** A sentence or two from the feed, as plain text. May be empty. */
+  summary: string;
+  /**
+   * The `https` address of the story's picture, as its feed names it. Never load it
+   * directly (the interface has no network access): pass it to `pictureSrc`.
+   */
+  image: string | null;
+  /** What the publisher filed it under, e.g. `Bitcoin`, `Markets`. */
+  topics: string[];
+  /** Markets on the active network the story is about, e.g. `BTCUSDT`, found by coin ticker or name. */
+  markets: string[];
+  desk: NewsDesk;
+}
+
+/** The News page: the newest stories from every publisher. */
+export interface NewsFeedView {
+  /** Newest first; stories without a time come last. */
+  stories: StoryView[];
+  /** Every publisher read, in a fixed order. */
+  publishers: string[];
+  /** Publishers that could not be reached on the last read; their stories may be missing. */
+  missing: string[];
+  /** ISO-8601 UTC time the feeds were last read. */
+  readAt: string;
+}
+
+/** Where the article view sits: CSS pixels from the top-left of the window, as `getBoundingClientRect` gives them. */
+export interface ArticleBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** The article view started or finished loading, or its page's title or address changed. */
+export interface ArticleEvent {
+  /** Where the view is now, after links and redirects. */
+  url: string;
+  /** The page's title, once it has one. */
+  title: string | null;
+  loading: boolean;
+}
+
 /** The trading wallet for one network. The app never holds the main wallet's key. */
 export interface WalletView {
   network: Network;
@@ -733,4 +791,28 @@ export interface Backend {
   openExternal(url: string): Promise<void>;
   /** Subscribes to snapshots pushed by background work (wallet approval, launch). Returns an unsubscribe function. */
   onSnapshot(listener: (snapshot: Snapshot) => void): () => void;
+
+  /**
+   * The newest stories from every publisher, read again when the copy held is older than
+   * five minutes. Rejects with a message to show while web search is off.
+   */
+  newsFeed(): Promise<NewsFeedView>;
+  /** An address for an `<img>` showing a story's picture, which the core fetches. `image` is `StoryView.image`. */
+  pictureSrc(image: string): string;
+  /**
+   * Opens an article in the in-app view, a separate browser view drawn over the window at
+   * `bounds`. Nothing in the page can be drawn over it: hide it with `showArticle(false)`
+   * while a dialog, a menu or the narrow sidebar is open. Desktop only; the mock does nothing.
+   */
+  openArticle(url: string, bounds: ArticleBounds): Promise<void>;
+  /** Moves or resizes the article view. */
+  moveArticle(bounds: ArticleBounds): Promise<void>;
+  /** Hides the article view, or shows it again. */
+  showArticle(shown: boolean): Promise<void>;
+  /** Loads the article view's page again. */
+  reloadArticle(): Promise<void>;
+  /** Closes the article view. Safe to call when none is open. */
+  closeArticle(): Promise<void>;
+  /** Subscribes to the article view's loading, title and address. Returns an unsubscribe function. */
+  onArticle(listener: (event: ArticleEvent) => void): () => void;
 }

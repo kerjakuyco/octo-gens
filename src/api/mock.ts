@@ -20,12 +20,16 @@
  *   markets=595                                      pad the mainnet market list, to try the screener at size
  *   theme=system|light|dark                          colour theme
  *   mcp=1                                            a tool server is attached
+ *   web=1|0                                          web search on (the default) or off
+ *   feed=missing|error|loading|empty                 the News page: a newsroom that did not answer, no
+ *                                                    newsroom answering, a read that never ends, no stories
  *   speed=0.25                                       multiplier for scripted delays
  */
 
 import { ago } from "../lib/format";
 import { ema } from "../lib/indicators";
 import { networkName } from "../lib/network";
+import { mockNewsFeed } from "./mockNews";
 import type {
   AccountView,
   AssistantRequest,
@@ -86,6 +90,7 @@ export type MockWallet = "connected" | "deposit" | "none" | "error";
 export type MockTicket = "long" | "short" | "close";
 export type MockLocal = "up" | "down" | "retry";
 export type MockUpdate = "available" | "manual" | "upToDate" | "error" | "installError";
+export type MockFeed = "missing" | "error" | "loading" | "empty";
 
 export interface MockOptions {
   seed?: MockSeed;
@@ -116,6 +121,11 @@ export interface MockOptions {
   mcp?: boolean;
   /** Whether the assistant may read the news. On unless turned off. */
   web?: boolean;
+  /**
+   * How the News page's read goes: one newsroom does not answer, none does, the read never
+   * finishes, or no newsroom has a story. Every newsroom answers by default.
+   */
+  feed?: MockFeed;
   /** Multiplier for scripted delays. `0` makes every turn finish immediately. */
   speed?: number;
   /** Pause the next streamed answer half-way until `stopTurn` is called. */
@@ -734,6 +744,9 @@ export function createMockBackend(options: MockOptions = {}): Backend {
   let effort: Effort = "auto";
   let liveTickets = seed === "liveticket";
   let webSearch = options.web !== false;
+  /** Stories are dated before the mock started, so they age as it runs; the feeds are read again every five minutes. */
+  const newsAnchor = Date.now();
+  let newsReadAt = 0;
   const localDown = options.local === "down";
   const firstTry = new Set<RealProvider>(options.local === "retry" ? ["ollama", "lmstudio"] : []);
 
@@ -2804,6 +2817,35 @@ export function createMockBackend(options: MockOptions = {}): Backend {
         listeners.delete(listener);
       };
     },
+
+    newsFeed: async () => {
+      await ready;
+      if (options.feed === "loading") return new Promise<never>(() => {});
+      if (speed > 0) await new Promise((done) => setTimeout(done, 420 * speed));
+      // The core reads nothing from the web while web search is off, and says so.
+      if (!webSearch) throw new Error("Web search is off. Turn it on to read the news.");
+      if (options.feed === "error") {
+        throw new Error("None of the newsrooms answered. Check the internet connection, then try again.");
+      }
+      const now = Date.now();
+      if (now - newsReadAt > 5 * 60_000) newsReadAt = now;
+      return mockNewsFeed({
+        anchor: newsAnchor,
+        readAt: newsReadAt,
+        listed: marketsOf(network),
+        missing: options.feed === "missing" ? ["Kelp Desk"] : [],
+        empty: options.feed === "empty",
+      });
+    },
+    // The mock's pictures are drawn in place; it fetches nothing from a publisher.
+    pictureSrc: (image) => (image.startsWith("data:") ? image : ""),
+    // There is no separate browser view in a plain browser: the News page shows its own reading panel.
+    openArticle: async () => {},
+    moveArticle: async () => {},
+    showArticle: async () => {},
+    reloadArticle: async () => {},
+    closeArticle: async () => {},
+    onArticle: () => () => {},
   };
 }
 
@@ -2840,6 +2882,7 @@ export function mockOptionsFromUrl(search: string): MockOptions {
     theme: oneOf(params.get("theme"), ["system", "light", "dark"] as const),
     mcp: flag(params.get("mcp")),
     web: flag(params.get("web")),
+    feed: oneOf(params.get("feed"), ["missing", "error", "loading", "empty"] as const),
     speed: numberOf(params.get("speed")),
     update: oneOf(params.get("update"), ["available", "manual", "upToDate", "error", "installError"] as const),
   };

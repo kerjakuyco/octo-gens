@@ -1,11 +1,11 @@
-//! Finds the headlines a few words are about.
+//! Finds the headlines a few words are about, and the coins a story names.
 //!
 //! The news the app holds is a few hundred recent articles, so this is not a
 //! search engine: it matches words. What makes it useful for markets is that
 //! it knows a ticker and a name are the same thing ("BTC" finds "Bitcoin"),
 //! and that it prefers a match in the headline, then newer over older.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use super::feed::Article;
 
@@ -129,6 +129,10 @@ const SAME: &[(&[&str], &[&str])] = &[
     (&["fed", "fomc"], &["fed", "fomc", "federal reserve", "federal open market committee"]),
     (&["sec"], &["sec", "securities and exchange commission"]),
 ];
+
+/// Letters the news writes in capitals for something other than a coin, though a
+/// coin may trade under them: "AI agents", "US stocks", the "GENIUS Act".
+const NOT_TICKERS: &[&str] = &["ai", "us", "uk", "eu", "id", "ceo", "ipo", "etf", "genius"];
 
 /// What a market symbol ends with: `BTCUSDT` is about `BTC`.
 const QUOTES: [&str; 4] = ["usdt", "usdc", "usd1", "usd"];
@@ -321,6 +325,116 @@ pub(crate) fn pick<'a>(
     chosen.into_iter().map(|indexed| &indexed.article).collect()
 }
 
+/// How the news names one coin: by a name [`SAME`] gives it, written any way,
+/// or by its ticker written in capitals. "LINK" is the coin; "link" is a word,
+/// and so is "Link" at the start of a headline.
+pub(crate) struct Coin {
+    /// Names in the form they are compared in, e.g. `" chainlink "`. None for a coin `SAME` does not know.
+    names: Vec<String>,
+    /// The ticker in lower case. `None` when it is one character, a word that says
+    /// nothing, or letters the news uses for something else.
+    ticker: Option<String>,
+}
+
+impl Coin {
+    /// The coin a market trades, from its base asset: `BTC`, or `1000PEPE`, which
+    /// is PEPE by the thousand. `None` when the news has no way to name it.
+    pub(crate) fn new(base: &str) -> Option<Self> {
+        let base = base.trim().to_lowercase();
+        let ticker = base
+            .strip_prefix("1000")
+            .map(|rest| rest.trim_start_matches('0'))
+            .filter(|rest| rest.chars().count() >= 2)
+            .unwrap_or(&base);
+        let names: Vec<String> = SAME
+            .iter()
+            .find(|(keys, _)| keys.contains(&ticker))
+            .map(|(_, names)| names.iter().map(|name| normal(name)).collect())
+            .unwrap_or_default();
+        let usable =
+            ticker.chars().count() >= 2 && !FILLER.contains(&ticker) && !NOT_TICKERS.contains(&ticker);
+        let ticker = usable.then(|| ticker.to_string());
+        (!names.is_empty() || ticker.is_some()).then_some(Self { names, ticker })
+    }
+
+    /// Whether the coin has names of its own, which have to be looked for in every story.
+    pub(crate) fn has_names(&self) -> bool {
+        !self.names.is_empty()
+    }
+
+    pub(crate) fn ticker(&self) -> Option<&str> {
+        self.ticker.as_deref()
+    }
+}
+
+/// The words of `text` written in capitals (`BTC`, `$PEPE`), in lower case. A
+/// text written all in capitals has none: there, capitals do not mark a ticker.
+fn capitals(text: &str) -> Vec<String> {
+    let words: Vec<&str> = text
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|word| word.chars().any(char::is_alphabetic))
+        .collect();
+    let loud = |word: &&str| word.chars().any(char::is_uppercase) && !word.chars().any(char::is_lowercase);
+    if words.len() >= 3 && words.iter().all(loud) {
+        return Vec::new();
+    }
+    words.into_iter().filter(loud).map(str::to_lowercase).collect()
+}
+
+/// A story's words, ready to be looked through for coins.
+pub(crate) struct Mentions {
+    title: String,
+    /// Each topic apart: two labels side by side are not one phrase.
+    topics: Vec<String>,
+    summary: String,
+    /// Words written in capitals, with the best place each was found: 3 the
+    /// headline, 2 a topic, 1 the summary.
+    capitals: HashMap<String, u32>,
+}
+
+impl Mentions {
+    pub(crate) fn new(article: &Article) -> Self {
+        let mut found = HashMap::new();
+        let places = std::iter::once((1, article.summary.as_str()))
+            .chain(article.topics.iter().map(|topic| (2, topic.as_str())))
+            .chain(std::iter::once((3, article.title.as_str())));
+        // From the least telling place to the most, so that each word keeps the best.
+        for (place, text) in places {
+            for word in capitals(text) {
+                found.insert(word, place);
+            }
+        }
+        Self {
+            title: normal(&article.title),
+            topics: article.topics.iter().map(|topic| normal(topic)).collect(),
+            summary: normal(&article.summary),
+            capitals: found,
+        }
+    }
+
+    /// The words the story writes in capitals, in lower case: the tickers it may name.
+    pub(crate) fn capitals(&self) -> impl Iterator<Item = &str> {
+        self.capitals.keys().map(String::as_str)
+    }
+
+    /// Where the story names `coin`: 3 in the headline, 2 in a topic, 1 in the summary, 0 nowhere.
+    pub(crate) fn of(&self, coin: &Coin) -> u32 {
+        let named = |text: &String| coin.names.iter().any(|name| text.contains(name.as_str()));
+        let by_name = if named(&self.title) {
+            3
+        } else if self.topics.iter().any(named) {
+            2
+        } else if named(&self.summary) {
+            1
+        } else {
+            0
+        };
+        let by_ticker =
+            coin.ticker.as_ref().and_then(|ticker| self.capitals.get(ticker)).copied().unwrap_or(0);
+        by_name.max(by_ticker)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use chrono::{DateTime, TimeZone, Utc};
@@ -340,6 +454,7 @@ mod tests {
             summary: summary.to_string(),
             topics: topics.iter().map(|topic| (*topic).to_string()).collect(),
             body: None,
+            image: None,
         })
     }
 
@@ -486,5 +601,49 @@ mod tests {
         let picked = pick(&crowded, &Query::new("bitcoin"), 5);
         let sources: Vec<&str> = picked.iter().map(|article| article.source.as_str()).collect();
         assert_eq!(sources, ["Loud", "Loud", "Loud", "Quiet", "Loud"]);
+    }
+
+    /// Where `title`, `summary` and `topics` name the coin of `base`: 3 the
+    /// headline, 2 a topic, 1 the summary.
+    fn named(base: &str, title: &str, summary: &str, topics: &[&str]) -> u32 {
+        let coin = Coin::new(base).expect("a coin the news can name");
+        Mentions::new(&story("Desk", title, summary, topics, 1).article).of(&coin)
+    }
+
+    #[test]
+    fn a_coin_is_named_by_its_names_or_by_its_ticker_in_capitals() {
+        // By name, written any way, and by ticker.
+        assert_eq!(named("BTC", "Bitcoin slides 12%", "", &[]), 3);
+        assert_eq!(named("BTC", "Miners sell", "Forced selling of btc explained the move.", &[]), 1);
+        assert_eq!(named("ETH", "Funds sell", "", &["Ether"]), 2);
+        assert_eq!(named("BTC", "Gold rallies", "", &[]), 0);
+        // The headline counts for more than a topic, and a topic for more than the summary.
+        assert_eq!(named("SOL", "SOL rallies", "Solana gained.", &["Solana"]), 3);
+
+        // A ticker that is also a word is the coin only in capitals, or by the coin's own name.
+        assert_eq!(named("LINK", "Analysts link the selloff to rate fears", "", &[]), 0);
+        assert_eq!(named("LINK", "Link between rates and crypto grows", "", &[]), 0);
+        assert_eq!(named("LINK", "Whales accumulate", "Chainlink holders added $2.16M.", &[]), 1);
+        assert_eq!(named("LINK", "LINK whales accumulate $2.16M", "", &[]), 3);
+        // A coin the names table does not know is found by its ticker in capitals alone.
+        assert_eq!(named("PEPE", "$PEPE jumps 30%", "", &[]), 3);
+        assert_eq!(named("MOVE", "Bitcoin's next move", "The move was sharp.", &[]), 0);
+        assert_eq!(named("MOVE", "Movement network", "MOVE fell 8%.", &[]), 1);
+        // A market that trades a coin by the thousand is about that coin.
+        assert_eq!(named("1000PEPE", "PEPE jumps 30%", "", &[]), 3);
+        assert_eq!(named("1000SHIB", "Shiba Inu burn rate soars", "", &[]), 3);
+        // A possessive is still the ticker.
+        assert_eq!(named("PEPE", "PEPE's rally stalls", "", &[]), 3);
+
+        // A headline written all in capitals does not say which words are tickers.
+        assert_eq!(named("MOVE", "MARKETS MOVE LOWER AS RATES RISE", "", &[]), 0);
+        assert_eq!(named("MOVE", "MOVE", "", &[]), 3);
+        // Letters the news uses for something else are never a coin, and nor is a single letter
+        // or a word that says nothing.
+        for base in ["AI", "US", "GENIUS", "S", "W", "ME", "THE", "NOT", "4"] {
+            assert!(Coin::new(base).is_none(), "{base}");
+        }
+        assert!(Coin::new("0G").is_some() && Coin::new("TRUMP").is_some());
+        assert_eq!(named("0G", "0G Labs raises $40M", "", &[]), 3);
     }
 }

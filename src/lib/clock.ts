@@ -35,3 +35,17 @@ export function useNow(): number {
     () => now,
   );
 }
+
+function minute(): number {
+  // While nothing is counting, the last tick may be long gone: read the clock instead.
+  if (timer === undefined) now = Date.now();
+  return now - (now % 60_000);
+}
+
+/**
+ * The current time to the minute, for "12 minutes ago". It follows the same tick, but a
+ * component only draws again when the minute changes.
+ */
+export function useMinute(): number {
+  return useSyncExternalStore(subscribe, minute, minute);
+}

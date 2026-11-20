@@ -4,8 +4,12 @@
 //! the web view and the [`Studio`]: commands take the arguments named in
 //! `src/api/types.ts`, return a fresh [`Snapshot`], and fail with a plain
 //! message the interface shows as-is. The web view has no network access of
-//! its own; every request to the exchange or a model is made from here.
+//! its own; every request to the exchange or a model is made from here,
+//! including the pictures of news stories, which it loads from the
+//! `newsimg` scheme. A news article opens in a second web view that only
+//! shows the publisher's page (see `article`): it cannot call commands.
 
+mod article;
 mod keychain;
 mod updater;
 
@@ -18,20 +22,26 @@ use octoneo_core::mcp::{McpConnectRequest, ToolInfo};
 use octoneo_core::model::Network;
 use octoneo_core::store::{Provider, SecretStore, Theme};
 use octoneo_core::studio::view::{
-    AssistantRequest, CandleSeries, FundingRequest, FundingView, MarketRow, ModelsRequest, OrderBookView,
-    RiskRequest, Snapshot, TechnicalsView, TicketRequest, TradeView, TurnEvent, TurnSink,
+    AssistantRequest, CandleSeries, FundingRequest, FundingView, MarketRow, ModelsRequest, NewsFeedView,
+    OrderBookView, RiskRequest, Snapshot, TechnicalsView, TicketRequest, TradeView, TurnEvent, TurnSink,
     WalletBrowserRequest, WalletKeyRequest,
 };
 use octoneo_core::studio::{Studio, StudioConfig};
+use tauri::http::{Response, StatusCode, header};
 use tauri::ipc::Channel;
-use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
+use tauri::{AppHandle, Emitter, EventTarget, Manager, RunEvent, State};
 use tauri_plugin_opener::OpenerExt;
 
 type Desk<'a> = State<'a, Arc<Studio>>;
 type Reply<T> = Result<T, String>;
 
+/// The label of the window, and of the web view that draws the interface.
+pub(crate) const MAIN: &str = "main";
 /// Name of the event that carries snapshots produced by background work.
 const SNAPSHOT_EVENT: &str = "snapshot";
+/// The scheme the interface loads story pictures from: `newsimg://localhost/<address>`,
+/// or `http://newsimg.localhost/<address>` on Windows, as `convertFileSrc` writes it.
+const PICTURES: &str = "newsimg";
 
 fn message(error: DeskError) -> String {
     error.0
@@ -292,6 +302,76 @@ async fn set_web_search(studio: Desk<'_>, on: bool) -> Reply<Snapshot> {
 }
 
 #[tauri::command]
+async fn news_feed(studio: Desk<'_>) -> Reply<NewsFeedView> {
+    studio.news_feed().await.map_err(message)
+}
+
+#[tauri::command]
+async fn article_open(app: AppHandle, url: String, bounds: article::Bounds) -> Reply<()> {
+    article::open(&app, &url, bounds)
+}
+
+#[tauri::command]
+async fn article_bounds(app: AppHandle, bounds: article::Bounds) -> Reply<()> {
+    article::place(&app, bounds)
+}
+
+#[tauri::command]
+async fn article_shown(app: AppHandle, shown: bool) -> Reply<()> {
+    article::show(&app, shown)
+}
+
+#[tauri::command]
+async fn article_reload(app: AppHandle) -> Reply<()> {
+    article::reload(&app)
+}
+
+#[tauri::command]
+async fn article_close(app: AppHandle) -> Reply<()> {
+    article::close(&app)
+}
+
+/// `%XX` escapes decoded, as `encodeURIComponent` writes them. `None` if they do not make UTF-8.
+fn unescape(text: &str) -> Option<String> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut at = 0;
+    while at < bytes.len() {
+        if bytes[at] == b'%' {
+            let pair = std::str::from_utf8(bytes.get(at + 1..at + 3)?).ok()?;
+            out.push(u8::from_str_radix(pair, 16).ok()?);
+            at += 3;
+        } else {
+            out.push(bytes[at]);
+            at += 1;
+        }
+    }
+    String::from_utf8(out).ok()
+}
+
+/// Answers a picture request from the interface. The core fetches the picture,
+/// and only one it offered with a story; anything else is not found.
+async fn picture(studio: Arc<Studio>, path: String) -> Response<Vec<u8>> {
+    let not_found = || {
+        let mut response = Response::new(Vec::new());
+        *response.status_mut() = StatusCode::NOT_FOUND;
+        response
+    };
+    let Some(address) = unescape(path.trim_start_matches('/')) else {
+        return not_found();
+    };
+    match studio.news_picture(&address).await {
+        Ok(picture) => Response::builder()
+            .header(header::CONTENT_TYPE, picture.content_type)
+            .header(header::CACHE_CONTROL, "max-age=3600")
+            .header(header::X_CONTENT_TYPE_OPTIONS, "nosniff")
+            .body(picture.bytes)
+            .unwrap_or_else(|_| not_found()),
+        Err(_) => not_found(),
+    }
+}
+
+#[tauri::command]
 async fn check_update(
     app: AppHandle,
     state: State<'_, updater::UpdaterState>,
@@ -428,9 +508,79 @@ fn secret_store() -> Arc<dyn SecretStore> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let commands: fn(tauri::ipc::Invoke<tauri::Wry>) -> bool = tauri::generate_handler![
+        boot,
+        snapshot,
+        set_network,
+        select_symbol,
+        refresh_quotes,
+        refresh_account,
+        candles,
+        market_overview,
+        order_book,
+        recent_trades,
+        market_funding,
+        market_technicals,
+        watch_add,
+        watch_remove,
+        ask,
+        stop_turn,
+        new_thread,
+        open_thread,
+        delete_thread,
+        prepare_ticket,
+        submit_ticket,
+        dismiss_ticket,
+        close_position,
+        cancel_order,
+        cancel_all_orders,
+        connect_wallet_key,
+        connect_wallet_browser,
+        fund_wallet,
+        cancel_wallet_page,
+        disconnect_wallet,
+        save_risk,
+        mcp_connect,
+        mcp_disconnect,
+        mcp_tools,
+        mcp_call,
+        list_models,
+        save_assistant,
+        forget_provider,
+        set_theme,
+        set_web_search,
+        check_update,
+        download_update,
+        install_update,
+        news_feed,
+        article_open,
+        article_bounds,
+        article_shown,
+        article_reload,
+        article_close,
+    ];
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .register_asynchronous_uri_scheme_protocol(PICTURES, |context, request, responder| {
+            let studio = context.app_handle().try_state::<Arc<Studio>>().map(|studio| studio.inner().clone());
+            // The whole address is the path. Take the query too, in case the web view decoded a `%3F`.
+            let path =
+                request.uri().path_and_query().map(|value| value.as_str().to_string()).unwrap_or_default();
+            match studio {
+                // Only the interface shows pictures; the article view never asks.
+                Some(studio) if context.webview_label() == MAIN => {
+                    tauri::async_runtime::spawn(
+                        async move { responder.respond(picture(studio, path).await) },
+                    );
+                }
+                _ => {
+                    let mut response = Response::new(Vec::new());
+                    *response.status_mut() = StatusCode::NOT_FOUND;
+                    responder.respond(response);
+                }
+            }
+        })
         .setup(|app| {
             let handle = app.handle().clone();
             let mut config = StudioConfig::new(data_directory(&handle)?, secret_store());
@@ -440,9 +590,14 @@ pub fn run() {
                 }
             }
             let studio = Studio::open(config).map_err(|error| error.0)?;
-            // Background work (a wallet page finishing in the browser) pushes its snapshot to the window.
+            // Background work (a wallet page finishing in the browser) pushes its snapshot to the
+            // interface, and only to it: the article view shows other people's pages.
             studio.set_notifier(move |snapshot| {
-                let _ = handle.emit(SNAPSHOT_EVENT, snapshot);
+                let _ = handle.emit_to(
+                    EventTarget::Webview { label: MAIN.to_string() },
+                    SNAPSHOT_EVENT,
+                    snapshot,
+                );
             });
             #[cfg(debug_assertions)]
             if selftest::wanted() {
@@ -451,53 +606,18 @@ pub fn run() {
             }
             app.manage(studio);
             app.manage(updater::UpdaterState::default());
+            app.manage(article::ArticleState::default());
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
-            boot,
-            snapshot,
-            set_network,
-            select_symbol,
-            refresh_quotes,
-            refresh_account,
-            candles,
-            market_overview,
-            order_book,
-            recent_trades,
-            market_funding,
-            market_technicals,
-            watch_add,
-            watch_remove,
-            ask,
-            stop_turn,
-            new_thread,
-            open_thread,
-            delete_thread,
-            prepare_ticket,
-            submit_ticket,
-            dismiss_ticket,
-            close_position,
-            cancel_order,
-            cancel_all_orders,
-            connect_wallet_key,
-            connect_wallet_browser,
-            fund_wallet,
-            cancel_wallet_page,
-            disconnect_wallet,
-            save_risk,
-            mcp_connect,
-            mcp_disconnect,
-            mcp_tools,
-            mcp_call,
-            list_models,
-            save_assistant,
-            forget_provider,
-            set_theme,
-            set_web_search,
-            check_update,
-            download_update,
-            install_update,
-        ])
+        // Commands answer the interface only. Tauri already refuses them to remote pages such
+        // as the article view's; this holds even if a page there ever counted as the app's own.
+        .invoke_handler(move |invoke| {
+            if invoke.message.webview_ref().label() != MAIN {
+                invoke.resolver.reject("Only the app's own window can do that.");
+                return true;
+            }
+            commands(invoke)
+        })
         .build(tauri::generate_context!());
 
     match app {
@@ -512,6 +632,27 @@ pub fn run() {
         Err(error) => {
             eprintln!("OctoNeo could not start: {error}");
             std::process::exit(1);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::unescape;
+
+    #[test]
+    fn a_picture_address_comes_back_whole_from_its_escaped_path() {
+        // What `convertFileSrc` makes of a picture's address, with and without the web view decoding parts of it.
+        let address = "https://images.example.com/2026/11/btc.jpg?width=800&q=80";
+        for path in [
+            "https%3A%2F%2Fimages.example.com%2F2026%2F11%2Fbtc.jpg%3Fwidth%3D800%26q%3D80",
+            "https://images.example.com/2026/11/btc.jpg?width=800&q=80",
+        ] {
+            assert_eq!(unescape(path).as_deref(), Some(address), "{path}");
+        }
+        assert_eq!(unescape("caf%C3%A9").as_deref(), Some("café"));
+        for broken in ["%", "%4", "%zz", "%C3"] {
+            assert_eq!(unescape(broken), None, "{broken}");
         }
     }
 }

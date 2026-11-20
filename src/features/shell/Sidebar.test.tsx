@@ -55,6 +55,18 @@ describe("Sidebar", () => {
     expect(marketHtml).toMatch(/aria-current="page"[^>]*>.*Markets/);
   });
 
+  it("lists News right after Markets and marks it while the News page is open", () => {
+    state.navigate("news");
+    const html = renderToStaticMarkup(<Sidebar overlay={false} />);
+    const labels = [...html.matchAll(/class="nav-item"[^>]*>.*?<span class="grow truncate">([^<]+)<\/span>/g)].map(
+      (match) => match[1],
+    );
+    expect(labels).toEqual(["Markets", "News", "Account", "Activity"]);
+    expect(html).toMatch(/<button type="button" class="nav-item" aria-current="page"><svg[^>]*>.*?<\/svg><span class="grow truncate">News</);
+    expect(html).not.toMatch(/aria-current="page"[^>]*>(?:(?!<\/button>).)*Markets/);
+    state.navigate("markets");
+  });
+
   it("marks the overlay sidebar as a modal dialog when open and inert/hidden when closed", () => {
     const openTag = renderToStaticMarkup(<Sidebar overlay open />).split(">")[0] ?? "";
     expect(openTag).toContain('role="dialog"');

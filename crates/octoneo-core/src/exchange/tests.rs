@@ -151,6 +151,20 @@ async fn only_trading_perpetuals_are_listed_and_names_resolve_without_guessing()
     for unknown in ["", "OLD", "ODD", "TSLA", "BTCUSD"] {
         assert!(markets.resolve(unknown).is_err(), "{unknown} should not resolve");
     }
+    // One market per asset, in the venue's order: the one its bare name resolves to.
+    let one: Vec<&str> = markets.one_per_asset().iter().map(|m| m.symbol.as_str()).collect();
+    assert_eq!(one, ["BTCUSDT", "ETHUSDT", "XAUUSD1", "币安人生USDT", "B-MONEYUSDT"]);
+    let rows = [
+        symbol("SOLUSDC", "SOL", "USDC", "TRADING"),
+        symbol("SOLU", "SOL", "U", "TRADING"),
+        symbol("SOLUSD1", "SOL", "USD1", "TRADING"),
+        symbol("DOGEU", "DOGE", "U", "TRADING"),
+        symbol("SOLUSDT", "SOL", "USDT", "TRADING"),
+    ];
+    let listed = Markets::new(rows.iter().filter_map(market_from).collect());
+    let one: Vec<&str> = listed.one_per_asset().iter().map(|m| m.symbol.as_str()).collect();
+    assert_eq!(one, ["DOGEU", "SOLUSDT"]);
+    assert_eq!(listed.resolve("sol").expect("sol").symbol, "SOLUSDT");
 
     // The list is cached: asking again does not ask the exchange again.
     assert_eq!(venue.market("eth").await.expect("market").symbol, "ETHUSDT");

@@ -37,7 +37,7 @@ OctoNeo has three layers. Each one knows only about the layer below it.
 | `indicators` | Deterministic technical readings, so the model never does arithmetic. |
 | `llm` | The model providers. `chat` streams Chat Completions with tool calls for OpenRouter, Cloudflare AI Gateway and LM Studio; `ollama` speaks Ollama's own API. A `Connection` hides which one it is from the agent loop. |
 | `assistant` | The system prompt, the tool definitions, and the agent loop. |
-| `web` | News and web pages for the assistant: reads the publishers' feeds and the headlines filed under a share's ticker, matches a search against them on this computer, and reads one page at a time. `web::guard` decides which addresses may be read at all. |
+| `web` | News and web pages: reads the publishers' feeds and the headlines filed under a share's ticker, matches a search against them on this computer, and reads one page at a time for the assistant. For the News page it lists the newest stories with their pictures and the markets they name, and fetches a story's picture (only one a feed offered, only jpeg, png, webp, gif or avif, at most 4 MB). `web::guard` decides which addresses may be read at all. |
 | `mcp` | Model Context Protocol client for tool servers. |
 | `store` | Preferences, the run journal, and the `SecretStore` trait. |
 | `studio` | The one object that owns the desk's state and offers every action. |
@@ -84,7 +84,9 @@ The market data on a market's page and in the screener is public data read on de
 
 `src-tauri` is deliberately thin: `lib.rs` maps each command to a `Studio` method, and `keychain.rs` implements `SecretStore` with the system keychain. Turn events travel over a Tauri channel; snapshots from background work (a wallet page finishing in the browser) are emitted as the `snapshot` event. The shell also opens the wallet page in your browser, because the page's address is on this computer and the web view may only open `https` links.
 
-The web view runs under a content security policy that allows no network connections except IPC. Its only capability beyond the app's own commands is opening `https` links in your browser.
+The web view runs under a content security policy that allows no network connections except IPC. Its only capability beyond the app's own commands is opening `https` links in your browser. Story pictures on the News page come from the `newsimg` scheme, which the shell answers with what `Studio::news_picture` fetched.
+
+A news article opens in a second web view, `article.rs`, which the shell adds to the window where the interface leaves room for it. It is a browser view of the publisher's page, kept apart from the app: commands are refused to it (Tauri refuses remote pages, the capability names only the interface's web view, and the invoke handler checks the label of the web view that asked), it may move only to public `https` pages, downloads and new windows are refused, and it is incognito, so the page's cookies and storage go when it closes. Nothing in the interface can be drawn over it, so the interface hides it while a dialog, a menu or the narrow sidebar is open.
 
 ## The interface
 
@@ -98,6 +100,8 @@ The contract is enforced. `crates/octoneo-core/tests/contract.rs` serialises rea
 | --- | --- | --- |
 | Run journal | `journal.sqlite3` in the data folder | Conversations and activity, the last 2,000 runs, with the headlines the assistant was shown (title, publisher, link). A deleted conversation is overwritten, not just unlinked. Output of tool-server tools is never written here |
 | News feeds | In memory | Read again after five minutes. Nothing is kept between launches |
+| Story pictures | In memory | The last 64, up to 32 MB. Nothing is kept between launches |
+| An opened article | In memory | The article view keeps the page's cookies and storage only while it is open |
 | Preferences | `preferences.json` | Network, watchlist, risk limits, wallet addresses, the provider and model in use, a Cloudflare account ID, local server addresses. No secrets |
 | API wallet keys, OpenRouter key, Cloudflare API token | System keychain | In memory only if no keychain exists |
 | Positions, balances, orders | On the exchange | The app reads them; it keeps no copy between launches |

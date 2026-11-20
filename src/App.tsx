@@ -7,6 +7,7 @@ import { ChatPage } from "./features/chat/ChatPage";
 import { MarketPage } from "./features/market/MarketPage";
 import { TradeDialog } from "./features/market/TradeDialog";
 import { MarketsPage } from "./features/markets/MarketsPage";
+import { NewsPage } from "./features/news/NewsPage";
 import { SettingsDialog } from "./features/settings/SettingsDialog";
 import { Sidebar } from "./features/shell/Sidebar";
 import { TopBar } from "./features/shell/TopBar";
@@ -135,6 +136,7 @@ function Shell() {
         {page === "chat" ? <ChatPage /> : null}
         {page === "markets" ? <MarketsPage /> : null}
         {page === "market" ? <MarketPage /> : null}
+        {page === "news" ? <NewsPage /> : null}
         {page === "account" ? <AccountPage /> : null}
         {page === "activity" ? <ActivityPage /> : null}
       </main>

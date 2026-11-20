@@ -20,10 +20,10 @@ use octoneo_core::model::{
 };
 use octoneo_core::store::MemorySecrets;
 use octoneo_core::studio::view::{
-    AccountView, CandleSeries, CardView, FundingView, InstrumentView, MarketRow, McpView, NewsView,
-    OrderBookView, PendingWalletView, PlanView, QuoteView, RunStatus, RunView, StepStatus, StepView,
-    TechnicalFrame, TechnicalsView, ThreadView, TicketView, TradeView, Trend, TurnEvent, WalletNoticeView,
-    WalletTask, WalletView,
+    AccountView, CandleSeries, CardView, FundingView, InstrumentView, MarketRow, McpView, NewsDesk,
+    NewsFeedView, NewsView, OrderBookView, PendingWalletView, PlanView, QuoteView, RunStatus, RunView,
+    StepStatus, StepView, StoryView, TechnicalFrame, TechnicalsView, ThreadView, TicketView, TradeView,
+    Trend, TurnEvent, WalletNoticeView, WalletTask, WalletView,
 };
 use octoneo_core::studio::{Studio, StudioConfig};
 use rust_decimal::Decimal;
@@ -344,6 +344,30 @@ fn every_view_sends_exactly_the_fields_the_interface_declares() {
         CardView::Account,
     ];
     same("NewsView", &headline, &contract);
+    // The News page, and every desk a story can come from.
+    let story = StoryView {
+        title: "Bitcoin slides 12%".into(),
+        source: "CoinDesk".into(),
+        url: "https://www.coindesk.com/markets/a".into(),
+        published: Some("2026-11-19T06:00:00Z".into()),
+        summary: "Forced selling explained most of the move.".into(),
+        image: Some("https://cdn.example.com/a.jpg".into()),
+        topics: vec!["Markets".into()],
+        markets: vec!["BTCUSDT".into()],
+        desk: NewsDesk::Crypto,
+    };
+    same("StoryView", &story, &contract);
+    same(
+        "NewsFeedView",
+        &NewsFeedView {
+            stories: vec![story],
+            publishers: vec!["CoinDesk".into()],
+            missing: Vec::new(),
+            read_at: "2026-11-19T06:05:00Z".into(),
+        },
+        &contract,
+    );
+    assert_eq!(wire(&[NewsDesk::Crypto, NewsDesk::Macro]), union("NewsDesk"));
     let mut drawn = BTreeSet::new();
     for card in &attached {
         let wire = serde_json::to_value(card).expect("serialises");

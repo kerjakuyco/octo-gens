@@ -116,6 +116,9 @@ impl Failure {
     }
 }
 
+/// The quotes a bare asset name prefers, the deepest first: `BTC` is `BTCUSDT`.
+const BARE_QUOTES: [&str; 3] = ["USDT", "USD1", "USDC"];
+
 /// The markets of a network, in the venue's order.
 #[derive(Debug, Default)]
 pub struct Markets {
@@ -168,6 +171,25 @@ impl Markets {
         self.index.get(symbol).map(|i| &self.list[*i])
     }
 
+    /// One market per base asset, in the venue's order: the one a bare asset name
+    /// resolves to. Several markets trade bitcoin; news about bitcoin is about `BTCUSDT`.
+    pub fn one_per_asset(&self) -> Vec<&Market> {
+        let rank = |market: &Market| {
+            BARE_QUOTES.iter().position(|quote| *quote == market.quote).unwrap_or(BARE_QUOTES.len())
+        };
+        let mut best: HashMap<&str, &Market> = HashMap::new();
+        for market in &self.list {
+            let chosen = best.entry(market.base.as_str()).or_insert(market);
+            if rank(market) < rank(chosen) {
+                *chosen = market;
+            }
+        }
+        self.list
+            .iter()
+            .filter(|market| best.get(market.base.as_str()).is_some_and(|b| std::ptr::eq(*b, *market)))
+            .collect()
+    }
+
     /// Resolves what a person or a model typed (`btc`, `$BTC`, `BTCUSDT`,
     /// `BTC/USDT`, `BTC-PERP`) to a market. A bare asset name prefers its USDT
     /// market. Nothing is guessed: an unknown name is an error.
@@ -188,7 +210,7 @@ impl Markets {
             }
         }
         // A bare asset: prefer the deepest quote first.
-        for quote in ["USDT", "USD1", "USDC"] {
+        for quote in BARE_QUOTES {
             if let Some(market) = self.list.iter().find(|m| m.base == stripped && m.quote == quote) {
                 return Ok(market);
             }

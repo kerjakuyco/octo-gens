@@ -752,6 +752,7 @@ mod tests {
             summary: "s".repeat(400),
             topics: vec!["Markets".into()],
             body: Some("The whole article.".into()),
+            image: None,
         };
         let undated = Article { published: None, summary: String::new(), ..article.clone() };
         let news = news_json("BTC", &[article, undated], now);

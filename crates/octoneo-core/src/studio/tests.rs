@@ -3694,14 +3694,19 @@ async fn a_secret_that_cannot_be_forgotten_stays_connected() {
     assert!(studio.snapshot().assistant.providers[0].has_key);
 }
 
+/// The first bytes of a JPEG and of a PNG picture.
+const JPEG: &[u8] = &[0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, b'J', b'F', b'I', b'F', 0x00, 0x01, 0x01];
+const PNG: &[u8] = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\0\x01\0\0\0\x01\x08\x06\0\0\0";
+
 /// A newsroom: one feed of three stories and the pages behind them. The Ether
 /// story's page refuses apps, and `/secret` is a page nobody was shown a link to.
+/// The Bitcoin and Ether stories have pictures.
 async fn newsroom() -> MockServer {
     let server = MockServer::start().await;
-    let story = |title: &str, route: &str, summary: &str, hour: u32| {
+    let story = |title: &str, route: &str, summary: &str, hour: u32, picture: &str| {
         format!(
             "<item><title>{title}</title><link>{}{route}</link><pubDate>Thu, 19 Nov 2026 {hour:02}:00:00 GMT</pubDate>\
-             <description><![CDATA[{summary}]]></description></item>",
+             <description><![CDATA[{summary}]]></description>{picture}</item>",
             server.uri()
         )
     };
@@ -3711,19 +3716,28 @@ async fn newsroom() -> MockServer {
             "Bitcoin slides 12% through its 200-week average",
             "/story/btc",
             "Forced selling explained most of the move.",
-            6
+            6,
+            &format!(
+                "<enclosure url=\"{}/pictures/btc.jpg\" type=\"image/jpeg\" length=\"13\"/>",
+                server.uri()
+            )
         ),
         story(
             "ETF outflows mount as Ether risks $1,500",
             "/story/eth",
             "Spot funds lost $399M this week.",
-            5
+            5,
+            &format!(
+                "<enclosure url=\"{}/pictures/eth.png\" type=\"image/png\" length=\"24\"/>",
+                server.uri()
+            )
         ),
         story(
             "Solana says account rent could fall 86%",
             "/story/sol",
             "Developers would pay less for storage.",
-            4
+            4,
+            ""
         ),
     );
     let page = "<html><head><title>Bitcoin slides - Desk</title>\
@@ -3741,6 +3755,8 @@ async fn newsroom() -> MockServer {
         ("/story/btc", ResponseTemplate::new(200).set_body_raw(page, "text/html; charset=utf-8")),
         ("/story/eth", ResponseTemplate::new(403)),
         ("/secret", ResponseTemplate::new(200).set_body_raw(secret, "text/html")),
+        ("/pictures/btc.jpg", ResponseTemplate::new(200).set_body_raw(JPEG.to_vec(), "image/jpeg")),
+        ("/pictures/eth.png", ResponseTemplate::new(200).set_body_raw(PNG.to_vec(), "image/png")),
     ] {
         Mock::given(method("GET")).and(path(route)).respond_with(response).mount(&server).await;
     }
@@ -4080,4 +4096,76 @@ async fn a_market_that_is_not_a_coin_is_also_looked_up_by_its_ticker() {
     let snapshot = desk.studio.ask("And bitcoin?", &Silent).await.expect("turn");
     assert_eq!(kinds(&last_turn(&snapshot).cards), ["news"]);
     assert_eq!(by_ticker().await.len(), 1);
+}
+
+#[tokio::test]
+async fn the_news_page_ties_each_story_to_its_markets_and_shows_only_its_own_pictures() {
+    let folder = tempfile::tempdir().expect("tempdir");
+    let news = newsroom().await;
+    let link = |route: &str| format!("{}{route}", news.uri());
+    let (server, _exchange) = stand_in(Network::Testnet).await;
+    let desk = open(folder.path(), Arc::default(), |config| {
+        config.exchange_bases.insert(Network::Testnet, server.uri());
+        config.news_feeds = Some(vec![("Desk".to_string(), link("/rss"))]);
+    });
+    let studio = &desk.studio;
+    studio.set_network(Network::Testnet).await.expect("testnet");
+
+    // No model is needed to read the news.
+    let page = studio.news_feed().await.expect("news page");
+    let (btc, eth) = (link("/pictures/btc.jpg"), link("/pictures/eth.png"));
+    let shown: Vec<(&str, Vec<&str>, Option<&str>)> = page
+        .stories
+        .iter()
+        .map(|story| {
+            let markets = story.markets.iter().map(String::as_str).collect();
+            (story.title.as_str(), markets, story.image.as_deref())
+        })
+        .collect();
+    assert_eq!(
+        shown,
+        [
+            ("Bitcoin slides 12% through its 200-week average", vec!["BTCUSDT"], Some(btc.as_str())),
+            ("ETF outflows mount as Ether risks $1,500", vec!["ETHUSDT"], Some(eth.as_str())),
+            // Testnet lists no Solana market, so the story is tied to none.
+            ("Solana says account rent could fall 86%", vec![], None),
+        ]
+    );
+    let first = &page.stories[0];
+    assert_eq!(
+        (first.source.as_str(), first.url.as_str(), first.published.as_deref(), first.desk),
+        ("Desk", link("/story/btc").as_str(), Some("2026-11-19T06:00:00Z"), NewsDesk::Crypto)
+    );
+    assert_eq!(first.summary, "Forced selling explained most of the move.");
+    assert_eq!((page.publishers.as_slice(), page.missing.len()), (["Desk".to_string()].as_slice(), 0));
+    assert!(chrono::DateTime::parse_from_rfc3339(&page.read_at).is_ok(), "{}", page.read_at);
+
+    // The interface has no network access: the core fetches the pictures it was given, and no other address.
+    let picture = studio.news_picture(&btc).await.expect("jpeg");
+    assert_eq!((picture.content_type.as_str(), picture.bytes.as_slice()), ("image/jpeg", JPEG));
+    assert_eq!(studio.news_picture(&eth).await.expect("png").content_type, "image/png");
+    let unknown = studio.news_picture(&link("/secret")).await.expect_err("not a picture it was given");
+    assert_eq!(unknown.0, "That picture is not one the News page showed.");
+    assert_eq!(count(&news, "/secret").await, 0);
+
+    // Off: nothing is read or fetched, and the trader is told where to turn it on.
+    studio.set_web_search(false).expect("off");
+    let before = news.received_requests().await.expect("recorded").len();
+    let off = "Web search is off. Turn it on in Settings, under Tools, to read the news.";
+    assert_eq!(studio.news_feed().await.expect_err("off").0, off);
+    assert_eq!(studio.news_picture(&btc).await.expect_err("off").0, off);
+    assert_eq!(news.received_requests().await.expect("recorded").len(), before);
+}
+
+#[tokio::test]
+async fn without_the_market_list_the_news_page_still_shows_the_news() {
+    let folder = tempfile::tempdir().expect("tempdir");
+    let news = newsroom().await;
+    // The exchange cannot be reached: every network points nowhere.
+    let desk = open(folder.path(), Arc::default(), |config| {
+        config.news_feeds = Some(vec![("Desk".to_string(), format!("{}/rss", news.uri()))]);
+    });
+    let page = desk.studio.news_feed().await.expect("news page");
+    assert_eq!(page.stories.len(), 3);
+    assert!(page.stories.iter().all(|story| story.markets.is_empty()));
 }

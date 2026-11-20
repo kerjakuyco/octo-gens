@@ -83,6 +83,13 @@ const SHAPES = {
   chevronDown: <path d="m6 9 6 6 6-6" />,
   back: <path d="m15 6-6 6 6 6" />,
   news: <path d="M4.5 5.5h11.5v13H6.5a2 2 0 0 1-2-2zM16 9.5h3.5v7a2 2 0 0 1-2 2H6.5M7.5 9h5.5M7.5 12.5h5.5M7.5 16h3" />,
+  magazine: (
+    <>
+      <rect x="3.5" y="5" width="17" height="14" rx="2.5" />
+      <rect x="6.5" y="8" width="5" height="5" rx="1" />
+      <path d="M14.5 8.5h3M14.5 12h3M6.5 16h11" />
+    </>
+  ),
   plug: <path d="M9 4v4M15 4v4M6.5 8h11v3a5.5 5.5 0 0 1-11 0zM12 16.5V20" />,
   appearance: (
     <>

@@ -6,6 +6,7 @@ import { activeWallet } from "../../lib/market";
 import { networkName } from "../../lib/network";
 import { useResolvedTheme } from "../../lib/theme";
 import { filterThreads, groupThreads } from "../../lib/threads";
+import { openNews } from "../news/store";
 import {
   deleteThread,
   hasVisibleUpdate,
@@ -267,6 +268,9 @@ export function Sidebar({ overlay, open = true }: SidebarProps) {
               current={page === "markets" || page === "market"}
               onClick={() => navigate("markets")}
             />
+          </li>
+          <li>
+            <NavItem icon="magazine" label="News" current={page === "news"} onClick={openNews} />
           </li>
           <li>
             <NavItem

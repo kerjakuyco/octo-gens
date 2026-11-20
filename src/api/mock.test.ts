@@ -1082,3 +1082,102 @@ describe("mock backend: forced states", () => {
     expect(attached.servers).toHaveLength(1);
   });
 });
+
+describe("mock backend: news", () => {
+  it("reads two dozen invented stories from the last day, newest first, from both desks", async () => {
+    const feed = await instant().newsFeed();
+    expect(feed.stories.length).toBeGreaterThanOrEqual(20);
+    expect(feed.stories.length).toBeLessThanOrEqual(28);
+
+    const times = feed.stories.map((story) => Date.parse(story.published ?? ""));
+    expect([...times].sort((left, right) => right - left)).toEqual(times);
+    for (const time of times) {
+      expect(Date.now() - time).toBeGreaterThan(0);
+      expect(Date.now() - time).toBeLessThan(24 * 3_600_000);
+    }
+    expect(new Set(feed.stories.map((story) => story.desk))).toEqual(new Set(["crypto", "macro"]));
+
+    // Every newsroom is invented, and so is every address.
+    expect(feed.missing).toEqual([]);
+    for (const story of feed.stories) {
+      expect(feed.publishers).toContain(story.source);
+      const url = new URL(story.url);
+      expect(url.protocol).toBe("https:");
+      expect(url.hostname.endsWith(".example")).toBe(true);
+      expect(story.title.length).toBeGreaterThan(0);
+      expect(story.summary.length).toBeGreaterThan(0);
+    }
+    expect(feed.publishers).toEqual(expect.arrayContaining(["Tidewire", "Kelp Desk", "The Brine Report"]));
+    expect(Number.isNaN(Date.parse(feed.readAt))).toBe(false);
+  });
+
+  it("draws an abstract picture for most stories, the same one every time, and leaves a few without", async () => {
+    const first = await instant().newsFeed();
+    const second = await instant().newsFeed();
+    const pictured = first.stories.filter((story) => story.image !== null);
+    expect(pictured.length).toBeGreaterThan(first.stories.length / 2);
+    expect(first.stories.length - pictured.length).toBeGreaterThanOrEqual(3);
+    for (const story of pictured) {
+      expect(story.image).toMatch(/^data:image\/svg\+xml/);
+      // Shapes and colour only: no words that could pass for a brand.
+      expect(decodeURIComponent(story.image!)).not.toMatch(/<text|<image|https?:\/\/(?!www\.w3\.org)/);
+    }
+    expect(new Set(pictured.map((story) => story.image)).size).toBe(pictured.length);
+    expect(second.stories.map((story) => story.image)).toEqual(first.stories.map((story) => story.image));
+  });
+
+  it("names only markets listed on the active network", async () => {
+    const backend = instant();
+    const testnet = await backend.newsFeed();
+    const listed = new Set((await backend.marketOverview()).map((row) => row.symbol));
+    const about = testnet.stories.flatMap((story) => story.markets);
+    expect(about).toEqual(expect.arrayContaining(["BTCUSDT", "ETHUSDT", "SOLUSDT"]));
+    for (const symbol of about) expect(listed.has(symbol)).toBe(true);
+
+    // Gold is only listed on mainnet.
+    const gold = (stories: typeof testnet.stories) => stories.find((story) => story.title.startsWith("Gold"))?.markets;
+    expect(gold(testnet.stories)).toEqual([]);
+    await backend.setNetwork("mainnet");
+    expect(gold((await backend.newsFeed()).stories)).toEqual(["XAUUSD1"]);
+  });
+
+  it("reads nothing while web search is off, and says so", async () => {
+    const backend = instant({ web: false });
+    await expect(backend.newsFeed()).rejects.toThrow("Web search is off");
+    await backend.setWebSearch(true);
+    expect((await backend.newsFeed()).stories.length).toBeGreaterThan(0);
+  });
+
+  it("can be told that a newsroom did not answer, that none did, or that nobody had a story", async () => {
+    const missing = await instant({ feed: "missing" }).newsFeed();
+    expect(missing.missing).toEqual(["Kelp Desk"]);
+    expect(missing.publishers).toContain("Kelp Desk");
+    expect(missing.stories.some((story) => story.source === "Kelp Desk")).toBe(false);
+
+    await expect(instant({ feed: "error" }).newsFeed()).rejects.toThrow("None of the newsrooms answered");
+    expect((await instant({ feed: "empty" }).newsFeed()).stories).toEqual([]);
+
+    expect(mockOptionsFromUrl("?feed=missing&web=0")).toMatchObject({ feed: "missing", web: false });
+    expect(mockOptionsFromUrl("?feed=nope").feed).toBeUndefined();
+  });
+
+  it("passes its own pictures through, and has no article view to open or report on", async () => {
+    const backend = instant();
+    const feed = await backend.newsFeed();
+    const image = feed.stories.find((story) => story.image !== null)!.image!;
+    expect(backend.pictureSrc(image)).toBe(image);
+    expect(backend.pictureSrc("https://tidewire.example/pictures/lead.jpg")).toBe("");
+
+    const bounds = { x: 260, y: 106, width: 1180, height: 794 };
+    await expect(backend.openArticle(feed.stories[0]!.url, bounds)).resolves.toBeUndefined();
+    await expect(backend.moveArticle(bounds)).resolves.toBeUndefined();
+    await expect(backend.showArticle(false)).resolves.toBeUndefined();
+    await expect(backend.reloadArticle()).resolves.toBeUndefined();
+    await expect(backend.closeArticle()).resolves.toBeUndefined();
+    const stop = backend.onArticle(() => {
+      throw new Error("The mock has no article view to report on.");
+    });
+    expect(stop).toBeTypeOf("function");
+    stop();
+  });
+});

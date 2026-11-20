@@ -1,15 +1,17 @@
 /** The real backend: commands and events served by the Rust core through Tauri. */
 
-import { Channel, invoke } from "@tauri-apps/api/core";
+import { Channel, convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { safeExternalUrl } from "../lib/markdown";
 import type {
+  ArticleEvent,
   Backend,
   CandleSeries,
   FundingView,
   MarketRow,
   ModelInfo,
+  NewsFeedView,
   OrderBookView,
   Snapshot,
   TechnicalsView,
@@ -19,6 +21,22 @@ import type {
   UpdateCheckResult,
   UpdateProgress,
 } from "./types";
+
+/** Calls `listener` with each payload of a Tauri event until the returned function is called. */
+function subscribe<T>(event: string, listener: (payload: T) => void): () => void {
+  let active = true;
+  let stop: (() => void) | undefined;
+  void listen<T>(event, (received) => {
+    if (active) listener(received.payload);
+  }).then((unlisten) => {
+    if (active) stop = unlisten;
+    else unlisten();
+  });
+  return () => {
+    active = false;
+    stop?.();
+  };
+}
 
 export function createTauriBackend(): Backend {
   return {
@@ -86,19 +104,16 @@ export function createTauriBackend(): Backend {
       await openUrl(safe);
     },
 
-    onSnapshot(listener) {
-      let active = true;
-      let stop: (() => void) | undefined;
-      void listen<Snapshot>("snapshot", (event) => {
-        if (active) listener(event.payload);
-      }).then((unlisten) => {
-        if (active) stop = unlisten;
-        else unlisten();
-      });
-      return () => {
-        active = false;
-        stop?.();
-      };
-    },
+    onSnapshot: (listener) => subscribe<Snapshot>("snapshot", listener),
+
+    newsFeed: () => invoke<NewsFeedView>("news_feed"),
+    // The core fetches the picture and serves it on its own scheme; the web view never reaches the publisher.
+    pictureSrc: (image) => convertFileSrc(image, "newsimg"),
+    openArticle: (url, bounds) => invoke<void>("article_open", { url, bounds }),
+    moveArticle: (bounds) => invoke<void>("article_bounds", { bounds }),
+    showArticle: (shown) => invoke<void>("article_shown", { shown }),
+    reloadArticle: () => invoke<void>("article_reload"),
+    closeArticle: () => invoke<void>("article_close"),
+    onArticle: (listener) => subscribe<ArticleEvent>("article", listener),
   };
 }
