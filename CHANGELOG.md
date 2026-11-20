@@ -4,6 +4,10 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## Unreleased
 
+### Changed
+
+- **A new app icon.** The white octopus now sits on near-black, the colour of the website, in place of blue.
+
 ## 0.6.0
 
 Every market now has a page of its own: a larger chart with the overlays you choose, readings on trend, volatility and trading flow, and your position and orders in that market. It takes the place of the market panel beside the conversation, and the sidebar was redesigned.

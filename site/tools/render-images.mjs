@@ -33,7 +33,7 @@ try {
   if (wanted("apple-touch-icon")) {
     // The tile without its rounded corners, filling the square.
     const icon = readFileSync(join(SRC, "assets", "images", "icon.svg"), "utf8").replace(/rx="186"/, 'rx="0"');
-    const html = `<!doctype html><html><body style="margin:0;background:#1a3aa6">${icon.replace("<svg ", '<svg width="180" height="180" ')}</body></html>`;
+    const html = `<!doctype html><html><body style="margin:0;background:#0a0a0a">${icon.replace("<svg ", '<svg width="180" height="180" ')}</body></html>`;
     await page.goto(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`, { width: 180, height: 180, scale: 1 });
     await page.capture(join(SRC, "assets", "images", "apple-touch-icon.png"), { format: "png" });
     rendered.push("apple-touch-icon.png");
