@@ -4,6 +4,10 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## Unreleased
 
+### Changed
+
+- **The wallet pages, redesigned.** The pages the app opens in your browser to approve the trading key, deposit and withdraw now match the app: a calm card in light or dark, following your system, with the network at the top and real funds marked on mainnet. Each page says what is about to happen before you act: what the key can and cannot do and for how long, or where the funds go, from your wallet to your trading account or back. Steps show what is done, what is next, the wallet you connected and the network it is on. The amount has 25%, 50%, 75% and Max, with what is in your wallet or what you can withdraw below it, and a summary that follows as you type: the network, the fee, and what you deposit or receive. A signature that must be confirmed in time shows the seconds left. Waiting for your wallet, a declined request, the wrong network or account, no wallet found, an expired page and success each say plainly what happened and what to do next. Only the look and the guidance changed: what your wallet signs and sends is the same.
+
 ### Fixed
 
 - **Every market in the order form and on Grid bots.** Both listed only the markets on your watchlist. They now open a searchable list of every market the exchange lists, the watchlist first and then the most traded, each with its price and its move today, and a market off the watchlist is loaded with its own price, funding and levels once picked.

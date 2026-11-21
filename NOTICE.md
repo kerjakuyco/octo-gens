@@ -28,6 +28,6 @@ Headlines come from the public RSS feeds of CoinDesk, Cointelegraph, The Block, 
 
 ## Coin icons
 
-The icons of well-known coins in `src/assets/coins/` are from [Web3 Icons](https://github.com/0xa3k5/web3icons) (`@web3icons/core` 4.0.60), under the MIT license. Each coin's logo is a trademark of its project and is shown only to identify that coin. The website shows the single-colour marks of BNB Smart Chain, Ethereum, Arbitrum One and Rabby from the same set, and MetaMask's mark in shades of one colour, only to name the networks and wallets the app works with.
+The icons of well-known coins in `src/assets/coins/` are from [Web3 Icons](https://github.com/0xa3k5/web3icons) (`@web3icons/core` 4.0.60), under the MIT license. Each coin's logo is a trademark of its project and is shown only to identify that coin. The website shows the single-colour marks of BNB Smart Chain, Ethereum, Arbitrum One and Rabby from the same set, and MetaMask's mark in shades of one colour, only to name the networks and wallets the app works with. The wallet page the app serves in your browser (`crates/octoneo-core/src/connect/page.html`) shows the same single-colour marks of BNB Smart Chain, Ethereum and Arbitrum One, only to name the network funds travel on.
 
 BNB Chain, Ethereum, Arbitrum, OpenRouter, Cloudflare, Ollama, LM Studio, MetaMask, Rabby, TradingView, CoinDesk, Cointelegraph, The Block, Decrypt, crypto.news and Yahoo Finance are trademarks of their owners. OctoNeo is an independent project and is not affiliated with or endorsed by any of them.

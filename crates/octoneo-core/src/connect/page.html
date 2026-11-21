@@ -5,45 +5,59 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-__NONCE__'; style-src 'nonce-__NONCE__'; connect-src 'self'; img-src data:; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
 <title>OctoNeo</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7.5' fill='%230a0a0a'/%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2.7' stroke-linecap='round' d='M20.6 16.6C23.6 18.6 27.2 17.6 27.2 14.2M20 19C22 22.6 25.6 23.4 27.4 21.4M18 20.2C18.2 23.8 20.4 26.4 23.6 26.2M11.4 16.6C8.4 18.6 4.8 17.6 4.8 14.2M12 19C10 22.6 6.4 23.4 4.6 21.4M14 20.2C13.8 23.8 11.6 26.4 8.4 26.2'/%3E%3Cellipse cx='16' cy='12.6' rx='7.4' ry='7.6' fill='%23fff'/%3E%3Crect x='11.4' y='12.6' width='3.4' height='1.5' rx='.75' fill='%230a0a0a'/%3E%3Crect x='17.2' y='12.6' width='3.4' height='1.5' rx='.75' fill='%230a0a0a'/%3E%3C/svg%3E">
 <style nonce="__NONCE__">
-  /* The colours of the app: paper and ink, one blue, and green and red only for can and cannot. */
+  /* The app's colours: paper and ink. Green and red say can and cannot, amber says real funds. */
   :root {
     color-scheme: light dark;
-    --paper: #ffffff;
+    --page: #f4f4f4;
+    --card: #ffffff;
+    --surface: #f7f7f7;
     --ink: #0d0d0d;
-    --quiet: #5d5d5d;
+    --muted: #5d5d5d;
     --faint: #767676;
-    --rule: #e5e5e5;
-    --rule-strong: #cdcdcd;
-    --wash: #f5f5f5;
-    --brand: #2a63dd;
-    --brand-strong: #1f51c2;
-    --brand-soft: rgba(42, 99, 221, 0.08);
-    --on-brand: #ffffff;
-    --can: #06733b;
-    --cannot: #c5221f;
-    --on-cannot: #ffffff;
+    --border: #e5e5e5;
+    --border-strong: #cdcdcd;
+    --field: #8f8f8f;
+    --halo: rgba(13, 13, 13, 0.07);
+    --primary: #0d0d0d;
+    --primary-hover: #2f2f2f;
+    --on-primary: #ffffff;
+    --up: #06733b;
+    --up-soft: rgba(6, 115, 59, 0.1);
+    --down: #c5221f;
+    --down-soft: rgba(197, 34, 31, 0.07);
+    --warn: #8a5a00;
+    --warn-soft: rgba(214, 150, 20, 0.15);
     --focus: #2563eb;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px rgba(0, 0, 0, 0.06);
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --paper: #212121;
+      --page: #181818;
+      --card: #212121;
+      --surface: #2a2a2a;
       --ink: #ececec;
-      --quiet: #b4b4b4;
+      --muted: #b4b4b4;
       --faint: #9a9a9a;
-      --rule: #383838;
-      --rule-strong: #575757;
-      --wash: #2b2b2b;
-      --brand: #78a4ff;
-      --brand-strong: #96b8ff;
-      --brand-soft: rgba(120, 164, 255, 0.12);
-      --on-brand: #0c1a38;
-      --can: #3ecf8e;
-      --cannot: #ff8a80;
-      --on-cannot: #2a0f0c;
+      --border: rgba(255, 255, 255, 0.1);
+      --border-strong: rgba(255, 255, 255, 0.2);
+      --field: rgba(255, 255, 255, 0.36);
+      --halo: rgba(255, 255, 255, 0.09);
+      --primary: #ffffff;
+      --primary-hover: #dcdcdc;
+      --on-primary: #0d0d0d;
+      --up: #3ecf8e;
+      --up-soft: rgba(62, 207, 142, 0.13);
+      --down: #ff8a80;
+      --down-soft: rgba(255, 138, 128, 0.11);
+      --warn: #f2b84b;
+      --warn-soft: rgba(242, 184, 75, 0.13);
       --focus: #7aa7ff;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.32);
     }
   }
 
@@ -52,182 +66,289 @@
   body {
     margin: 0;
     min-height: 100vh;
-    background: var(--paper);
+    background: var(--page);
     color: var(--ink);
-    font: 400 16px/1.5 system-ui, -apple-system, Roboto, "Noto Sans", sans-serif;
+    font: 400 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
   h1, h2, p, ul, ol, dl, dd, fieldset, legend { margin: 0; padding: 0; }
   fieldset { min-width: 0; border: 0; }
   [hidden] { display: none !important; }
   :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  .mono { font-family: ui-monospace, monospace; font-size: 0.92em; overflow-wrap: anywhere; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.9em; overflow-wrap: anywhere; }
+  .quiet { color: var(--muted); }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .glyph { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 
   /* ------------------------------------------------------------------ top */
 
   .top {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px 20px;
-    min-height: 56px;
-    padding: 12px clamp(20px, 4vw, 40px);
-    border-bottom: 1px solid var(--rule);
+    gap: 12px;
+    padding: 16px clamp(16px, 4vw, 32px);
   }
-  .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
-  .mark { flex: none; width: 28px; height: 26px; color: var(--brand); }
-  .mark-eye { fill: var(--paper); }
-  .net { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--quiet); }
+  .brand { display: inline-flex; align-items: center; gap: 9px; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+  .mark { flex: none; width: 26px; height: 24px; color: var(--ink); }
+  .mark-eye { fill: var(--page); }
+  .net {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    padding: 0 11px 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--card);
+    color: var(--muted);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .net::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
   .net-name { color: var(--ink); font-weight: 600; }
-  .real { padding: 2px 8px; border-radius: 4px; background: var(--ink); color: var(--paper); font-size: 13px; font-weight: 600; }
+  .net[data-real="true"] { border-color: transparent; background: var(--warn-soft); color: var(--warn); }
+  .net[data-real="true"]::before { background: var(--warn); }
+  .net[data-real="true"] .net-name { color: var(--warn); }
 
-  /* ----------------------------------------------------------------- page */
+  /* ----------------------------------------------------------------- card */
 
-  main {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 272px;
-    column-gap: clamp(40px, 7vw, 96px);
-    align-items: start;
-    max-width: 1040px;
-    margin: 0 auto;
-    padding: clamp(32px, 6vw, 64px) clamp(20px, 4vw, 40px) 80px;
+  .page { display: grid; justify-items: center; gap: 14px; padding: clamp(4px, 3vw, 28px) 16px 56px; }
+  .card {
+    width: min(100%, 560px);
+    padding: clamp(22px, 5vw, 34px);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--card);
+    box-shadow: var(--shadow);
   }
-  .intro, .statement, .steps, .result { grid-column: 1; }
-  .notes { grid-column: 2; grid-row: 1 / span 4; }
+  h1 { font-size: clamp(23px, 4.6vw, 27px); line-height: 1.2; font-weight: 650; letter-spacing: -0.02em; text-wrap: balance; }
+  .lead { margin-top: 8px; color: var(--muted); text-wrap: pretty; }
 
-  h1 { font-size: clamp(28px, 4.2vw, 38px); line-height: 1.1; font-weight: 650; letter-spacing: -0.025em; text-wrap: balance; }
-  .lead { max-width: 34em; margin-top: 14px; font-size: 17px; }
+  /* ------------------------------------------------------ what will happen */
 
-  .notes { padding-left: 28px; border-left: 1px solid var(--rule); font-size: 14px; color: var(--quiet); }
-  .notes h2 { font-size: 14px; font-weight: 600; color: var(--ink); }
-  .notes ul { display: grid; gap: 14px; margin-top: 12px; list-style: none; }
-
-  /* ----------------------------------------------- what is being approved */
-
-  .statement { margin-top: 32px; padding: 18px 0 22px; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule); }
-  .statement h2 { font-size: 15px; font-weight: 600; }
-  .key { display: grid; gap: 2px; margin-top: 12px; }
-  .key .mono { text-wrap: balance; }
-  .key-name { font-size: 14px; color: var(--quiet); }
-  .grants { display: grid; gap: 8px; margin-top: 18px; list-style: none; }
-  .grant { display: grid; grid-template-columns: 72px minmax(0, 1fr); column-gap: 12px; align-items: baseline; }
+  .summary { margin-top: 22px; padding: 16px 18px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+  .summary-title { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .key { display: grid; gap: 3px; margin-top: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .key-name { font-size: 13px; color: var(--muted); }
+  .key .mono { font-size: 13.5px; line-height: 1.45; }
+  .grants { display: grid; gap: 9px; margin-top: 14px; list-style: none; }
+  .grant { display: grid; grid-template-columns: 20px minmax(0, 1fr); column-gap: 10px; align-items: start; }
+  .grant-icon { display: grid; place-items: center; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; }
+  .grant-icon .glyph { width: 12px; height: 12px; stroke-width: 2.6; }
+  .grant[data-can="yes"] .grant-icon { background: var(--up-soft); color: var(--up); }
+  .grant[data-can="no"] .grant-icon { background: var(--down-soft); color: var(--down); }
   .grant-word { font-weight: 650; }
-  .grant[data-can="yes"] .grant-word { color: var(--can); }
-  .grant[data-can="no"] .grant-word { color: var(--cannot); }
-  .grant-strong { padding-top: 6px; font-size: 21px; line-height: 1.25; font-weight: 650; letter-spacing: -0.012em; }
-  .valid { margin-top: 18px; font-size: 14px; color: var(--quiet); }
+  .grant[data-can="yes"] .grant-word { color: var(--up); }
+  .grant[data-can="no"] .grant-word { color: var(--down); }
+  .grant-strong { font-weight: 600; }
+  .valid { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+
+  .route { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 10px; }
+  .end { display: grid; align-content: start; gap: 1px; min-width: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+  .end-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .end-name { font-size: 15px; font-weight: 600; }
+  .end-sub { font-size: 13px; color: var(--muted); }
+  .route-arrow { display: grid; place-items: center; color: var(--muted); }
+  .route-arrow .glyph { width: 16px; height: 16px; }
+  .route-note { margin-top: 12px; font-size: 13px; color: var(--muted); }
 
   /* ---------------------------------------------------------------- steps */
 
-  .steps { margin-top: 36px; list-style: none; }
-  .step, .result { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 16px; }
-  .step { padding-bottom: 26px; }
-  .step::before { content: ""; position: absolute; top: 32px; bottom: 4px; left: 13.5px; width: 1px; background: var(--rule-strong); }
-  .steps[data-ended="false"] .step:last-child { padding-bottom: 0; }
-  .steps[data-ended="false"] .step:last-child::before { display: none; }
+  .steps { margin-top: 26px; list-style: none; }
+  .step { position: relative; display: grid; grid-template-columns: 26px minmax(0, 1fr); column-gap: 14px; padding-bottom: 20px; }
+  .step::before { content: ""; position: absolute; top: 31px; bottom: 5px; left: 12.5px; width: 1px; background: var(--border-strong); }
+  .step:last-child { padding-bottom: 0; }
+  .step:last-child::before { display: none; }
+  .step[data-state="done"]::before, .step[data-state="skipped"]::before { background: var(--muted); }
 
   .marker {
     position: relative;
     display: grid;
     place-items: center;
-    width: 28px;
-    height: 28px;
-    border: 1px solid var(--rule-strong);
+    width: 26px;
+    height: 26px;
+    border: 1.5px solid var(--border-strong);
     border-radius: 50%;
-    background: var(--paper);
-    color: var(--quiet);
-    font-size: 13px;
-    font-weight: 600;
+    background: var(--card);
+    color: var(--faint);
+    font-size: 12px;
+    font-weight: 650;
     font-variant-numeric: tabular-nums;
     line-height: 1;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
   }
-  .glyph { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .step[data-state="active"] > .marker { border-color: var(--brand); background: var(--brand); color: var(--on-brand); }
-  .step[data-state="wallet"] > .marker, .step[data-state="busy"] > .marker { border-color: var(--rule); color: var(--brand); }
+  .step[data-state="active"] > .marker { border-color: var(--ink); color: var(--ink); box-shadow: 0 0 0 4px var(--halo); }
+  .step[data-state="wallet"] > .marker, .step[data-state="busy"] > .marker { border-color: var(--border); color: var(--ink); }
   .step[data-state="wallet"] > .marker::after, .step[data-state="busy"] > .marker::after {
     content: "";
     position: absolute;
-    inset: -1px;
+    inset: -1.5px;
     border: 2px solid transparent;
-    border-top-color: var(--brand);
-    border-right-color: var(--brand);
+    border-top-color: var(--ink);
+    border-right-color: var(--ink);
     border-radius: 50%;
     animation: turn 0.9s linear infinite;
   }
-  .step[data-state="done"] > .marker { border-color: var(--ink); background: var(--ink); color: var(--paper); }
-  .step[data-state="failed"] > .marker { border-color: var(--cannot); background: var(--cannot); color: var(--on-cannot); }
-  .step[data-state="skipped"] > .marker { border-style: dashed; }
+  .step[data-state="done"] > .marker { border-color: var(--primary); background: var(--primary); color: var(--on-primary); }
+  .step[data-state="failed"] > .marker { border-color: var(--down); background: var(--down); color: var(--card); }
+  .step[data-state="skipped"] > .marker { border-style: dashed; color: var(--muted); }
   @keyframes turn { to { transform: rotate(360deg); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(4px); } }
+  @keyframes pop { from { opacity: 0; transform: scale(0.6); } }
 
   .step-main { min-width: 0; }
-  .step-title { font-size: 17px; line-height: 28px; font-weight: 600; }
-  .step[data-state="todo"] .step-title { color: var(--quiet); font-weight: 500; }
-  .step-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; font-size: 14px; color: var(--quiet); }
-  .step-body { display: grid; gap: 14px; justify-items: start; margin-top: 8px; }
+  .step-title { font-size: 15.5px; line-height: 26px; font-weight: 600; }
+  .step-title:focus { outline: none; }
+  .step-title:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
+  .step[data-state="todo"] .step-title { color: var(--faint); font-weight: 500; }
+  .step-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 3px; font-size: 13.5px; color: var(--muted); }
+  .step-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 12px; }
   .step-body:empty { display: none; }
-  .step-body > * { max-width: 100%; }
+  .step-body > * { min-width: 0; animation: rise 0.28s var(--ease); }
 
-  .hint { max-width: 34em; font-size: 15px; color: var(--quiet); }
-  .status { font-size: 15px; font-weight: 600; }
-  .problem { max-width: 34em; font-size: 15px; font-weight: 500; color: var(--cannot); }
-  .plain { max-width: 34em; font-size: 15px; font-weight: 600; }
-  .note { max-width: 36em; padding: 10px 14px; border-left: 2px solid var(--rule-strong); background: var(--wash); font-size: 14px; }
-  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
-  .facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 20px; font-size: 15px; font-variant-numeric: tabular-nums; }
-  .facts dt { color: var(--quiet); }
+  .hint { font-size: 14px; color: var(--muted); text-wrap: pretty; }
+  .plain { font-weight: 600; }
+  .hush { color: var(--warn); }
+  .hush:empty { display: none; }
 
+  /* waiting for the wallet, or for the app */
+  .wait { display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+  .spin { width: 20px; height: 20px; margin-top: 1px; border: 2px solid var(--border-strong); border-top-color: var(--ink); border-radius: 50%; animation: turn 0.8s linear infinite; }
+  .wait-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
+  .status { font-weight: 600; }
+
+  /* something went wrong */
+  .alert { display: grid; grid-template-columns: 20px minmax(0, 1fr); column-gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--down-soft); }
+  .alert-icon { display: grid; place-items: center; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; background: var(--down); color: var(--card); }
+  .alert-icon .glyph { width: 12px; height: 12px; stroke-width: 2.8; }
+  .alert-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; min-width: 0; }
+  .problem { font-weight: 600; text-wrap: pretty; }
+
+  .note { display: grid; grid-template-columns: 18px minmax(0, 1fr); column-gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; font-size: 13.5px; color: var(--muted); }
+  .note-icon { display: grid; place-items: center; width: 18px; height: 18px; margin-top: 1px; border: 1.5px solid currentColor; border-radius: 50%; }
+  .note-icon .glyph { width: 10px; height: 10px; stroke-width: 2.6; }
+
+  .empty { display: grid; gap: 6px; }
+
+  /* -------------------------------------------------------------- buttons */
+
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  .actions > .btn { flex: 1 1 160px; }
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 44px;
-    padding: 0 18px;
+    gap: 8px;
+    min-height: 46px;
+    padding: 0 20px;
     border: 1px solid transparent;
-    border-radius: 8px;
+    border-radius: 12px;
     font: inherit;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
+    transition: background-color 0.15s, transform 0.1s;
   }
-  .btn-primary { background: var(--brand); color: var(--on-brand); }
-  .btn-primary:hover:not(:disabled) { background: var(--brand-strong); }
-  .btn-quiet { border-color: var(--rule-strong); background: transparent; color: var(--ink); }
-  .btn-quiet:hover:not(:disabled) { background: var(--wash); }
-  .btn:disabled { opacity: 0.45; cursor: default; }
-  .link { padding: 0; border: 0; background: none; color: var(--brand); font: inherit; font-size: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn-primary { background: var(--primary); color: var(--on-primary); }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+  .btn-quiet { border-color: var(--border-strong); background: var(--card); color: var(--ink); }
+  .btn-quiet:hover:not(:disabled) { background: var(--surface); }
+  .btn-small { min-height: 32px; padding: 0 12px; border-radius: 10px; font-size: 13.5px; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-size: inherit;
+    font-weight: 500;
+    text-decoration: underline;
+    text-decoration-color: var(--muted);
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  .link:hover { text-decoration-color: currentColor; }
   .link:disabled { color: var(--faint); text-decoration: none; cursor: default; }
 
   /* -------------------------------------------------------------- wallets */
 
-  .wallets { display: grid; gap: 8px; width: min(100%, 360px); }
-  .wallet { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 14px; border: 1px solid var(--rule-strong); border-radius: 8px; cursor: pointer; }
-  .wallet[data-on="true"] { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); background: var(--brand-soft); }
+  .wallets { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .wallet {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    min-height: 58px;
+    padding: 10px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    background: var(--card);
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+  }
+  .wallet:hover { background: var(--surface); }
+  .wallet[data-on="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
   .wallet:has(:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
-  .wallet input { flex: none; width: 16px; height: 16px; margin: 0 0 0 auto; accent-color: var(--brand); }
+  .wallet input { flex: none; width: 18px; height: 18px; margin: 0 0 0 auto; accent-color: var(--ink); }
   .wallet input:focus-visible { outline: none; }
-  .wallet-icon, .wallet-letter { flex: none; width: 28px; height: 28px; border-radius: 6px; }
+  .wallet-icon, .wallet-letter { flex: none; width: 32px; height: 32px; border-radius: 8px; }
   .wallet-icon { object-fit: contain; }
-  .wallet-letter { display: grid; place-items: center; border: 1px solid var(--rule); background: var(--wash); color: var(--quiet); font-size: 14px; font-weight: 600; }
-  .wallet-name { font-size: 15px; font-weight: 600; }
-  .copy-field { width: min(100%, 420px); min-height: 40px; padding: 0 10px; border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--paper); color: var(--ink); }
+  .wallet-letter { display: grid; place-items: center; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 14px; font-weight: 650; }
+  .wallet-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; padding: 3px 11px 3px 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink); }
+  .chip .wallet-icon, .chip .wallet-letter { width: 22px; height: 22px; border-radius: 999px; font-size: 11px; }
+  .chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .chip .mono { flex: none; white-space: nowrap; color: var(--muted); }
+  .copy-field { width: 100%; min-height: 40px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--card); color: var(--ink); }
+
+  .chain { min-width: 0; }
+  .chain-lead { white-space: nowrap; }
+  .chain-mark { display: inline-block; width: 18px; height: 18px; margin-right: 7px; vertical-align: -4px; fill: currentColor; }
+  .step-summary .chain-mark { width: 16px; height: 16px; margin-right: 5px; vertical-align: -3px; }
+  .phrase { display: inline-flex; flex-wrap: wrap; align-items: center; column-gap: 0.32em; }
 
   /* ----------------------------------------------------------------- form */
 
-  .form { display: grid; gap: 22px; justify-self: stretch; width: min(100%, 480px); }
-  .form:disabled .choice, .form:disabled .link { cursor: default; }
-  .field { display: grid; gap: 8px; }
-  .label { font-size: 14px; font-weight: 600; }
-  .single { font-size: 15px; }
+  .form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .field { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .btn, .hint, .status, .problem, .step-summary { overflow-wrap: anywhere; }
+  .label { font-size: 13px; font-weight: 600; color: var(--muted); }
   .choices { display: flex; flex-wrap: wrap; gap: 8px; }
-  .choice { position: relative; display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border: 1px solid var(--rule-strong); border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; }
+  .choice {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 0 14px 0 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    background: var(--card);
+    font-size: 14.5px;
+    font-weight: 500;
+    cursor: pointer;
+  }
   .choice input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
-  .choice[data-on="true"] { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); background: var(--brand-soft); font-weight: 600; }
+  .choice[data-on="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); font-weight: 600; }
   .choice:has(:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
-  .select { width: min(100%, 240px); min-height: 44px; padding: 0 10px; border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--paper); color: var(--ink); font: inherit; font-size: 15px; font-weight: 500; }
-  .amount { display: flex; align-items: baseline; gap: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--ink); }
-  .amount:focus-within { border-bottom-color: var(--brand); outline: 2px solid var(--focus); outline-offset: 6px; border-radius: 1px; }
-  .amount[data-bad="true"] { border-bottom-color: var(--cannot); }
+  .form:disabled .choice, .form:disabled .link { cursor: default; }
+
+  .amount {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 72px;
+    padding: 8px 10px 8px 16px;
+    border: 1px solid var(--field);
+    border-radius: 14px;
+    background: var(--card);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .amount:focus-within { border-color: var(--ink); box-shadow: 0 0 0 4px var(--halo); }
+  .amount:has(.amount-input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .amount[data-bad="true"] { border-color: var(--down); }
   .amount-input {
     flex: 1 1 auto;
     width: 100%;
@@ -238,49 +359,118 @@
     background: transparent;
     color: var(--ink);
     font: inherit;
-    font-size: clamp(34px, 9vw, 46px);
-    line-height: 1.15;
+    font-size: clamp(22px, 6.5vw, 34px);
+    line-height: 1.2;
     font-weight: 600;
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
   }
   .amount-input::placeholder { color: var(--faint); opacity: 1; }
   .amount-input:focus-visible { outline: none; }
-  .amount-unit { flex: none; font-size: 18px; font-weight: 600; color: var(--quiet); }
-  .meta { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; font-size: 14px; color: var(--quiet); font-variant-numeric: tabular-nums; }
-  .field-error { font-size: 14px; font-weight: 500; color: var(--cannot); }
+  .unit { flex: none; display: inline-flex; align-items: center; min-height: 38px; padding: 0 13px; border-radius: 999px; background: var(--surface); font-weight: 650; }
+  .asset { position: relative; flex: none; display: inline-flex; align-items: center; }
+  .asset select {
+    appearance: none;
+    -webkit-appearance: none;
+    min-height: 38px;
+    padding: 0 32px 0 13px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+  }
+  .asset .glyph { position: absolute; right: 11px; width: 13px; height: 13px; color: var(--muted); pointer-events: none; }
+  .field-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; min-height: 30px; }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; font-size: 13.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .meta > * { min-width: 0; overflow-wrap: anywhere; }
+  .quick { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+  .pick {
+    min-height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+  }
+  .pick:not([data-on="true"]):hover:not(:disabled) { background: var(--surface); }
+  .pick[data-on="true"] { border-color: var(--ink); background: var(--ink); color: var(--card); }
+  .pick:disabled { opacity: 0.4; cursor: default; }
+  .field-error { font-size: 13.5px; font-weight: 500; color: var(--down); }
+  #amount-help[data-tone="warn"] { color: var(--warn); }
   .field-error:empty { display: none; }
+  .more { display: grid; gap: 8px; }
+  .aside { padding: 0 2px; font-size: 13px; color: var(--muted); }
 
-  /* ------------------------------------------------------------ countdown */
+  /* ------------------------------------------------------- figures, timer */
 
-  .clock { display: grid; gap: 6px; width: min(100%, 320px); }
-  .clock-track { display: block; height: 4px; border-radius: 2px; background: var(--rule); overflow: hidden; }
-  .clock-fill { display: block; width: 100%; height: 100%; background: var(--brand); }
-  .clock[data-over="true"] .clock-fill { background: var(--cannot); }
-  .clock-text { font-size: 14px; color: var(--quiet); font-variant-numeric: tabular-nums; }
+  .facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .facts dt { color: var(--muted); }
+  .facts dd { min-width: 0; padding-left: 16px; overflow-wrap: anywhere; }
+  .receipt { padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+  .receipt dd { text-align: right; }
+  .receipt.left { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .receipt.left dd { padding-left: 0; text-align: left; }
+  .receipt.left dd + dt { margin-top: 8px; }
+  .facts .total { padding-top: 9px; border-top: 1px solid var(--border); color: var(--ink); font-size: 15px; font-weight: 650; }
+
+  .clock { display: grid; gap: 6px; margin-top: 4px; }
+  .clock-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .clock-track { display: block; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+  .clock-fill { display: block; width: 100%; height: 100%; border-radius: inherit; background: var(--ink); }
+  .clock[data-low="true"] .clock-fill { background: var(--warn); }
+  .clock[data-low="true"] .clock-text { color: var(--warn); }
+  .clock[data-over="true"] .clock-fill { background: var(--down); }
+  .clock[data-over="true"] .clock-text { color: var(--down); }
 
   /* --------------------------------------------------------------- result */
 
-  .result > .marker { border-color: var(--can); background: var(--can); color: var(--paper); }
-  .result[data-tone="bad"] > .marker { border-color: var(--cannot); background: var(--cannot); color: var(--on-cannot); }
-  .result[data-tone="plain"] > .marker { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+  .result { display: grid; gap: 16px; margin-top: 26px; padding-top: 26px; border-top: 1px solid var(--border); }
   .result:focus { outline: none; }
-  .result h2 { font-size: 22px; line-height: 28px; font-weight: 650; letter-spacing: -0.015em; }
-  .result-body { display: grid; gap: 10px; justify-items: start; margin-top: 8px; font-size: 15px; }
-  .result-body p { max-width: 34em; }
-  .result-close { color: var(--quiet); }
+  .result-head { display: grid; justify-items: center; gap: 12px; text-align: center; }
+  .result-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: var(--up-soft); color: var(--up); animation: pop 0.4s var(--ease); }
+  .result-icon .glyph { width: 26px; height: 26px; stroke-width: 2.4; }
+  .result[data-tone="bad"] .result-icon { background: var(--down-soft); color: var(--down); }
+  .result[data-tone="plain"] .result-icon { background: var(--surface); color: var(--ink); }
+  .result h2 { font-size: 21px; line-height: 1.25; font-weight: 650; letter-spacing: -0.015em; }
+  .result-body { display: grid; gap: 12px; }
+  .result-body > p { text-align: center; text-wrap: balance; }
+  .result-close { padding: 11px 14px; border-radius: 12px; background: var(--surface); color: var(--muted); font-size: 14px; text-align: center; }
 
-  .noscript { max-width: 1040px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 40px) 40px; font-weight: 600; }
+  /* ------------------------------------------------------- below the card */
 
-  @media (max-width: 860px) {
-    main { grid-template-columns: minmax(0, 1fr); }
-    .notes { grid-column: 1; grid-row: auto; margin-top: 44px; padding: 20px 0 0; border-top: 1px solid var(--rule); border-left: 0; }
+  .notes { width: min(100%, 560px); padding: 0 6px; color: var(--muted); font-size: 14px; }
+  .notes summary { display: flex; align-items: center; gap: 8px; min-height: 40px; color: var(--ink); font-weight: 600; cursor: pointer; list-style: none; }
+  .notes summary::-webkit-details-marker { display: none; }
+  .notes summary .glyph { color: var(--muted); transition: transform 0.2s var(--ease); }
+  .notes[open] summary .glyph { transform: rotate(90deg); }
+  .notes ul { display: grid; gap: 10px; margin: 2px 0 6px; padding-left: 42px; }
+  .served { display: block; width: min(100%, 560px); margin: 0; padding: 0 6px; color: var(--muted); font-size: 13px; text-align: center; }
+  .served .glyph { display: inline-block; width: 13px; height: 13px; margin-right: 6px; vertical-align: -2px; }
+
+  .noscript { max-width: 560px; margin: 0 auto; padding: 0 16px 40px; font-weight: 600; }
+
+  @media (max-width: 480px) {
+    .page { padding-inline: 10px; }
+    .card { padding: 22px 16px 24px; border-radius: 16px; }
+    .summary { padding: 14px; }
+    .route { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .route-arrow .glyph { transform: rotate(90deg); }
+    .step { column-gap: 10px; }
+    .receipt { padding: 12px; }
+    .facts dd { padding-left: 12px; }
   }
-  @media (max-width: 440px) {
-    .step, .result { column-gap: 12px; }
-    .actions > .btn-primary { flex: 1 1 100%; }
-    .grant { grid-template-columns: 64px minmax(0, 1fr); }
-    .grant-strong { font-size: 19px; }
+  @media (forced-colors: active) {
+    .pick[data-on="true"], .choice[data-on="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+    .clock-track { border: 1px solid CanvasText; }
+    .clock-fill { forced-color-adjust: none; background: CanvasText; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -300,15 +490,16 @@
   </span>
   <span class="net" id="net"></span>
 </header>
-<main>
-  <div class="intro">
+<main class="page">
+  <article class="card" aria-labelledby="title">
     <h1 id="title">OctoNeo</h1>
     <p class="lead" id="lead"></p>
-  </div>
-  <section class="statement" id="statement" aria-labelledby="statement-title" hidden></section>
-  <ol class="steps" id="steps" data-ended="false"></ol>
-  <section class="result" id="result" tabindex="-1" hidden></section>
-  <aside class="notes" id="notes"></aside>
+    <section class="summary" id="statement" aria-labelledby="statement-title" hidden></section>
+    <ol class="steps" id="steps" aria-label="Steps" data-ended="false"></ol>
+    <section class="result" id="result" tabindex="-1" hidden></section>
+  </article>
+  <details class="notes" id="notes"></details>
+  <p class="served" id="served"></p>
 </main>
 <p class="sr" id="live" role="status" aria-live="polite"></p>
 <noscript><p class="noscript">This page needs JavaScript to talk to your wallet. Turn it on for this page, then reload.</p></noscript>
@@ -355,32 +546,95 @@
     return node;
   }
 
-  const GLYPHS = { check: "M3.6 8.4l2.9 2.9 5.9-6.6", bang: "M8 3.6v5.2M8 11.8v.4", dash: "M4.6 8h6.8" };
-  function glyph(name) {
+  /** A drawing made of paths, hidden from screen readers: the words beside it say the same. */
+  function drawing(className, viewBox, paths) {
     const space = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(space, "svg");
-    svg.setAttribute("class", "glyph");
-    svg.setAttribute("viewBox", "0 0 16 16");
+    svg.setAttribute("class", className);
+    svg.setAttribute("viewBox", viewBox);
     svg.setAttribute("aria-hidden", "true");
-    const path = document.createElementNS(space, "path");
-    path.setAttribute("d", GLYPHS[name]);
-    svg.append(path);
+    svg.setAttribute("focusable", "false");
+    for (const d of paths) {
+      const path = document.createElementNS(space, "path");
+      path.setAttribute("d", d);
+      svg.append(path);
+    }
     return svg;
+  }
+
+  const GLYPHS = {
+    check: "M3.6 8.4l2.9 2.9 5.9-6.6",
+    bang: "M8 3.6v5.2M8 11.8v.4",
+    dash: "M4.6 8h6.8",
+    cross: "M4.8 4.8l6.4 6.4M11.2 4.8l-6.4 6.4",
+    arrow: "M2.8 8h10.4M9.4 4.2 13.2 8l-3.8 3.8",
+    chevron: "M4.4 6.2 8 9.8l3.6-3.6",
+    more: "M6.2 3.8 10.4 8l-4.2 4.2",
+    info: "M8 7.2v4.4M8 4.4v.4",
+    lock: "M4.6 7.2V5.6a3.4 3.4 0 0 1 6.8 0v1.6M3.6 7.2h8.8v6.2H3.6z",
+  };
+  const glyph = (name) => drawing("glyph", "0 0 16 16", [GLYPHS[name]]);
+
+  /** The marks of the networks the funds can travel on, in one colour (Web3 Icons, MIT). */
+  const MARKS = {
+    bnb: [
+      "M7.09 5.755 12 3l4.91 2.755-1.8 1.02L12 5.035l-3.105 1.74zm9.82 3.48-1.8-1.02L12 9.955l-3.105-1.74-1.805 1.02v2.035l3.1 1.74v3.475l1.81 1.02 1.805-1.02V13.01l3.105-1.74zm0 5.515v-2.04l-1.8 1.02v2.035zm1.285.72-3.105 1.735v2.04l4.91-2.76v-5.51l-1.805 1.015zM16.39 7.495l1.8 1.02v2.035L20 9.535v-2.04l-1.805-1.02L16.39 7.5zm-6.2 10.45v2.035L12 21l1.805-1.02v-2.03L12 18.965l-1.805-1.02zm-3.1-3.2 1.8 1.02V13.73l-1.8-1.02v2.04zm3.1-7.25L12 8.515l1.805-1.02L12 6.475 10.195 7.5zm-4.385 1.02 1.805-1.02-1.8-1.02L4 7.5v2.04l1.805 1.015zm0 3.475L4 10.975v5.51l4.91 2.76V17.2l-3.1-1.735v-3.48z",
+    ],
+    ethereum: [
+      "M12 3v6.652l5.625 2.516zm0 0-5.625 9.166L12 9.652zm0 13.478V21l5.625-7.785zM12 21v-4.522l-5.625-3.263z",
+      "m12 15.43 5.625-3.263L12 9.652zm-5.625-3.263L12 15.43V9.652z",
+    ],
+    arbitrum: [
+      "m13.353 13.368-.885 2.39a.3.3 0 0 0 0 .205l1.523 4.112 1.76-1.001-2.113-5.706a.152.152 0 0 0-.285 0m1.774-4.019a.152.152 0 0 0-.285 0l-.885 2.39a.3.3 0 0 0 0 .205l2.494 6.732 1.761-1.001z",
+      "M11.998 4.115a.3.3 0 0 1 .126.033l6.715 3.818a.25.25 0 0 1 .126.214v7.635c0 .089-.048.17-.126.214l-6.715 3.819a.25.25 0 0 1-.126.032.3.3 0 0 1-.125-.032l-6.715-3.815a.25.25 0 0 1-.126-.215V8.182c0-.089.048-.17.126-.215l6.715-3.818a.26.26 0 0 1 .125-.034m0-1.115c-.238 0-.478.06-.692.183L4.593 7A1.36 1.36 0 0 0 3.9 8.182v7.635c0 .487.264.938.693 1.181l6.714 3.819a1.41 1.41 0 0 0 1.386 0l6.714-3.818a1.36 1.36 0 0 0 .693-1.182V8.182A1.36 1.36 0 0 0 19.407 7l-6.716-3.817A1.4 1.4 0 0 0 11.998 3",
+      "m7.559 18.685.617-1.666 1.244 1.018-1.163 1.046zm3.874-11.05H9.731a.3.3 0 0 0-.285.197l-3.649 9.852 1.761 1.001 4.018-10.849a.15.15 0 0 0-.143-.2",
+      "M14.412 7.635h-1.703a.3.3 0 0 0-.284.197l-4.167 11.25 1.761 1 4.535-12.246a.15.15 0 0 0-.142-.2",
+    ],
+  };
+  const MARK_OF = { 1: "ethereum", 56: "bnb", 97: "bnb", 42161: "arbitrum", 11155111: "ethereum" };
+
+  /** A network's name, with its mark when it has one. The mark keeps to the name's first word, however the name wraps. */
+  function chainLabel(chain) {
+    const mark = chain && MARKS[MARK_OF[chain.id]];
+    const name = chain && chain.name ? String(chain.name) : "";
+    const space = name.indexOf(" ");
+    const first = space > 0 ? name.slice(0, space) : name;
+    return el("span", { class: "chain" }, el("span", { class: "chain-lead" }, mark ? drawing("chain-mark", "0 0 24 24", mark) : null, first), space > 0 ? name.slice(space) : null);
   }
 
   const button = (label, run, kind = "primary") => el("button", { type: "button", class: `btn btn-${kind}`, on: { click: run } }, label);
   const linkButton = (label, run) => el("button", { type: "button", class: "link", on: { click: run } }, label);
   const mono = (text, title) => el("span", { class: "mono", title: title || null, text });
   const fact = (name, ...value) => [el("dt", { text: name }), el("dd", null, value)];
+  const totalRow = (name, ...value) => [el("dt", { class: "total", text: name }), el("dd", { class: "total" }, value)];
+  const hint = (...kids) => el("p", { class: "hint" }, kids);
+  /** One phrase of a finished step, kept together. */
+  const phrase = (...kids) => el("span", { class: "phrase" }, kids);
+  const note = (text) => el("p", { class: "note" }, el("span", { class: "note-icon", "aria-hidden": "true" }, glyph("info")), el("span", { text }));
 
   function say(text) {
     $("live").textContent = text;
   }
 
-  /** A line that says what is happening now. It is also read out. */
-  function status(text) {
+  /** What is happening now, with a spinner while it lasts. The words are also read out. */
+  function status(text, ...more) {
     say(text);
-    return el("p", { class: "status", text });
+    return el(
+      "div",
+      { class: "wait" },
+      el("span", { class: "spin", "aria-hidden": "true" }),
+      el("div", { class: "wait-main" }, el("p", { class: "status", text }), more),
+    );
+  }
+
+  /** What went wrong, and a second, calmer sentence when there is one. */
+  function trouble(problem, more, announce = true) {
+    return el(
+      "div",
+      { class: "alert", role: announce ? "alert" : null },
+      el("span", { class: "alert-icon", "aria-hidden": "true" }, glyph("bang")),
+      el("div", { class: "alert-main" }, el("p", { class: "problem", text: problem }), more ? hint(more) : null),
+    );
   }
 
   /* -------------------------------------------------------------- amounts */
@@ -417,6 +671,27 @@
     return kept ? `${whole || "0"}.${kept}` : whole || "0";
   }
 
+  /** `a` less `b`, for two decimal strings. `null` unless both are numbers and the rest is above zero. Only for showing. */
+  function minus(a, b) {
+    const left = isDecimal(a) ? toUnits(cut(a, 18), 18) : null;
+    const right = isDecimal(b) ? toUnits(cut(b, 18), 18) : null;
+    if (left === null || right === null || left <= right) return null;
+    return fromUnits(left - right, 18);
+  }
+
+  /** A decimal string with its thousands grouped and every decimal kept. Only for showing. */
+  function grouped(text) {
+    const [whole, fraction] = String(text).split(".");
+    const head = (whole || "0").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return fraction === undefined ? head : `${head}.${fraction}`;
+  }
+
+  /** `share` percent of `units`, cut down to `places` decimals. Empty when that is nothing. */
+  function share(units, decimals, percent, places) {
+    const part = cut(fromUnits((units * BigInt(percent)) / 100n, decimals), places);
+    return part === "0" ? "" : part;
+  }
+
   /* ----------------------------------------------------------- the server */
 
   /** Something this page says itself, as opposed to what a wallet reports. */
@@ -427,6 +702,15 @@
     }
   }
 
+  let pageGone = false; // the last request found the app gone; any later answer clears it
+  /** The app no longer answers. Once a deposit is on its way, the deposit's own ending says so instead. */
+  function gone() {
+    if (!committed) pageGone = true;
+    return new Fault(GONE, "gone");
+  }
+  /** Whether what is about to be reported is the page's own expiry, and not some other trouble. */
+  const expired = (message) => pageGone && String([message].flat()[0] || "").startsWith(GONE);
+
   async function post(path, body) {
     let response;
     try {
@@ -436,8 +720,10 @@
         body: JSON.stringify(body || {}),
       });
     } catch {
-      throw new Fault(GONE, "gone");
+      throw gone();
     }
+    // Any answer but "not found" shows the app is still there.
+    if (response.status !== 404) pageGone = false;
     let data = null;
     try {
       data = await response.json();
@@ -446,7 +732,7 @@
     }
     if (response.ok && data && !data.error) return data;
     if (data && typeof data.error === "string" && data.error) throw new Fault(data.error, "server");
-    throw new Fault(response.status === 404 ? GONE : `${APP} did not accept the request. Try again.`, response.status === 404 ? "gone" : "server");
+    throw response.status === 404 ? gone() : new Fault(`${APP} did not accept the request. Try again.`, "server");
   }
 
   /* ----------------------------------------------------------- the wallet */
@@ -466,6 +752,8 @@
   let walletProblem = ""; // why the last attempt to connect ended, while the list is shown
 
   const needsAccount = config.task === "deposit" || config.task === "withdraw";
+  /** An address as shown: the trading account as the app spells it, whatever case the wallet uses. Only for reading. */
+  const shown = (address) => (needsAccount && same(address, config.account) ? config.account : address);
   const ask = (method, params) => chosen.provider.request(params === undefined ? { method } : { method, params });
 
   const codeOf = (error) =>
@@ -506,7 +794,7 @@
       icon: typeof info.icon === "string" && /^data:image\//i.test(info.icon) ? info.icon : "",
       provider,
     });
-    if (stage === "wallet" && flight === 0) showWallets();
+    if (stage === "wallet" && flight === 0) showWallets(walletProblem, true);
   }
 
   function legacyWallet() {
@@ -639,27 +927,41 @@
     const root = $("steps");
     root.replaceChildren();
     steps.clear();
-    list.forEach(([id, title], index) => {
+    list.forEach(([id, name], index) => {
       const marker = el("span", { class: "marker", "aria-hidden": "true" }, String(index + 1));
       const spoken = el("span", { class: "sr", text: `, ${STATE_WORDS.todo}` });
       const summary = el("p", { class: "step-summary", hidden: true });
       const body = el("div", { class: "step-body" });
-      const node = el(
-        "li",
-        { class: "step", data: { state: "todo", step: id } },
-        marker,
-        el("div", { class: "step-main" }, el("h2", { class: "step-title" }, title, spoken), summary, body),
-      );
-      steps.set(id, { node, marker, spoken, summary, body, number: index + 1 });
+      const title = el("h2", { class: "step-title", tabindex: "-1" }, name, spoken);
+      const node = el("li", { class: "step", data: { state: "todo", step: id } }, marker, el("div", { class: "step-main" }, title, summary, body));
+      steps.set(id, { node, marker, spoken, title, summary, body, number: index + 1 });
       root.append(node);
     });
+  }
+
+  /** Changes a step. When that removes what had the keyboard, the keyboard waits on the step's title, not on the page. */
+  function keep(id, change) {
+    const step = steps.get(id);
+    const held = document.activeElement;
+    const inside = held && held !== document.body && held !== step.title && step.node.contains(held);
+    change();
+    if (inside && !held.isConnected) step.title.focus({ preventScroll: true });
+  }
+
+  /** Moves the keyboard, when it waits on another step's title, to this step's. */
+  function follow(id) {
+    const held = document.activeElement;
+    const title = steps.get(id).title;
+    if (held && held !== title && held.classList.contains("step-title")) title.focus({ preventScroll: true });
   }
 
   function setSummary(id, content) {
     const step = steps.get(id);
     const kids = content === null || content === undefined ? [] : [content].flat().filter(Boolean);
-    step.summary.replaceChildren(...kids);
-    step.summary.hidden = kids.length === 0;
+    keep(id, () => {
+      step.summary.replaceChildren(...kids);
+      step.summary.hidden = kids.length === 0;
+    });
   }
 
   /** Sets a step's state. A summary is the one line a finished step keeps. */
@@ -673,39 +975,68 @@
     if (state === "active" || state === "wallet" || state === "busy" || state === "failed") step.node.setAttribute("aria-current", "step");
     else step.node.removeAttribute("aria-current");
     if (summary !== undefined) setSummary(id, summary);
-    if (state === "todo") {
-      setSummary(id, null);
-      step.body.replaceChildren();
-    }
-    if (state === "done" || state === "skipped") step.body.replaceChildren();
+    if (state === "todo") setSummary(id, null);
+    if (state === "todo" || state === "done" || state === "skipped") keep(id, () => step.body.replaceChildren());
   }
 
   function fill(id, ...kids) {
     const body = steps.get(id).body;
-    body.replaceChildren(...kids.flat().filter(Boolean));
+    keep(id, () => body.replaceChildren(...kids.flat().filter(Boolean)));
     return body;
   }
 
-  /** Moves the keyboard to the step's first control, unless the trader is busy somewhere else. */
+  /** Moves the keyboard to the step's first control, unless the trader is busy somewhere else. A step's title only holds it. */
   function focusIn(id) {
     const held = document.activeElement;
-    if (held && held !== document.body && held.isConnected) return;
+    if (held && held !== document.body && held.isConnected && !held.classList.contains("step-title")) return;
     const body = steps.get(id).body;
     const target = body.querySelector(".btn-primary:not(:disabled)") || body.querySelector("input:checked, input, select, button");
     if (target) target.focus({ preventScroll: true });
   }
 
-  /** Marks a step as failed. `message` is what went wrong, or that and a second, calmer paragraph. */
+  /**
+   * Marks a step as failed. `message` is what went wrong, or that and a second, calmer paragraph.
+   * When it is the page's own expiry, trying again cannot help, so no button offers it.
+   */
   function fail(id, message, ...actions) {
-    const [problem, more] = [message].flat();
+    report(id, message, actions, false);
+  }
+
+  /** As `fail`, for an outcome to read before acting on it: the keyboard goes to the message, not to a button. */
+  function failToRead(id, message, ...actions) {
+    report(id, message, actions, true);
+  }
+
+  function report(id, message, actions, read) {
+    const ended = expired(message);
+    const [problem, more] = ended ? ["This page has expired", GONE] : [message].flat();
+    const offered = ended ? [] : actions.flat().filter(Boolean);
+    // With nothing to press, the message itself takes the keyboard; a message that does is not also read out as an alert.
+    const toRead = read || offered.length === 0;
+    say("");
     setState(id, "failed");
-    fill(
-      id,
-      el("p", { class: "problem", role: "alert", text: problem }),
-      more ? el("p", { class: "hint", text: more }) : null,
-      actions.flat().filter(Boolean).length ? el("div", { class: "actions" }, actions) : null,
-    );
-    focusIn(id);
+    const notice = trouble(problem, more, !toRead);
+    fill(id, notice, offered.length ? el("div", { class: "actions" }, offered) : null);
+    if (ended) expiredHere();
+    if (!toRead) {
+      focusIn(id);
+      return;
+    }
+    notice.tabIndex = -1;
+    const held = document.activeElement;
+    if (!held || held === document.body || !held.isConnected || held.classList.contains("step-title")) notice.focus({ preventScroll: true });
+  }
+
+  /** Once the page has expired, it offers no other wallet: nothing more can happen here. */
+  function expiredHere() {
+    if (steps.get("wallet").node.dataset.state === "done") setSummary("wallet", walletSummary(false));
+  }
+
+  /** A timed signature ran out: say so plainly, and offer to sign again. */
+  function timeUp(id, again) {
+    setState(id, "failed");
+    fill(id, trouble("Time is up", "Decline the request in your wallet, then sign again."), el("div", { class: "actions" }, again));
+    again.focus({ preventScroll: true });
   }
 
   function resetWork() {
@@ -716,7 +1047,12 @@
   function countdown(seconds, onOver) {
     const bar = el("span", { class: "clock-fill" });
     const text = el("span", { class: "clock-text" });
-    const node = el("div", { class: "clock", role: "timer" }, el("span", { class: "clock-track" }, bar), text);
+    const node = el(
+      "div",
+      { class: "clock", role: "timer" },
+      el("span", { class: "clock-row" }, el("span", { "aria-hidden": "true", text: "Time to sign" }), text),
+      el("span", { class: "clock-track", "aria-hidden": "true" }, bar),
+    );
     const total = Math.max(1, seconds) * 1000;
     const started = performance.now();
     let over = false;
@@ -726,6 +1062,7 @@
       const whole = Math.ceil(left / 1000);
       bar.style.width = `${(left / total) * 100}%`;
       text.textContent = left > 0 ? `${whole} ${whole === 1 ? "second" : "seconds"} left` : "Time is up";
+      node.dataset.low = String(left > 0 && whole <= 3);
       if (left <= 0 && !over) {
         over = true;
         node.dataset.over = "true";
@@ -742,7 +1079,7 @@
     const label = `${hash.slice(0, 10)}…${hash.slice(-6)}`;
     const explorer = chain && typeof chain.explorer === "string" && /^https:\/\/[^\s/]+/.test(chain.explorer) ? chain.explorer.replace(/\/+$/, "") : "";
     if (!explorer || !HASH.test(hash)) return mono(label, hash);
-    return el("a", { class: "link mono", href: `${explorer}/tx/${hash}`, target: "_blank", rel: "noopener noreferrer", title: "Open in the network's explorer" }, label);
+    return el("a", { class: "link mono", href: `${explorer}/tx/${hash}`, target: "_blank", rel: "noopener noreferrer", title: hash, "aria-label": `Transaction ${hash} (opens in a new tab)` }, label);
   }
 
   /** How the page ends: what happened, below the last step. */
@@ -754,12 +1091,11 @@
     box.dataset.tone = tone;
     box.setAttribute("aria-label", title);
     box.replaceChildren(
-      el("span", { class: "marker", "aria-hidden": "true" }, glyph(tone === "bad" ? "bang" : "check")),
-      el("div", { class: "step-main" }, el("h2", { text: title }), el("div", { class: "result-body" }, kids.flat().filter(Boolean))),
+      el("div", { class: "result-head" }, el("span", { class: "result-icon", "aria-hidden": "true" }, glyph(tone === "bad" ? "bang" : "check")), el("h2", { text: title })),
+      el("div", { class: "result-body" }, kids.flat().filter(Boolean)),
     );
     box.hidden = false;
     document.title = `${title} | ${APP}`;
-    say(title);
     box.focus({ preventScroll: true });
     box.scrollIntoView({ block: "nearest" });
   }
@@ -771,26 +1107,30 @@
   const METAMASK_NOTE =
     "MetaMask is likely to refuse a withdrawal's second signature: it is made for the exchange's own network, and MetaMask signs only for the network it is on. A wallet that signs across networks, such as Rabby, works. You can still try; nothing is withdrawn unless both signatures are given.";
 
+  /** The wallet's own picture when it sent one, or its first letter. */
+  function walletIcon(wallet) {
+    if (wallet && wallet.icon) {
+      const icon = el("img", { class: "wallet-icon", alt: "" });
+      icon.src = wallet.icon;
+      return icon;
+    }
+    return el("span", { class: "wallet-letter", "aria-hidden": "true", text: wallet ? wallet.name.slice(0, 1).toUpperCase() : "?" });
+  }
+
   function walletRow(wallet, onPick) {
     const input = el("input", { type: "radio", name: "wallet", value: wallet.key });
     input.checked = wallet.key === picked;
     input.addEventListener("change", onPick);
-    let icon;
-    if (wallet.icon) {
-      icon = el("img", { class: "wallet-icon", alt: "" });
-      icon.src = wallet.icon;
-    } else {
-      icon = el("span", { class: "wallet-letter", "aria-hidden": "true", text: wallet.name.slice(0, 1).toUpperCase() });
-    }
-    return el("label", { class: "wallet", data: { on: String(input.checked), key: wallet.key } }, icon, el("span", { class: "wallet-name", text: wallet.name }), input);
+    return el("label", { class: "wallet", data: { on: String(input.checked), key: wallet.key } }, walletIcon(wallet), el("span", { class: "wallet-name", title: wallet.name, text: wallet.name }), input);
   }
 
-  function showWallets(problem = walletProblem) {
+  /** The wallet step's list. `quiet` when nothing the trader did brought it: the keyboard stays where it is. */
+  function showWallets(problem = walletProblem, quiet = false) {
     walletProblem = problem;
     setState("wallet", problem ? "failed" : "active");
     if (!wallets.length) {
       if (looked) noWallet();
-      else fill("wallet", el("p", { class: "hint", text: "Looking for a wallet in this browser." }));
+      else fill("wallet", status("Looking for a wallet in this browser"));
       return;
     }
     // A lone wallet is marked already. Wallets announce themselves one by one, so that is decided afresh each time.
@@ -799,7 +1139,7 @@
       picked = wallets.length === 1 ? wallets[0].key : null;
     }
     const go = button("Connect wallet", connect);
-    const note = el("p", { class: "note", text: METAMASK_NOTE });
+    const caution = note(METAMASK_NOTE);
     const group = el("div", { class: "wallets", role: "radiogroup", "aria-label": "Wallet in this browser" });
     const refresh = () => {
       const on = group.querySelector("input:checked");
@@ -807,7 +1147,7 @@
       for (const row of group.children) row.dataset.on = String(row.dataset.key === picked);
       const wallet = wallets.find((item) => item.key === picked);
       go.disabled = !wallet;
-      note.hidden = !(config.task === "withdraw" && wallet && wallet.rdns === "io.metamask");
+      caution.hidden = !(config.task === "withdraw" && wallet && wallet.rdns === "io.metamask");
     };
     group.append(
       ...wallets.map((wallet) =>
@@ -819,16 +1159,18 @@
     );
     fill(
       "wallet",
-      problem ? el("p", { class: "problem", role: "alert", text: problem }) : null,
+      problem ? trouble(problem) : null,
       needsAccount && ADDRESS.test(config.account || "")
-        ? el("p", { class: "hint" }, "Connect the wallet that trades, on account ", mono(short(config.account), config.account), ".")
-        : null,
+        ? hint("Connect the wallet that trades, on account ", mono(short(config.account), config.account), ".")
+        : wallets.length > 1
+          ? hint("Choose the wallet to approve with.")
+          : null,
       group,
-      note,
+      caution,
       el("div", { class: "actions" }, go),
     );
     refresh();
-    focusIn("wallet");
+    if (!quiet) focusIn("wallet");
   }
 
   function noWallet() {
@@ -854,23 +1196,27 @@
         lookForWallets();
         showWallets();
         if (!wallets.length) say("Still no wallet in this browser.");
+        focusIn("wallet");
       },
       "quiet",
     );
     fill(
       "wallet",
-      el("p", { class: "plain", text: "No wallet was found in this browser." }),
-      el("p", {
-        class: "hint",
-        text: "Open this page in the browser where your wallet extension is installed, for example MetaMask or Rabby. Copy the link and paste it there. It works for a few minutes.",
-      }),
+      el(
+        "div",
+        { class: "empty" },
+        el("p", { class: "plain", text: "No wallet was found in this browser." }),
+        hint("Install a browser wallet such as Rabby or MetaMask, from its own website or your browser's extension store, then reload this page. If it is installed but locked, unlock it and choose Look again."),
+        hint("Is your wallet in another browser? Copy this page's link and open it there. It works for a few minutes."),
+      ),
       el("div", { class: "actions" }, copy, again),
       field,
     );
+    say("No wallet was found in this browser.");
   }
 
   function walletSummary(changeable) {
-    const hush = el("span", { role: "status" });
+    const hush = el("span", { class: "hush", role: "status" });
     const change = linkButton("Use another wallet", () => {
       if (flight > 0 || committed) {
         hush.textContent = "Answer the request in your wallet first.";
@@ -878,7 +1224,11 @@
       }
       startOver();
     });
-    return [el("span", { text: chosen ? chosen.name : "" }), mono(short(account), account), changeable ? change : null, changeable ? hush : null];
+    return [
+      el("span", { class: "chip" }, chosen ? walletIcon(chosen) : null, el("span", { class: "chip-name", title: chosen ? chosen.name : null, text: chosen ? chosen.name : "" }), mono(short(shown(account)), shown(account))),
+      changeable ? change : null,
+      changeable ? hush : null,
+    ];
   }
 
   function startOver() {
@@ -902,8 +1252,7 @@
     setState("wallet", "wallet");
     fill(
       "wallet",
-      status("Waiting for your wallet"),
-      el("p", { class: "hint", text: `Approve the connection in ${wallet.name}. If no prompt appears, open the wallet from the browser's toolbar.` }),
+      status("Confirm the connection in your wallet", hint(`Approve the connection in ${wallet.name}. If no prompt appears, open the wallet from the browser's toolbar.`)),
     );
     try {
       const first = preferred(await ask("eth_requestAccounts"));
@@ -923,18 +1272,17 @@
   }
 
   /** The wallet is on an account that does not trade: say which one is needed, and follow the wallet. */
-  function wrongAccount(note) {
+  function wrongAccount(message) {
     stage = "wallet";
     setState("wallet", "failed");
     setSummary("wallet", null);
     fill(
       "wallet",
-      el("p", { class: "problem", role: "alert", text: note || "Your wallet is on another account." }),
-      el("dl", { class: "facts" }, fact("Wallet is on", mono(account)), fact("Trading account", mono(config.account))),
-      el("p", {
-        class: "hint",
-        text: `A ${config.task === "deposit" ? "deposit" : "withdrawal"} is made by the account that trades. Switch to it in ${chosen.name}; this page follows.`,
-      }),
+      trouble(
+        message || "Your wallet is on another account.",
+        `A ${config.task === "deposit" ? "deposit" : "withdrawal"} is made by the account that trades. Switch to it in ${chosen.name}; this page follows.`,
+      ),
+      el("dl", { class: "facts receipt left" }, fact("Wallet is on", mono(account)), fact("Trading account", mono(config.account))),
       el("div", { class: "actions" }, button("Choose account in wallet", chooseAccount), linkButton("Use another wallet", startOver)),
     );
     focusIn("wallet");
@@ -956,11 +1304,7 @@
     const mine = ++run;
     takeoff();
     setState("wallet", "wallet");
-    fill(
-      "wallet",
-      status("Waiting for your wallet"),
-      el("p", { class: "hint" }, "Pick the trading account, ", mono(short(config.account), config.account), `, in ${chosen.name}'s prompt.`),
-    );
+    fill("wallet", status("Choose the account in your wallet", hint("Pick the trading account, ", mono(short(config.account), config.account), `, in ${chosen.name}'s prompt.`)));
     try {
       try {
         await ask("wallet_requestPermissions", [{ eth_accounts: {} }]);
@@ -984,10 +1328,11 @@
   /* ------------------------------------------------------- task: connect */
 
   const signing = validChain(config.signingChain) ? config.signingChain : null;
+  const onSigning = () => phrase("Your wallet is on", chainLabel(signing));
 
   async function switchForApproval() {
     if (!signing || walletChain === signing.id) {
-      setState("network", "done", signing ? `Your wallet is on ${signing.name}` : "Nothing to switch");
+      setState("network", "done", signing ? onSigning() : "Nothing to switch");
       readyToSign();
       return;
     }
@@ -996,13 +1341,12 @@
     setState("network", "wallet");
     fill(
       "network",
-      status("Waiting for your wallet"),
-      el("p", { class: "hint", text: `The approval is signed on ${signing.name}. Your wallet asks to switch to it; nothing is sent there.` }),
+      status("Confirm the network switch in your wallet", hint(`The approval is signed on ${signing.name}. Your wallet asks to switch to it; nothing is sent there.`)),
     );
     try {
       await ensureChain(signing);
       if (mine !== run) return;
-      setState("network", "done", `Your wallet is on ${signing.name}`);
+      setState("network", "done", onSigning());
     } catch (error) {
       if (mine !== run) return;
       if (isDeclined(error) || error instanceof Fault) {
@@ -1022,16 +1366,13 @@
   }
 
   function readyToSign(problem) {
-    const go = button("Sign approval", signApproval);
+    const go = button(problem ? "Try again" : "Sign approval", signApproval);
     if (problem) fail("sign", problem, go);
     else {
       setState("sign", "active");
       fill(
         "sign",
-        el("p", {
-          class: "hint",
-          text: `Your wallet shows the approval for the trading key. Confirm it within ${APPROVAL_SECONDS} seconds of the prompt: after that the exchange no longer takes it, and you sign again.`,
-        }),
+        hint(`Your wallet shows the approval for the trading key. Confirm it within ${APPROVAL_SECONDS} seconds of the prompt: after that the exchange no longer takes it, and you sign again.`),
         el("div", { class: "actions" }, go),
       );
       focusIn("sign");
@@ -1056,15 +1397,9 @@
       // The message carries the time, so it is made at the last moment.
       const prepared = await post("/prepare", { account });
       if (mine !== run) return;
-      const late = el("p", { class: "problem", hidden: true, text: "The time is up. The exchange will probably refuse this signature: decline it in your wallet, then sign again." });
-      const again = el("div", { class: "actions", hidden: true }, button("Sign again", signApproval, "quiet"));
-      clock = countdown(Number(prepared.seconds) > 0 ? Number(prepared.seconds) : APPROVAL_SECONDS, () => {
-        late.hidden = false;
-        again.hidden = false;
-        say("The time is up. Decline the request in your wallet, then sign again.");
-      });
+      clock = countdown(Number(prepared.seconds) > 0 ? Number(prepared.seconds) : APPROVAL_SECONDS, () => timeUp("sign", button("Sign again", signApproval)));
       setState("sign", "wallet");
-      fill("sign", status("Confirm the approval in your wallet"), clock.node, late, again);
+      fill("sign", status("Confirm the approval in your wallet", hint("Check that it names the trading key above, then sign."), clock.node));
       const signature = await ask("eth_signTypedData_v4", [account, JSON.stringify(prepared.typedData)]);
       if (mine !== run) return;
       clock.stop();
@@ -1072,7 +1407,7 @@
       fill("sign", status("Sending the approval to the exchange"));
       await post("/submit", { signature });
       if (mine !== run) return;
-      setState("sign", "done", ["Signed by", mono(short(account), account)]);
+      setState("sign", "done", phrase("Signed by", mono(short(shown(account)), shown(account))));
       finish(
         "ok",
         "Approved",
@@ -1099,10 +1434,15 @@
 
   function showStatement() {
     const grant = (can, text, strong) =>
-      el("li", { class: strong ? "grant grant-strong" : "grant", data: { can: can ? "yes" : "no" } }, el("span", { class: "grant-word", text: can ? "Can" : "Cannot" }), el("span", { text }));
+      el(
+        "li",
+        { class: "grant", data: { can: can ? "yes" : "no" } },
+        el("span", { class: "grant-icon", "aria-hidden": "true" }, glyph(can ? "check" : "cross")),
+        el("span", { class: strong ? "grant-strong" : null }, el("span", { class: "grant-word", text: can ? "Can" : "Cannot" }), ` ${text}`),
+      );
     const box = $("statement");
     box.replaceChildren(
-      el("h2", { id: "statement-title", text: "What your wallet approves" }),
+      el("h2", { class: "summary-title", id: "statement-title", text: "What your wallet approves" }),
       el("p", { class: "key" }, el("span", { class: "key-name", text: `Trading key, made by ${APP} on this computer` }), mono(String(config.agent || ""))),
       el(
         "ul",
@@ -1116,16 +1456,38 @@
     box.hidden = false;
   }
 
+  /** For a deposit or a withdrawal: where the funds come from and where they go. */
+  function showRoute() {
+    const deposit = config.task === "deposit";
+    const end = (label, name, sub) => el("div", { class: "end" }, el("span", { class: "end-label", text: label }), el("span", { class: "end-name", text: name }), sub);
+    const wallet = (label) => end(label, "Your wallet", mono(short(config.account), config.account));
+    const trading = (label) => end(label, "Trading account", el("span", { class: "end-sub", text: `On the exchange, ${NETWORK}` }));
+    const box = $("statement");
+    box.replaceChildren(
+      ...[
+      el("h2", { class: "sr", id: "statement-title", text: deposit ? "Where the deposit goes" : "Where the withdrawal goes" }),
+      el(
+        "div",
+        { class: "route" },
+        deposit ? wallet("From") : trading("From"),
+        el("span", { class: "route-arrow", "aria-hidden": "true" }, glyph("arrow")),
+        deposit ? trading("To") : wallet("To"),
+      ),
+      deposit ? null : el("p", { class: "route-note", text: "Only to your own wallet, the one that trades: this page offers no other destination." }),
+      ].filter(Boolean),
+    );
+    box.hidden = false;
+  }
+
   /* -------------------------------------------- deposit and withdraw: form */
 
   function choiceGroup(legend, name, options, selected, onChange) {
-    if (options.length === 1) {
-      return el("div", { class: "field" }, el("span", { class: "label", text: legend }), el("span", { class: "single", text: options[0].label }));
-    }
+    const show = (option) => (option.chain ? chainLabel(option.chain) : el("span", { text: option.label }));
+    if (options.length === 1) return null;
     const rows = options.map((option) => {
       const input = el("input", { type: "radio", name, value: String(option.value) });
       input.checked = option.value === selected;
-      return { input, row: el("label", { class: "choice", data: { on: String(input.checked) } }, input, el("span", { text: option.label })) };
+      return { input, row: el("label", { class: "choice", data: { on: String(input.checked) } }, input, show(option)) };
     });
     const group = el("fieldset", { class: "field" }, el("legend", { class: "label", text: legend }), el("div", { class: "choices" }, rows.map((item) => item.row)));
     group.addEventListener("change", () => {
@@ -1136,22 +1498,21 @@
     return group;
   }
 
-  function assetField(names, selected, onChange) {
-    if (names.length === 1) {
-      return el("div", { class: "field" }, el("span", { class: "label", text: "Asset" }), el("span", { class: "single", text: names[0] }));
-    }
-    const select = el("select", { class: "select", id: "asset" });
+  /** The asset, at the end of the amount field: a list when there is a choice. */
+  function assetPicker(names, selected, onChange) {
+    if (names.length === 1) return el("span", { class: "unit", text: names[0] });
+    const select = el("select", { id: "asset", "aria-label": "Asset" });
     for (const name of names) {
       const option = el("option", { value: name, text: name });
       option.selected = name === selected;
       select.append(option);
     }
     select.addEventListener("change", () => onChange(select.value));
-    return el("div", { class: "field" }, el("label", { class: "label", for: "asset", text: "Asset" }), select);
+    return el("span", { class: "asset" }, select, glyph("chevron"));
   }
 
   /**
-   * The form both money tasks share: network, asset, one large amount, and the button.
+   * The form both money tasks share: network, one large amount with its asset, and the button.
    * `spec` supplies the lists and judges the amount; this draws them and keeps them in step.
    */
   function amountForm(spec) {
@@ -1166,24 +1527,64 @@
       "aria-describedby": "amount-help amount-error",
       value: spec.text(),
     });
-    const unit = el("span", { class: "amount-unit", text: spec.asset().name });
-    const wrap = el("div", { class: "amount", data: { bad: "false" } }, input, unit);
+    const wrap = el("div", { class: "amount", data: { bad: "false" } }, input, assetPicker(spec.assets().map((asset) => asset.name), spec.asset().name, (value) => spec.pickAsset(value)));
     const help = el("span", { id: "amount-help" });
-    const side = el("span");
+    const side = el("span", { class: "side" });
     const error = el("p", { class: "field-error", id: "amount-error", role: "alert" });
-    const more = el("div", { class: "field" });
+    const more = el("div", { class: "more" });
     const go = button(spec.verb, () => submit());
-    const working = el("p", { class: "status", hidden: true });
+    const working = el("div", { hidden: true });
+    const quick = el("span", { class: "quick-slot" });
     const set = el(
       "fieldset",
-      { class: "form" },
-      choiceGroup("Network", "network", spec.chains().map((chain) => ({ value: chain.id, label: chain.name })), spec.chain().id, (value) => spec.pickChain(Number(value))),
-      assetField(spec.assets().map((asset) => asset.name), spec.asset().name, (value) => spec.pickAsset(value)),
-      el("div", { class: "field" }, el("label", { class: "label", for: "amount", text: "Amount" }), wrap, el("div", { class: "meta" }, help, side), error),
+      { class: "form", "aria-label": spec.legend },
+      choiceGroup("Network", "network", spec.chains().map((chain) => ({ value: chain.id, label: chain.name, chain })), spec.chain().id, (value) => spec.pickChain(Number(value))),
+      el(
+        "div",
+        { class: "field" },
+        el("div", { class: "field-head" }, el("label", { class: "label", for: "amount", text: "Amount" }), quick),
+        wrap,
+        el("div", { class: "meta" }, help, side),
+        error,
+      ),
       more,
-      el("div", { class: "actions" }, go, working),
+      el("div", { class: "actions" }, go),
+      working,
     );
     let formError = "";
+
+    const put = (value) => {
+      input.value = value;
+      formError = "";
+      refresh();
+      input.focus();
+    };
+
+    /** The quick amounts: a share of what there is, and all of it. */
+    const picks = (text) => {
+      const list = spec.quick();
+      if (!list.length) return null;
+      return el(
+        "span",
+        { class: "quick", role: "group", "aria-label": "Quick amounts" },
+        list.map((pick) =>
+          el(
+            "button",
+            {
+              type: "button",
+              class: "pick",
+              data: { on: String(Boolean(pick.value) && pick.value === text) },
+              "aria-pressed": String(Boolean(pick.value) && pick.value === text),
+              title: pick.title || null,
+              "aria-label": pick.title || null,
+              disabled: pick.value ? null : true,
+              on: { click: () => put(pick.value) },
+            },
+            pick.label,
+          ),
+        ),
+      );
+    };
 
     const refresh = () => {
       const text = input.value.trim();
@@ -1191,19 +1592,18 @@
       const judged = spec.judge(text);
       // What went wrong with the last attempt stays in view until the amount is edited.
       const shown = formError || judged.error;
-      error.textContent = shown;
+      // Only a new message is set, so the same one is not read out again at every key.
+      if (error.textContent !== shown) error.textContent = shown;
       wrap.dataset.bad = String(Boolean(judged.error));
       input.setAttribute("aria-invalid", String(Boolean(judged.error)));
-      go.textContent = judged.amount ? `${spec.verb} ${judged.amount} ${spec.asset().name}` : spec.verb;
+      go.textContent = judged.amount ? `${spec.verb} ${grouped(judged.amount)} ${spec.asset().name}` : spec.verb;
       go.disabled = !judged.amount;
-      help.replaceChildren(...[spec.help()].flat().filter(Boolean));
-      side.replaceChildren(...[spec.side((value) => {
-        input.value = value;
-        formError = "";
-        refresh();
-        input.focus();
-      })].flat().filter(Boolean));
-      more.replaceChildren(...[spec.more()].flat().filter(Boolean));
+      const told = spec.help(judged);
+      help.textContent = typeof told === "string" ? told : told.text;
+      help.dataset.tone = typeof told === "string" ? "" : told.tone;
+      side.replaceChildren(...[spec.side()].filter(Boolean));
+      quick.replaceChildren(...[picks(text)].filter(Boolean));
+      more.replaceChildren(...[spec.more(judged)].flat().filter(Boolean));
       more.hidden = more.childElementCount === 0;
       return judged;
     };
@@ -1232,17 +1632,32 @@
       refresh,
       /** While the page works on what was entered: nothing can be changed, and it says what it is doing. */
       busy(text) {
+        const held = document.activeElement;
+        const had = held && held !== document.body && set.contains(held);
         set.disabled = true;
         go.hidden = true;
+        working.replaceChildren(status(text));
         working.hidden = false;
-        working.textContent = text;
-        say(text);
+        // The form only ever stands in the amount step: its title holds the keyboard while the form is shut.
+        if (had) steps.get("amount").title.focus({ preventScroll: true });
       },
       /** Back to editing, with what went wrong if something did. */
       idle(problem) {
+        working.hidden = true;
+        working.replaceChildren();
+        if (expired(problem)) {
+          // The app no longer answers: the form stays as it was, says why nothing more can happen, and takes the keyboard there.
+          const notice = trouble("This page has expired", GONE, false);
+          notice.tabIndex = -1;
+          working.replaceChildren(notice);
+          working.hidden = false;
+          say("");
+          expiredHere();
+          notice.focus({ preventScroll: true });
+          return;
+        }
         set.disabled = false;
         go.hidden = false;
-        working.hidden = true;
         formError = problem || "";
         refresh();
         if (problem) input.focus();
@@ -1293,14 +1708,14 @@
       options = await post("/deposit/options", {});
     } catch (error) {
       if (mine !== run) return;
-      fail("amount", explain(error), button("Load again", loadDeposit, "quiet"));
+      fail("amount", explain(error), button("Try again", loadDeposit));
       return;
     }
     if (mine !== run) return;
     const assets = (Array.isArray(options.assets) ? options.assets : []).filter(validDepositAsset);
     const chains = (Array.isArray(options.chains) ? options.chains : []).filter((chain) => validChain(chain) && assets.some((asset) => asset.chainId === chain.id));
     if (!chains.length) {
-      fail("amount", `Nothing can be deposited on ${NETWORK} right now. Try again in a while.`, button("Load again", loadDeposit, "quiet"));
+      fail("amount", `Nothing can be deposited on ${NETWORK} right now. Try again in a while.`, button("Try again", loadDeposit));
       return;
     }
     deposit.options = { chains, assets };
@@ -1308,10 +1723,26 @@
     showDepositForm("amount");
   }
 
+  /** What the deposit will do, as it stands in the form. */
+  function depositReceipt(judged) {
+    const asset = depositAsset();
+    const chain = depositChain();
+    const coin = chain.currency && typeof chain.currency.symbol === "string" ? chain.currency.symbol : "";
+    return el(
+      "dl",
+      { class: "facts receipt" },
+      fact("Network", chainLabel(chain)),
+      fact("Network fee", coin ? `Paid in ${coin} by your wallet` : "Paid by your wallet"),
+      fact("Credited to", "Your trading account"),
+      totalRow("You deposit", judged.amount ? `${pretty(judged.amount, asset.decimals)} ${asset.name}` : `— ${asset.name}`),
+    );
+  }
+
   function showDepositForm(focus) {
     deposit.asset = depositAsset().name;
     deposit.form = amountForm({
       verb: "Deposit",
+      legend: "What to deposit",
       chains: () => deposit.options.chains,
       chain: depositChain,
       assets: depositAssets,
@@ -1320,11 +1751,12 @@
       keep: (text) => {
         deposit.text = text;
       },
+      // Picking a network asks the wallet nothing: arrowing through the list would ask at every step.
+      // A wallet on another network is said under the amount, with a button to switch it.
       pickChain: (id) => {
         deposit.chainId = id;
         deposit.asset = "";
         showDepositForm("network");
-        if (walletChain !== id) switchForBalance();
       },
       pickAsset: (name) => {
         deposit.asset = name;
@@ -1344,17 +1776,22 @@
         if (deposit.reading === "switching") return `Waiting for your wallet to switch to ${depositChain().name}`;
         if (deposit.reading === "reading") return "Reading your balance";
         if (deposit.reading === "unknown" || deposit.balance === null) return "Your balance could not be read. You can still enter an amount.";
-        return `In your wallet: ${pretty(fromUnits(deposit.balance, asset.decimals))} ${asset.name}`;
+        return `In your wallet: ${pretty(fromUnits(deposit.balance, asset.decimals))} ${asset.name}${asset.native ? ". Max keeps some for gas." : ""}`;
       },
-      side: (put) => {
+      side: () => (deposit.reading === "elsewhere" ? button(`Switch to ${depositChain().name}`, switchForBalance, "quiet btn-small") : null),
+      // The quick amounts wait, shown but off, until the balance can be read.
+      quick: () => {
         const asset = depositAsset();
-        if (deposit.reading === "elsewhere") return linkButton(`Switch to ${depositChain().name}`, switchForBalance);
-        if (deposit.reading !== "known" || deposit.balance === null) return null;
-        const most = asset.native ? deposit.balance - deposit.reserve : deposit.balance;
-        if (most <= 0n) return null;
-        return linkButton(asset.native ? "Max, less gas" : "Max", () => put(fromUnits(most, asset.decimals)));
+        const known = deposit.reading === "known" && deposit.balance !== null;
+        const most = known ? (asset.native ? deposit.balance - deposit.reserve : deposit.balance) : 0n;
+        const places = Math.min(asset.decimals, 6);
+        const later = known ? "" : ", once your balance is read";
+        return [
+          ...[25, 50, 75].map((percent) => ({ label: `${percent}%`, value: most > 0n ? share(most, asset.decimals, percent, places) : "", title: `${percent}% of your balance${later}` })),
+          { label: "Max", value: most > 0n ? fromUnits(most, asset.decimals) : "", title: `${asset.native ? "Max, less gas" : "Max"}${later}` },
+        ];
       },
-      more: () => null,
+      more: depositReceipt,
       submit: prepareDeposit,
     });
     setState("amount", "active");
@@ -1439,7 +1876,7 @@
     return prepared;
   }
 
-  const depositLine = () => `${deposit.amount} ${deposit.asset} from ${depositChain().name}`;
+  const depositLine = () => phrase(`${deposit.amount} ${deposit.asset} from`, chainLabel(depositChain()));
   const changeAmount = () =>
     linkButton("Change the amount", () => {
       if (flight > 0 || committed) return;
@@ -1511,16 +1948,17 @@
   }
 
   /** One transaction of a step: the wallet's prompt, then the wait for the network. */
-  async function transact(id, call, prompt, mine) {
+  async function transact(id, call, title, prompt, mine) {
     const chain = depositChain();
     setState(id, "wallet");
-    fill(id, status("Waiting for your wallet"), el("p", { class: "hint", text: prompt }));
+    fill(id, status(title, hint(prompt)));
     const hash = await ask("eth_sendTransaction", [{ from: account, to: call.to, data: call.data, value: call.value || "0x0" }]);
     if (typeof hash !== "string" || !HASH.test(hash)) throw new Fault("The wallet did not say which transaction it sent. Check the wallet's activity before trying again.");
     if (mine !== run) throw new Fault("", "abandoned");
     setState(id, "busy");
-    const slow = el("p", { class: "hint", hidden: true, text: "The network is taking longer than usual. The transaction is still on its way." });
-    fill(id, status("Waiting for the network to confirm"), el("p", { class: "hint" }, "Transaction ", txLink(chain, hash)), slow);
+    const slow = hint("The network is taking longer than usual. The transaction is still on its way.");
+    slow.hidden = true;
+    fill(id, status("Waiting for the network to confirm", hint("Transaction ", txLink(chain, hash)), slow));
     const ok = await confirmed(hash, mine, () => {
       slow.hidden = false;
     });
@@ -1551,6 +1989,7 @@
           const cleared = await transact(
             "allow",
             prepared.reset,
+            "Confirm the allowance in your wallet",
             `First your wallet clears the old allowance for ${asset.name}. This token has to be set to zero before the amount can change. It is one more transaction.`,
             mine,
           );
@@ -1559,15 +1998,16 @@
         const done = await transact(
           "allow",
           prepared.approve,
+          "Confirm the allowance in your wallet",
           `Confirm the allowance in your wallet. It lets the exchange's deposit contract (${short(prepared.vault)}) take ${deposit.amount} ${asset.name}, and no more.`,
           mine,
         );
         if (!done.ok) throw new Fault("The allowance failed on the network. Nothing was allowed; the network kept the gas.");
-        setState("allow", "done", ["Transaction", txLink(chain, done.hash)]);
+        setState("allow", "done", phrase("Transaction", txLink(chain, done.hash)));
       }
     } catch (error) {
       if (mine !== run || error.kind === "abandoned") return;
-      fail("allow", explain(error, "Nothing was allowed."), button(`Allow ${deposit.amount} ${asset.name}`, allowDeposit), changeAmount());
+      fail("allow", explain(error, "Nothing was allowed."), button("Try again", allowDeposit), changeAmount());
       return;
     } finally {
       land();
@@ -1586,21 +2026,20 @@
       setState("send", "wallet");
       fill(
         "send",
-        status("Waiting for your wallet"),
-        el("p", { class: "hint", text: `Confirm the deposit in your wallet: ${deposit.amount} ${asset.name} to the exchange's deposit contract (${short(prepared.vault)}).` }),
+        status("Confirm the deposit in your wallet", hint(`Confirm the deposit in your wallet: ${deposit.amount} ${asset.name} to the exchange's deposit contract (${short(prepared.vault)}).`)),
       );
       hash = await ask("eth_sendTransaction", [{ from: account, to: prepared.send.to, data: prepared.send.data, value: prepared.send.value }]);
       if (typeof hash !== "string" || !HASH.test(hash)) throw new Fault("The wallet did not say which transaction it sent. Check the wallet's activity before trying again.");
     } catch (error) {
       land();
       if (mine !== run) return;
-      fail("send", explain(error, "Nothing was deposited."), button(`Deposit ${deposit.amount} ${asset.name}`, sendDeposit), changeAmount());
+      fail("send", explain(error, "Nothing was deposited."), button("Try again", sendDeposit), changeAmount());
       return;
     }
     // From here the deposit is on its way: nothing on this page may start it again.
     committed = true;
     setSummary("wallet", walletSummary(false));
-    setState("send", "done", ["Transaction", txLink(chain, hash)]);
+    setState("send", "done", phrase("Transaction", txLink(chain, hash)));
     let told = true;
     try {
       await post("/deposit/sent", { hash });
@@ -1608,8 +2047,9 @@
       told = false;
     }
     setState("confirm", "busy");
-    const slow = el("p", { class: "hint", hidden: true, text: "The network is taking longer than usual. The deposit is still on its way." });
-    fill("confirm", status("Waiting for the network to confirm the deposit"), slow);
+    const slow = hint("The network is taking longer than usual. The deposit is still on its way.");
+    slow.hidden = true;
+    fill("confirm", status("Waiting for the network to confirm the deposit", hint("Usually under a minute. You can leave this tab open meanwhile."), slow));
     let ok = null;
     try {
       ok = await confirmed(hash, mine, () => {
@@ -1626,8 +2066,14 @@
       }
     }
     land();
-    const unheard = told ? null : el("p", { class: "hint", text: `${APP} could not be told, because this page had expired. The transaction is what counts: the app shows the funds once the exchange credits them.` });
-    const receipt = el("dl", { class: "facts" }, fact("Amount", `${deposit.amount} ${asset.name}`), fact("Network", chain.name), fact("Transaction", txLink(chain, hash)));
+    const unheard = told ? null : hint(`${APP} could not be told, because this page had expired. The transaction is what counts: the app shows the funds once the exchange credits them.`);
+    const receipt = el(
+      "dl",
+      { class: "facts receipt" },
+      fact("Amount", `${deposit.amount} ${asset.name}`),
+      fact("Network", chainLabel(chain)),
+      fact("Transaction", txLink(chain, hash)),
+    );
     if (ok === true) {
       setState("confirm", "done", "Confirmed by the network");
       finish("ok", "Deposit confirmed", receipt, el("p", { text: `The exchange credits your trading account next, usually within a few minutes. ${APP} shows the funds once it has.` }), unheard, closing());
@@ -1660,7 +2106,7 @@
       options = await post("/withdraw/options", {});
     } catch (error) {
       if (mine !== run) return;
-      fail("amount", explain(error), button("Load again", loadWithdraw, "quiet"));
+      fail("amount", explain(error), button("Try again", loadWithdraw));
       return;
     }
     if (mine !== run) return;
@@ -1672,9 +2118,13 @@
       setState("amount", "active");
       fill(
         "amount",
-        el("p", { class: "plain", text: "There is nothing to withdraw yet." }),
-        el("p", { class: "hint", text: "Funds that back open positions and orders stay on the exchange until those are closed. A deposit also needs a few minutes before it can leave again." }),
-        el("div", { class: "actions" }, button("Check again", loadWithdraw, "quiet")),
+        el(
+          "div",
+          { class: "empty" },
+          el("p", { class: "plain", text: "There is nothing to withdraw yet." }),
+          hint("Funds that back open positions and orders stay on the exchange until those are closed. A deposit also needs a few minutes before it can leave again."),
+        ),
+        el("div", { class: "actions" }, button("Check again", loadWithdraw)),
       );
       focusIn("amount");
       return;
@@ -1685,10 +2135,30 @@
     showWithdrawForm("amount");
   }
 
+  /** What the withdrawal will do, as it stands in the form. The fee is fixed when the wallet signs, so these are close figures. */
+  function withdrawReceipt(judged) {
+    const asset = withdrawAsset();
+    const daily = withdraw.options.daily;
+    const rest = judged.amount ? minus(judged.amount, asset.fee) : null;
+    const receive = rest ? `about ${pretty(rest, 8)} ${asset.name}` : judged.amount ? "Less than the fee" : `— ${asset.name}`;
+    return [
+      el(
+        "dl",
+        { class: "facts receipt" },
+        fact("Network", chainLabel(withdrawChain())),
+        fact("Goes to", mono(short(shown(account)), shown(account)), el("span", { class: "quiet", text: ", your wallet" })),
+        fact("Exchange fee", `about ${pretty(asset.fee, 8)} ${asset.name}`),
+        totalRow("You receive", receive),
+      ),
+      daily ? el("p", { class: "aside", text: `Daily limit: ${pretty(daily.left, 2)} of ${pretty(daily.limit, 2)} USD left.` }) : null,
+    ];
+  }
+
   function showWithdrawForm(focus) {
     withdraw.asset = withdrawAsset().name;
     withdraw.form = amountForm({
       verb: "Withdraw",
+      legend: "What to withdraw",
       chains: () => withdraw.options.chains,
       chain: withdrawChain,
       assets: withdrawAssets,
@@ -1716,23 +2186,28 @@
         }
         return judged;
       },
-      help: () => `You can withdraw ${pretty(withdrawAsset().max, 8)} ${withdrawAsset().name}`,
-      side: (put) => linkButton("Max", () => put(cut(withdrawAsset().max, placesOf(withdrawAsset())))),
-      more: () => {
+      // At or below the fee is said before the click; the app still decides, since the fee is only fixed at signing.
+      help: (judged) => {
         const asset = withdrawAsset();
-        const daily = withdraw.options.daily;
-        return el(
-          "dl",
-          { class: "facts" },
-          fact("Exchange fee", `${pretty(asset.fee, 8)} ${asset.name}`),
-          fact("Goes to", mono(short(account), account), " on ", withdrawChain().name),
-          daily ? fact("Daily limit", `${pretty(daily.left, 2)} of ${pretty(daily.limit, 2)} USD left`) : null,
-        );
+        if (judged.amount && !minus(judged.amount, asset.fee)) return { text: `Less than the exchange's fee of about ${pretty(asset.fee, 8)} ${asset.name}`, tone: "warn" };
+        return `You can withdraw ${pretty(asset.max, 8)} ${asset.name}`;
       },
+      side: () => null,
+      quick: () => {
+        const asset = withdrawAsset();
+        const most = toUnits(cut(asset.max, 18), 18);
+        if (most === null || most <= 0n) return [];
+        const places = Math.min(placesOf(asset), 6);
+        return [
+          ...[25, 50, 75].map((percent) => ({ label: `${percent}%`, value: share(most, 18, percent, places), title: `${percent}% of what you can withdraw` })),
+          { label: "Max", value: cut(asset.max, placesOf(asset)), title: "Max" },
+        ];
+      },
+      more: withdrawReceipt,
       submit: (amount) => prepareWithdrawal(amount, true),
     });
     setState("amount", "active");
-    fill("amount", chosen && chosen.rdns === "io.metamask" ? el("p", { class: "note", text: METAMASK_NOTE }) : null, withdraw.form.node);
+    fill("amount", chosen && chosen.rdns === "io.metamask" ? note(METAMASK_NOTE) : null, withdraw.form.node);
     if (focus) withdraw.form.focus(focus);
   }
 
@@ -1759,6 +2234,7 @@
         setState("prove", "todo");
         setState("sign", "busy");
         fill("sign", status("Preparing the withdrawal"));
+        follow("sign");
       }
       try {
         await ensureChain(chain);
@@ -1775,21 +2251,25 @@
       }
       withdraw.amount = isDecimal(first.amount) ? first.amount : amount;
       const fee = isDecimal(first.fee) ? first.fee : asset.fee;
-      setState("amount", "done", `${withdraw.amount} ${asset.name} to ${chain.name}`);
+      const rest = minus(withdraw.amount, fee);
+      const figures = (request) =>
+        el(
+          "dl",
+          { class: "facts receipt" },
+          fact("Amount", `${withdraw.amount} ${asset.name}`),
+          fact("Exchange fee", `${fee} ${asset.name}`),
+          fact("Goes to", mono(short(shown(account)), shown(account)), el("span", { class: "quiet", text: ", your wallet" })),
+          fact("Network", chainLabel(chain)),
+          request ? fact("Request", mono(clip(request, 80))) : null,
+          rest ? totalRow("You receive", `${rest} ${asset.name}`) : null,
+        );
+      setState("amount", "done", phrase(`${withdraw.amount} ${asset.name} to`, chainLabel(chain)));
 
       setState("sign", "wallet");
       fill(
         "sign",
-        status("Confirm the withdrawal in your wallet"),
-        el(
-          "dl",
-          { class: "facts" },
-          fact("Amount", `${withdraw.amount} ${asset.name}`),
-          fact("Exchange fee", `${fee} ${asset.name}`),
-          fact("Goes to", mono(short(account), account), ", your wallet"),
-          fact("Network", chain.name),
-        ),
-        el("p", { class: "hint", text: "Signature 1 of 2. Your wallet shows the same figures: check them there before you sign." }),
+        status("Confirm the withdrawal in your wallet", hint("Signature 1 of 2. Your wallet shows the amount, the fee and where it goes: check them there before you sign.")),
+        figures(),
       );
       const one = await ask("eth_signTypedData_v4", [account, JSON.stringify(first.typedData)]);
       if (mine !== run) return;
@@ -1797,24 +2277,19 @@
       fill("sign", status("Checking the signature"));
       const second = await post("/withdraw/signed", { signature: one });
       if (mine !== run) return;
-      setState("sign", "done", ["Signed by", mono(short(account), account)]);
+      setState("sign", "done", phrase("Signed by", mono(short(shown(account)), shown(account))));
 
       stepNow = "prove";
-      const late = el("p", { class: "problem", hidden: true, text: "The time is up. The exchange will probably refuse this signature: decline it in your wallet, then sign the withdrawal again." });
-      const restart = el("div", { class: "actions", hidden: true }, button("Sign withdrawal again", () => prepareWithdrawal(amount, false), "quiet"));
-      clock = countdown(Number(second.seconds) > 0 ? Number(second.seconds) : 45, () => {
-        late.hidden = false;
-        restart.hidden = false;
-        say("The time is up. Decline the request in your wallet, then sign the withdrawal again.");
-      });
+      const seconds = Number(second.seconds) > 0 ? Number(second.seconds) : 45;
+      clock = countdown(seconds, () => timeUp("prove", button("Sign again", () => prepareWithdrawal(amount, false))));
       setState("prove", "wallet");
       fill(
         "prove",
-        status("Confirm the second signature in your wallet"),
-        el("p", { class: "hint", text: "Signature 2 of 2. It proves to the exchange that this request comes from you. On its own it moves nothing." }),
-        clock.node,
-        late,
-        restart,
+        status(
+          `Confirm it is you: sign in your wallet within ${seconds} seconds`,
+          hint("Signature 2 of 2. It proves to the exchange that this request comes from you. On its own it moves nothing."),
+          clock.node,
+        ),
       );
       const two = await ask("eth_signTypedData_v4", [account, JSON.stringify(second.typedData)]);
       if (mine !== run) return;
@@ -1823,19 +2298,12 @@
       fill("prove", status("Sending the withdrawal to the exchange"));
       const sent = await post("/withdraw/submit", { signature: two });
       if (mine !== run) return;
-      setState("prove", "done", ["Signed by", mono(short(account), account)]);
+      setState("prove", "done", phrase("Signed by", mono(short(shown(account)), shown(account))));
       const id = sent && (typeof sent.id === "string" || typeof sent.id === "number") ? String(sent.id) : "";
       finish(
         "ok",
         "Withdrawal requested",
-        el(
-          "dl",
-          { class: "facts" },
-          fact("Amount", `${withdraw.amount} ${asset.name}`),
-          fact("Exchange fee", `${fee} ${asset.name}`),
-          fact("Goes to", mono(short(account), account), " on ", chain.name),
-          id ? fact("Request", mono(clip(id, 80))) : null,
-        ),
+        figures(id),
         el("p", { text: "It arrives in your wallet after the exchange has processed it. Nothing more is needed from you." }),
         closing(),
       );
@@ -1843,9 +2311,13 @@
       if (mine !== run) return;
       if (clock) clock.stop();
       const refused = stepNow === "prove" && isChainRefusal(error);
-      const again = button("Sign withdrawal", () => prepareWithdrawal(amount, false), refused ? "quiet" : "primary");
+      // Past the first signature, asking again makes a new withdrawal with new signatures; the last one may yet have gone through.
+      const again =
+        stepNow === "prove"
+          ? button("Sign a new withdrawal", () => prepareWithdrawal(amount, false), "quiet")
+          : button("Try again", () => prepareWithdrawal(amount, false));
       if (refused) {
-        fail(
+        failToRead(
           "prove",
           [
             "Your wallet refused the second signature. Nothing was withdrawn.",
@@ -1857,7 +2329,7 @@
       } else if (isChainRefusal(error)) {
         fail("sign", `Your wallet has to be on ${chain.name} to sign this withdrawal, and it is on another network. Switch it there, then sign again. Nothing was withdrawn.`, again, withdrawAgain());
       } else if (stepNow === "prove") {
-        fail("prove", `${explain(error, "Nothing was withdrawn.")} Both signatures are made again.`, again, withdrawAgain());
+        failToRead("prove", `${explain(error, "Nothing was withdrawn.")} Both signatures are made again.`, again, withdrawAgain());
       } else if (fromForm && steps.get("amount").node.dataset.state !== "done") {
         withdraw.form.idle(explain(error, "Nothing was withdrawn."));
       } else {
@@ -1870,7 +2342,7 @@
 
   /* ------------------------------------------------------------ the tasks */
 
-  const SERVED = `This page is served by ${APP} from your own computer. It loads nothing from the internet.`;
+  const SERVED = `Served by ${APP} from your own computer. It loads nothing from the internet.`;
   const TASKS = {
     connect: {
       title: "Approve a trading key",
@@ -1885,12 +2357,11 @@
         "The trading key was made on this computer and stays in its keychain. Your wallet's own key never leaves your wallet.",
         "The approval is a signature, not a transaction. Nothing is sent on-chain and no gas is spent.",
         `The exchange takes the signature for about ${APPROVAL_SECONDS} seconds, so the wallet's prompt is timed.`,
-        SERVED,
       ],
       begin: switchForApproval,
       chain: () => {
         const state = steps.get("network").node.dataset.state;
-        if (signing && walletChain === signing.id && (state === "failed" || state === "skipped")) setState("network", "done", `Your wallet is on ${signing.name}`);
+        if (signing && walletChain === signing.id && (state === "failed" || state === "skipped")) setState("network", "done", onSigning());
         if (signing && walletChain === signing.id && state === "failed") readyToSign();
       },
     },
@@ -1909,7 +2380,6 @@
         "Funds go from your wallet, on the network you choose, to your trading account on the exchange.",
         "Your wallet may ask twice: once to allow the amount, once to send it. Both are transactions and cost that network's gas.",
         "The exchange credits a deposit after the network confirms it, usually within a few minutes.",
-        SERVED,
       ],
       begin: loadDeposit,
       chain: () => {
@@ -1931,7 +2401,6 @@
         "The first signature is the withdrawal itself: amount, fee and destination. The second proves to the exchange that the request is yours.",
         `${APP}'s trading key cannot withdraw. Only your wallet's signatures can.`,
         "Both are signatures, not transactions: you pay the exchange's fee, not gas.",
-        SERVED,
       ],
       begin: loadWithdraw,
     },
@@ -1940,10 +2409,14 @@
   const TASK = TASKS[config.task];
 
   $("app").textContent = APP;
-  $("net").replaceChildren(
+  const net = $("net");
+  net.dataset.real = String(Boolean(config.real));
+  net.replaceChildren(
     el("span", { class: "net-name", text: NETWORK }),
-    config.real ? el("span", { class: "real", text: "Real funds" }) : el("span", { text: "test funds" }),
+    el("span", { "aria-hidden": "true", text: "·" }),
+    el("span", { text: config.real ? "real funds" : "test funds" }),
   );
+  $("served").replaceChildren(glyph("lock"), SERVED);
 
   const complete = config.task === "connect" ? ADDRESS.test(config.agent || "") : ADDRESS.test(config.account || "");
   if (!TASK || !complete) {
@@ -1956,10 +2429,11 @@
   document.title = `${TASK.title} | ${APP}`;
   $("title").textContent = TASK.title;
   $("lead").textContent = TASK.lead;
-  $("notes").replaceChildren(el("h2", { text: TASK.notesTitle }), el("ul", null, TASK.notes.map((text) => el("li", { text }))));
+  $("notes").replaceChildren(el("summary", null, glyph("more"), el("span", { text: TASK.notesTitle })), el("ul", null, TASK.notes.map((text) => el("li", { text }))));
   if (config.task === "connect") showStatement();
+  else showRoute();
   buildSteps(TASK.steps);
-  showWallets();
+  showWallets("", true);
 
   window.addEventListener("eip6963:announceProvider", (event) => addWallet(event.detail));
   window.dispatchEvent(new Event("eip6963:requestProvider"));
@@ -1968,7 +2442,7 @@
     looked = true;
     const known = wallets.length;
     legacyWallet();
-    if (known === 0 && stage === "wallet" && flight === 0 && !account) showWallets();
+    if (known === 0 && stage === "wallet" && flight === 0 && !account) showWallets(walletProblem, true);
   }, 350);
 })();
 </script>
