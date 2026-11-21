@@ -84,7 +84,7 @@ The market data on a market's page and in the screener is public data read on de
 
 `src-tauri` is deliberately thin: `lib.rs` maps each command to a `Studio` method, and `keychain.rs` implements `SecretStore` with the system keychain. Turn events travel over a Tauri channel; snapshots from background work (a wallet page finishing in the browser) are emitted as the `snapshot` event. The shell also opens the wallet page in your browser, because the page's address is on this computer and the web view may only open `https` links.
 
-`updater.rs` asks GitHub for the latest release when the app starts and when you check in Settings, and tells the interface when a newer one is out. It installs an update itself only when the release carries packages signed for the key in `tauri.conf.json`; otherwise it links to the release.
+The interface asks `updater.rs` for the latest GitHub release when the app starts, every six hours and when you check in Settings. When the release carries a package signed for the key in `tauri.conf.json` (from 0.10.2 every release does, for each platform and installer), it downloads the package in the background, checks it against that key, and installs it when you choose to restart; on Windows it closes the desk before the installer takes over. A copy that cannot install its update, such as one without the key, gets a link to the release instead.
 
 The web view runs under a content security policy that allows no network connections except IPC. Its only capability beyond the app's own commands is opening `https` links in your browser. Story pictures on the News page come from the `newsimg` scheme, which the shell answers with what `Studio::news_picture` fetched.
 
