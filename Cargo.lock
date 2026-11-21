@@ -3147,7 +3147,7 @@ dependencies = [
 
 [[package]]
 name = "octoneo-core"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "chrono",
  "ego-tree",
@@ -3176,7 +3176,7 @@ dependencies = [
 
 [[package]]
 name = "octoneo-desktop"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "keyring",
  "octoneo-core",

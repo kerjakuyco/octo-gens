@@ -4,6 +4,10 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## Unreleased
 
+## 0.10.2
+
+Updates that install themselves, on Windows, macOS and Linux, and market orders checked against the exchange's price band before they are sent.
+
 ### Added
 
 - **Updates that install themselves.** OctoNeo looks for a new version when it starts and every six hours, and downloads it in the background. When it is ready, the sidebar offers **Restart to update**, or **Restart when done** while a task is running; nothing restarts until you choose. Each update is checked against the release's signature before it installs, on Windows, macOS and Linux (AppImage, .deb and .rpm), and after the restart a note links to what is new. **Settings → About & Updates** shows the progress and the release notes, and **Download updates automatically** can be turned off. Coming from 0.10.1 or earlier, install this version by hand once; later versions arrive by themselves.

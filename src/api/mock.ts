@@ -1412,7 +1412,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
     if (focused && !quotes[focused.symbol]) quotes[focused.symbol] = quote(focused);
     const wallet = wallets[network];
     return {
-      version: "0.10.1",
+      version: "0.10.2",
       network,
       focus: focus[network],
       feedError: "",
@@ -3773,12 +3773,12 @@ export function createMockBackend(options: MockOptions = {}): Backend {
           throw new Error("Could not reach GitHub Releases.");
         }
         if (mode === "upToDate" || mode === "installed") {
-          return { status: "upToDate", currentVersion: "0.10.1", releaseUrl: releasesUrl };
+          return { status: "upToDate", currentVersion: "0.10.2", releaseUrl: releasesUrl };
         }
         return {
           status: "available",
           version: "0.11.0",
-          currentVersion: "0.10.1",
+          currentVersion: "0.10.2",
           date: "2026-12-18T00:00:00Z",
           notes:
             "### What's new\n- New versions download in the background, and OctoNeo asks before it restarts.\n- Settings → About shows when OctoNeo last looked for a new version.\n- Smaller fixes and polish.",

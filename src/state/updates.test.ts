@@ -30,7 +30,7 @@ async function startWith(search: string, stored: Record<string, string> = {}) {
   return { state, storage, fire };
 }
 
-const RELEASE = "https://github.com/kerjakuyco/octo-neo/releases/tag/v0.10.1";
+const RELEASE = "https://github.com/kerjakuyco/octo-neo/releases/tag/v0.10.2";
 const HOUR = 60 * 60 * 1000;
 
 afterEach(() => {
@@ -218,9 +218,9 @@ describe("desktop updates", () => {
   });
 
   it("says once, after the restart, that OctoNeo was updated", async () => {
-    const note = JSON.stringify({ version: "0.10.1", url: RELEASE });
+    const note = JSON.stringify({ version: "0.10.2", url: RELEASE });
     const { state, storage } = await startWith("?speed=0&history=0&update=upToDate", { "octogens.installingUpdate": note });
-    expect(state.app.get().update.updated).toEqual({ version: "0.10.1", url: RELEASE });
+    expect(state.app.get().update.updated).toEqual({ version: "0.10.2", url: RELEASE });
     expect(storage.has("octogens.installingUpdate")).toBe(false);
     state.dismissUpdated();
     expect(state.app.get().update.updated).toBeNull();
@@ -234,13 +234,13 @@ describe("desktop updates", () => {
 
     // A link that is not this project's release page falls back to the version's own page.
     const odd = await startWith("?speed=0&history=0&update=upToDate", {
-      "octogens.installingUpdate": JSON.stringify({ version: "v0.10.1", url: "https://example.com/" }),
+      "octogens.installingUpdate": JSON.stringify({ version: "v0.10.2", url: "https://example.com/" }),
     });
-    expect(odd.state.app.get().update.updated).toEqual({ version: "0.10.1", url: RELEASE });
+    expect(odd.state.app.get().update.updated).toEqual({ version: "0.10.2", url: RELEASE });
 
     // The browser mock can show the same line.
     const shown = await startWith("?speed=0&history=0&update=installed");
-    expect(shown.state.app.get().update.updated?.version).toBe("0.10.1");
+    expect(shown.state.app.get().update.updated?.version).toBe("0.10.2");
   });
 
   it("keeps a failed background download quiet and offers to try again", async () => {
