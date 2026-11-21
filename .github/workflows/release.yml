@@ -2,14 +2,20 @@ name: Release
 
 # Builds installers for every platform, signs updater bundles when
 # TAURI_SIGNING_PRIVATE_KEY is configured, and attaches them (plus latest.json)
-# to a draft release. Push a tag such as v0.7.0, review the draft on GitHub,
+# to a draft release. Push a tag such as v0.10.2, review the draft on GitHub,
 # then publish it.
 #
-# The installers are not signed with an Apple/Windows developer certificate or
-# notarized: that needs certificates this repository does not hold. macOS
-# builds are sealed with an ad-hoc signature only. Updater artifacts use Tauri's
-# Ed25519 minisign keypair (TAURI_SIGNING_PRIVATE_KEY) so in-app updates are
-# cryptographically verified before installing. See SECURITY.md.
+# From 0.10.2 the app installs these updates itself: it reads latest.json from
+# the latest release, verifies each package against the public key built into
+# it (`plugins.updater.pubkey` in src-tauri/tauri.conf.json, Tauri's Ed25519
+# minisign keypair), and installs once the trader confirms. With the key set,
+# latest.json must cover every platform and installer, or the release fails.
+#
+# The installers are not signed with an Apple Developer ID or a Windows
+# certificate, nor notarized. macOS builds get an ad-hoc signature, or, when the
+# APPLE_CERTIFICATE secrets are set, a stable code-signing identity (a
+# self-signed one is enough), so macOS keeps the app's keychain access from one
+# update to the next. See SECURITY.md.
 
 on:
   push:
@@ -61,6 +67,41 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: rustup show
       - run: cargo test -p octoneo-core
+      # Optional, macOS only: a code-signing identity that stays the same from one release to the
+      # next, so macOS keeps the app's keychain access across updates. The certificate goes into a
+      # keychain of this run's own, and the build is given only its name: Tauri's APPLE_CERTIFICATE
+      # import cannot resolve a self-signed identity, while codesign signs with one found in the
+      # keychain search list. Without the secrets the build keeps the ad-hoc signature.
+      - name: Import the macOS code-signing certificate
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          MACOS_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          if [ -z "$MACOS_CERTIFICATE" ] || [ -z "$MACOS_SIGNING_IDENTITY" ]; then
+            echo "::notice::APPLE_CERTIFICATE is not set; the app gets an ad-hoc signature, so macOS asks for keychain access again after each update."
+            exit 0
+          fi
+          keychain="$RUNNER_TEMP/octoneo-signing.keychain-db"
+          password="$(openssl rand -base64 24)"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/signing.p12"
+          security import "$RUNNER_TEMP/signing.p12" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/signing.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain" > /dev/null
+          existing=()
+          while IFS= read -r line; do
+            line="${line#"${line%%[![:space:]]*}"}"
+            line="${line#\"}"
+            existing+=("${line%\"}")
+          done < <(security list-keychains -d user)
+          security list-keychains -d user -s "$keychain" "${existing[@]}"
+          echo "SIGNING_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+          echo "APPLE_SIGNING_IDENTITY=$MACOS_SIGNING_IDENTITY" >> "$GITHUB_ENV"
       - name: Build installers and updater bundles
         shell: bash
         env:
@@ -73,6 +114,17 @@ jobs:
             echo "::notice::TAURI_SIGNING_PRIVATE_KEY is not set; building installers without signed updater bundles."
             pnpm tauri build
           fi
+      - name: Show the macOS signature
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          # A stable identity shows as `certificate leaf = H"…"`; an ad-hoc one as a cdhash.
+          codesign --verify --deep --strict target/release/bundle/macos/OctoNeo.app
+          codesign -dr - target/release/bundle/macos/OctoNeo.app
+      - name: Remove the signing keychain
+        if: always() && runner.os == 'macOS' && env.SIGNING_KEYCHAIN != ''
+        shell: bash
+        run: security delete-keychain "$SIGNING_KEYCHAIN" || true
       - uses: actions/upload-artifact@v4
         with:
           name: octoneo-${{ matrix.name }}
@@ -131,24 +183,24 @@ jobs:
           path: release-artifacts
       - name: Generate latest.json
         env:
-          GH_TOKEN: ${{ github.token }}
+          # "true" once the updater signing key is configured: then every platform and
+          # installer must be in latest.json, or installs there would never update.
+          SIGNED_UPDATES: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
         run: |
+          args=(--repo "${{ github.repository }}" --dir release-artifacts --out latest.json)
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             TAG="$GITHUB_REF_NAME"
-            VERSION="${TAG#v}"
-            gh release view "$TAG" --json body -q .body > release-notes.md || : > release-notes.md
+            # The app's "What's new" shows these notes: the version's CHANGELOG.md section, the
+            # same text as the release notes. A missing section fails the release.
+            args+=(--version "${TAG#v}" --tag "$TAG" --changelog CHANGELOG.md)
           else
             VERSION="$(node -p "require('./package.json').version")"
-            TAG="v${VERSION}"
-            : > release-notes.md
+            args+=(--version "$VERSION" --tag "v${VERSION}")
           fi
-          node scripts/updater-manifest.mjs \
-            --version "$VERSION" \
-            --tag "$TAG" \
-            --repo "${{ github.repository }}" \
-            --dir release-artifacts \
-            --notes-file release-notes.md \
-            --out latest.json
+          if [ "$SIGNED_UPDATES" = "true" ]; then
+            args+=(--require "darwin-aarch64,windows-x86_64,windows-x86_64-nsis,windows-x86_64-msi,linux-x86_64,linux-x86_64-appimage,linux-x86_64-deb,linux-x86_64-rpm")
+          fi
+          node scripts/updater-manifest.mjs "${args[@]}"
       - name: Upload latest.json artifact
         uses: actions/upload-artifact@v4
         with:

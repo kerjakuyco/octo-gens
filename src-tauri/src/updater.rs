@@ -6,8 +6,19 @@
 //! once the trader confirms. When no signing key or manifest is available for
 //! the current package format, the check falls back to the GitHub Releases API
 //! and links straight to the release page for manual installation.
+//!
+//! Installing differs by platform, inside the updater plugin:
+//! - macOS swaps the `.app` bundle in place (asking for an administrator's
+//!   password when its folder is not writable), then OctoNeo restarts itself.
+//! - Linux replaces the AppImage, or installs the `.deb`/`.rpm` through
+//!   `pkexec`, then OctoNeo restarts itself.
+//! - Windows starts the NSIS or MSI installer in passive mode and ends the
+//!   process at once; the installer starts OctoNeo again when it is done.
+//!   Because the process ends inside the plugin, the app's own shutdown is run
+//!   from the plugin's `on_before_exit` hook instead.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use octoneo_core::studio::Studio;
@@ -15,7 +26,7 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use tauri::ipc::Channel;
-use tauri_plugin_updater::{Update, UpdaterExt};
+use tauri_plugin_updater::{Error as UpdaterError, Update, UpdaterExt};
 use tokio::sync::Mutex;
 
 const REPO: &str = "kerjakuyco/octo-neo";
@@ -23,6 +34,8 @@ const RELEASES_URL: &str = "https://github.com/kerjakuyco/octo-neo/releases";
 const LATEST_RELEASE_API: &str = "https://api.github.com/repos/kerjakuyco/octo-neo/releases/latest";
 const CHECK_TIMEOUT: Duration = Duration::from_secs(15);
 const PROGRESS_STEP_BYTES: u64 = 64 * 1024;
+/// Appended to every install failure: the installer on the release page always works.
+const MANUAL_INSTALL: &str = "You can download the installer from the release page instead.";
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -74,6 +87,8 @@ struct PendingUpdate {
 #[derive(Default)]
 pub struct UpdaterState {
     inner: Mutex<PendingUpdate>,
+    /// Set by the Windows `on_before_exit` hook once it has shut the studio down for the installer.
+    closed_for_install: Arc<AtomicBool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -120,14 +135,71 @@ fn safe_release_url(candidate: Option<&str>, version: &str) -> String {
     release_tag_url(version)
 }
 
+fn updater_config(app: &AppHandle) -> Option<serde_json::Value> {
+    app.config().plugins.0.get("updater").cloned()
+}
+
 fn has_signing_pubkey(app: &AppHandle) -> bool {
-    app.config()
-        .plugins
-        .0
-        .get("updater")
+    updater_config(app)
+        .as_ref()
         .and_then(|config| config.get("pubkey"))
         .and_then(serde_json::Value::as_str)
         .is_some_and(|key| !key.trim().is_empty())
+}
+
+/// True only for a build whose config opts into the plugin's insecure transport, which a
+/// test build serving `latest.json` from this computer does. Release builds never set it.
+fn insecure_transport_allowed(app: &AppHandle) -> bool {
+    updater_config(app)
+        .as_ref()
+        .and_then(|config| config.get("dangerousInsecureTransportProtocol"))
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false)
+}
+
+/// Updates download over HTTPS. Plain HTTP is accepted only from this computer, and only when
+/// the build opted into insecure transport for a local update test; the package's signature is
+/// verified either way.
+fn download_allowed(scheme: &str, host: Option<&str>, insecure_transport: bool) -> bool {
+    scheme == "https"
+        || (insecure_transport
+            && scheme == "http"
+            && matches!(host, Some("127.0.0.1" | "localhost" | "[::1]")))
+}
+
+fn update_download_allowed(update: &Update, insecure_transport: bool) -> bool {
+    download_allowed(update.download_url.scheme(), update.download_url.host_str(), insecure_transport)
+}
+
+/// Says in plain words why installing failed, and what still works.
+fn install_error_text(error: &UpdaterError) -> String {
+    let reason = match error {
+        // macOS reports a dismissed administrator prompt this way too.
+        UpdaterError::Io(io) if io.kind() == std::io::ErrorKind::PermissionDenied => {
+            "OctoNeo could not replace itself where it is installed: that folder needs an administrator's permission, and it was not given.".to_string()
+        }
+        UpdaterError::AuthenticationFailed => {
+            "The administrator's password was not given, so the update was not installed.".to_string()
+        }
+        UpdaterError::PreviousAppNotRestored(kept) => {
+            return format!(
+                "The update could not be installed, and the previous version could not be put back. It was kept at {}. {MANUAL_INSTALL}",
+                kept.display()
+            );
+        }
+        UpdaterError::PackageInstallFailed | UpdaterError::DebInstallFailed => {
+            "The system's package installer did not install the update.".to_string()
+        }
+        UpdaterError::TempDirNotOnSameMountPoint | UpdaterError::TempDirNotFound => {
+            "There was no folder to unpack the update in next to OctoNeo.".to_string()
+        }
+        UpdaterError::InvalidUpdaterFormat | UpdaterError::BinaryNotFoundInArchive => {
+            "The downloaded update does not fit the way OctoNeo was installed.".to_string()
+        }
+        UpdaterError::FailedToDetermineExtractPath => "OctoNeo could not find where it is installed.".to_string(),
+        other => format!("Could not install the update automatically ({other})."),
+    };
+    format!("{reason} {MANUAL_INSTALL}")
 }
 
 fn parse_github_release(release: GitHubRelease, current_version: &str) -> UpdateCheckResult {
@@ -185,18 +257,36 @@ async fn check_github_release(current_version: &str) -> Result<UpdateCheckResult
     Ok(parse_github_release(release, current_version))
 }
 
-pub async fn check(app: &AppHandle, state: &UpdaterState) -> Result<UpdateCheckResult, String> {
+pub async fn check(
+    app: &AppHandle,
+    studio: &Arc<Studio>,
+    state: &UpdaterState,
+) -> Result<UpdateCheckResult, String> {
     let current_version = app.package_info().version.to_string();
+    let insecure_transport = insecure_transport_allowed(app);
 
     if has_signing_pubkey(app) {
         let native = async {
-            let updater = app.updater_builder().timeout(CHECK_TIMEOUT).build()?;
+            let shutdown = Arc::clone(studio);
+            let closed = Arc::clone(&state.closed_for_install);
+            let updater = app
+                .updater_builder()
+                .timeout(CHECK_TIMEOUT)
+                // Windows only: the plugin starts the installer and ends the process right after
+                // this hook, so `RunEvent::Exit` never comes. Close a waiting wallet page and stop
+                // the tool servers here. `install` runs the plugin on a blocking thread, where
+                // blocking on the studio is allowed.
+                .on_before_exit(move || {
+                    closed.store(true, Ordering::SeqCst);
+                    tauri::async_runtime::block_on(shutdown.close());
+                })
+                .build()?;
             updater.check().await
         }
         .await;
 
         match native {
-            Ok(Some(update)) if update.download_url.scheme() == "https" => {
+            Ok(Some(update)) if update_download_allowed(&update, insecure_transport) => {
                 let version = clean_version(&update.version);
                 let date = update
                     .raw_json
@@ -226,7 +316,7 @@ pub async fn check(app: &AppHandle, state: &UpdaterState) -> Result<UpdateCheckR
                 }));
             }
             Ok(Some(_)) => {
-                // Non-HTTPS download URL: refuse native install and fall back to GitHub Releases.
+                // A download address that is not HTTPS: refuse it and fall back to GitHub Releases.
                 let mut pending = state.inner.lock().await;
                 pending.update = None;
                 pending.bytes = None;
@@ -256,14 +346,18 @@ pub async fn check(app: &AppHandle, state: &UpdaterState) -> Result<UpdateCheckR
     check_github_release(&current_version).await
 }
 
-pub async fn download(state: &UpdaterState, on_event: &Channel<UpdateProgress>) -> Result<(), String> {
+pub async fn download(
+    app: &AppHandle,
+    state: &UpdaterState,
+    on_event: &Channel<UpdateProgress>,
+) -> Result<(), String> {
     let update = {
         let pending = state.inner.lock().await;
         pending.update.clone()
     }
     .ok_or_else(|| "Check for updates first.".to_string())?;
 
-    if update.download_url.scheme() != "https" {
+    if !update_download_allowed(&update, insecure_transport_allowed(app)) {
         return Err("Refused to download an update over an insecure connection.".to_string());
     }
 
@@ -316,13 +410,41 @@ pub async fn install(app: &AppHandle, studio: &Arc<Studio>, state: &UpdaterState
         }
     };
 
-    if let Err(error) = update.install(&bytes) {
-        let mut pending = state.inner.lock().await;
-        pending.update = Some(update);
-        pending.bytes = Some(bytes);
-        return Err(format!(
-            "Could not install the update automatically ({error}). You can download the installer from GitHub instead."
-        ));
+    // The plugin's install blocks: it can wait on a password prompt (macOS, Linux packages), it
+    // runs the macOS prompt on the main thread and waits for it, and on Windows its exit hook
+    // blocks on closing the studio. None of that may run on an async worker or the main thread.
+    state.closed_for_install.store(false, Ordering::SeqCst);
+    let attempt = update.clone();
+    let outcome = tauri::async_runtime::spawn_blocking(move || {
+        let result = attempt.install(&bytes);
+        (result, bytes)
+    })
+    .await;
+
+    let failure = match outcome {
+        // macOS and Linux: the new version is in place.
+        Ok((Ok(()), _)) => None,
+        Ok((Err(error), bytes)) => {
+            let mut pending = state.inner.lock().await;
+            pending.update = Some(update);
+            pending.bytes = Some(bytes);
+            Some(install_error_text(&error))
+        }
+        Err(error) => {
+            // The install thread itself failed; the update stays checked, and is downloaded again.
+            let mut pending = state.inner.lock().await;
+            pending.update = Some(update);
+            Some(format!("Could not install the update automatically ({error}). {MANUAL_INSTALL}"))
+        }
+    };
+
+    if let Some(message) = failure {
+        if state.closed_for_install.load(Ordering::SeqCst) {
+            // Windows: the exit hook already shut the studio down, but the installer did not
+            // start. Start OctoNeo again so it is whole; the update is offered again from there.
+            app.restart();
+        }
+        return Err(message);
     }
 
     // Shut down any active wallet page or MCP child process cleanly before restarting.
@@ -343,6 +465,52 @@ mod tests {
         assert!(!is_newer("v0.5.9", "0.6.0"));
         assert!(!is_newer("v0.6.0-rc.1", "0.6.0"));
         assert!(!is_newer("not-a-version", "0.6.0"));
+    }
+
+    #[test]
+    fn downloads_only_over_https_unless_a_local_test_build_opts_in() {
+        assert!(download_allowed("https", Some("github.com"), false));
+        assert!(download_allowed("https", Some("github.com"), true));
+        // A release build never accepts plain HTTP, not even from this computer.
+        assert!(!download_allowed("http", Some("127.0.0.1"), false));
+        assert!(!download_allowed("http", Some("github.com"), false));
+        // A test build that opts into insecure transport accepts it from this computer only.
+        assert!(download_allowed("http", Some("127.0.0.1"), true));
+        assert!(download_allowed("http", Some("localhost"), true));
+        assert!(download_allowed("http", Some("[::1]"), true));
+        assert!(!download_allowed("http", Some("github.com"), true));
+        assert!(!download_allowed("http", Some("127.0.0.1.example.com"), true));
+        assert!(!download_allowed("http", None, true));
+        assert!(!download_allowed("ftp", Some("127.0.0.1"), true));
+    }
+
+    #[test]
+    fn install_failures_read_plainly_and_point_to_the_installer() {
+        let denied = UpdaterError::Io(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied"));
+        let text = install_error_text(&denied);
+        assert!(text.contains("administrator"), "{text}");
+        assert!(text.ends_with(MANUAL_INSTALL), "{text}");
+
+        let kept = UpdaterError::PreviousAppNotRestored(std::path::PathBuf::from("/Users/me/OctoNeo.app"));
+        let text = install_error_text(&kept);
+        assert!(text.contains("/Users/me/OctoNeo.app"), "{text}");
+        assert!(text.ends_with(MANUAL_INSTALL), "{text}");
+
+        for error in [
+            UpdaterError::AuthenticationFailed,
+            UpdaterError::PackageInstallFailed,
+            UpdaterError::DebInstallFailed,
+            UpdaterError::TempDirNotFound,
+            UpdaterError::TempDirNotOnSameMountPoint,
+            UpdaterError::InvalidUpdaterFormat,
+            UpdaterError::BinaryNotFoundInArchive,
+            UpdaterError::FailedToDetermineExtractPath,
+            UpdaterError::ReleaseNotFound,
+        ] {
+            let text = install_error_text(&error);
+            assert!(text.ends_with(MANUAL_INSTALL), "{text}");
+            assert!(!text.starts_with(' '), "{text}");
+        }
     }
 
     #[test]

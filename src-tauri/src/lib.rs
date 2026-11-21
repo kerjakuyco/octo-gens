@@ -409,6 +409,7 @@ async fn picture(studio: Arc<Studio>, path: String) -> Response<Vec<u8>> {
 #[tauri::command]
 async fn check_update(
     app: AppHandle,
+    studio: Desk<'_>,
     state: State<'_, updater::UpdaterState>,
 ) -> Reply<updater::UpdateCheckResult> {
     #[cfg(debug_assertions)]
@@ -418,15 +419,16 @@ async fn check_update(
             release_url: "https://github.com/kerjakuyco/octo-neo/releases".to_string(),
         });
     }
-    updater::check(&app, &state).await
+    updater::check(&app, studio.inner(), &state).await
 }
 
 #[tauri::command]
 async fn download_update(
+    app: AppHandle,
     state: State<'_, updater::UpdaterState>,
     on_event: Channel<updater::UpdateProgress>,
 ) -> Reply<()> {
-    updater::download(&state, &on_event).await
+    updater::download(&app, &state, &on_event).await
 }
 
 #[tauri::command]

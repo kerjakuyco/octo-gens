@@ -49,10 +49,11 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM2RjE3NUVCQzkwMDFEMTgKUldRWUhRREo2M1h4TnRpVkErMUg4Wm95M1pSMi9zM2J1TlZyNjNqMVptMDNhVzJvMkZsN1F1dTcK",
       "endpoints": [
         "https://github.com/kerjakuyco/octo-neo/releases/latest/download/latest.json"
       ],
+      "requireSignedVersion": true,
       "windows": {
         "installMode": "passive"
       }

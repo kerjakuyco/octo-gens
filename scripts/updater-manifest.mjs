@@ -5,12 +5,21 @@
  *
  * Usage:
  *   node scripts/updater-manifest.mjs \
- *     --version 0.7.0 \
- *     --tag v0.7.0 \
+ *     --version 0.10.2 \
+ *     --tag v0.10.2 \
  *     --repo kerjakuyco/octo-neo \
  *     --dir ./artifacts \
- *     --notes-file ./notes.md \
+ *     --changelog ./CHANGELOG.md \
+ *     --require darwin-aarch64,windows-x86_64,windows-x86_64-nsis,windows-x86_64-msi \
  *     --out ./latest.json
+ *
+ * `--changelog` takes the notes from the version's section of CHANGELOG.md, the
+ * same text the release notes carry, and fails when there is none. Without it,
+ * `--notes-file` (or `--notes`) gives the notes.
+ *
+ * `--require` lists the platform keys a release must offer. When any is missing,
+ * or no signed artifact was found at all, the script fails instead of writing a
+ * partial manifest: installs on a missing platform would never update.
  */
 
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -27,6 +36,38 @@ function walk(dir) {
     else if (entry.isFile()) results.push(full);
   }
   return results.sort();
+}
+
+/**
+ * Returns the body of `## <version>` in a Keep a Changelog file: everything up to the
+ * next `## ` heading, trimmed. Returns `null` when the file has no such section.
+ */
+export function changelogSection(changelog, version) {
+  const clean = version.trim().replace(/^v/i, "");
+  const lines = changelog.replace(/\r\n/g, "\n").split("\n");
+  const heading = (line) => /^## /.test(line);
+  const start = lines.findIndex((line) => {
+    const match = /^##\s+\[?v?([^\]\s]+)\]?/.exec(line);
+    return Boolean(match && match[1] === clean);
+  });
+  if (start === -1) return null;
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex(heading);
+  return (end === -1 ? rest : rest.slice(0, end)).join("\n").trim();
+}
+
+/** Lists the keys of `required` that `manifest` does not offer, in the order given. */
+export function missingPlatforms(manifest, required) {
+  const offered = manifest?.platforms ?? {};
+  return required.filter((key) => !Object.hasOwn(offered, key));
+}
+
+/** Splits a comma separated `--require` value into platform keys. */
+export function parsePlatformList(value) {
+  return String(value ?? "")
+    .split(",")
+    .map((key) => key.trim())
+    .filter(Boolean);
 }
 
 /** GitHub replaces spaces in uploaded release asset filenames with dots. */
@@ -154,21 +195,51 @@ function parseArgs(argv) {
   return args;
 }
 
+/** Reads the notes: the version's CHANGELOG.md section when `--changelog` is given. */
+function readNotes(args) {
+  if (args.changelog) {
+    const section = changelogSection(readFileSync(args.changelog, "utf8"), args.version ?? "");
+    if (section === null || section === "") {
+      throw new Error(`${args.changelog} has no section for ${args.version}; write it before releasing.`);
+    }
+    return section;
+  }
+  return args["notes-file"] ? readFileSync(args["notes-file"], "utf8") : (args.notes ?? "");
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = parseArgs(process.argv.slice(2));
-  const notes = args["notes-file"] ? readFileSync(args["notes-file"], "utf8") : (args.notes ?? "");
-  const manifest = buildUpdaterManifest({
-    version: args.version ?? "",
-    tag: args.tag ?? "",
-    repo: args.repo ?? "",
-    dir: args.dir ?? ".",
-    notes,
-    pubDate: args["pub-date"] ?? new Date().toISOString(),
-  });
+  const required = parsePlatformList(args.require);
+  const fail = (message) => {
+    console.error(`::error::${message}`);
+    process.exit(1);
+  };
+
+  let manifest;
+  try {
+    manifest = buildUpdaterManifest({
+      version: args.version ?? "",
+      tag: args.tag ?? "",
+      repo: args.repo ?? "",
+      dir: args.dir ?? ".",
+      notes: readNotes(args),
+      pubDate: args["pub-date"] ?? new Date().toISOString(),
+    });
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
 
   if (!manifest) {
+    if (required.length > 0) {
+      fail("No signed updater artifacts were found, although the updater signing key is set: no latest.json was written.");
+    }
     console.log("No signed updater artifacts found; skipping latest.json generation.");
     process.exit(0);
+  }
+
+  const missing = missingPlatforms(manifest, required);
+  if (missing.length > 0) {
+    fail(`latest.json would lack ${missing.join(", ")}: installs there would never update. Not writing it.`);
   }
 
   const output = `${JSON.stringify(manifest, null, 2)}\n`;

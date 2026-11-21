@@ -35,6 +35,7 @@ Fixes are released for the latest version only.
 | The assistant is pointed at something on your own network | Only public `https` pages are read. Addresses on this computer or on a private network are refused by name, by number, after a redirect, and when the connection is made. |
 | A signed request is replayed | Each request carries a nonce the exchange accepts once, within about a minute, and is signed for one network. HTTP redirects are never followed. |
 | A tool server does more than read | The assistant may call only tools a server marks read-only. |
+| A tampered update is installed | From 0.10.2 the app installs updates itself, only from this repository's GitHub releases, over HTTPS. Each package is signed with the project's updater key, and the app checks it against the public key built into it before anything is installed; the signature also names the version, so an older package cannot pass for a newer one. Nothing is installed until you choose to restart, and a failed install leaves the running version in place and points to the installer on the release page. |
 
 ## What you should do
 
@@ -44,14 +45,14 @@ Fixes are released for the latest version only.
 - Keep the leverage limit low.
 - Attach only tool servers you trust. A local command runs with your user's permissions.
 - Give a Cloudflare API token only the *Workers AI Read* permission. The app needs nothing more.
-- Keep the app up to date.
+- Keep the app up to date. From 0.10.2 it offers each new version, verified, and installs it when you restart.
 
 ## Limits you should know
 
 - **Anyone who can run programs as you can use the key.** Software running under your user account can ask the keychain for it, or drive the app. The key cannot withdraw, but it can trade.
 - **The journal is not encrypted.** It keeps your conversations and what the assistant quoted, which can include account figures. It never contains keys.
 - **Your trading journal is not encrypted either.** What you log under **Activity** is kept in the app window's own storage on this computer. It reaches a model only when you ask the assistant to review it.
-- **A cloud model sees what you ask it.** Your messages, the tool results it gathers and the account summary in each message go to the provider you chose (OpenRouter, or Cloudflare and the provider behind your gateway). A model on this computer keeps all of that here; only the requests to the exchange, to news publishers while web search is on, to any tool server you attached, and the check for a newer release on GitHub when the app starts, leave.
+- **A cloud model sees what you ask it.** Your messages, the tool results it gathers and the account summary in each message go to the provider you chose (OpenRouter, or Cloudflare and the provider behind your gateway). A model on this computer keeps all of that here; only the requests to the exchange, to news publishers while web search is on, to any tool server you attached, and the checks for a newer release on GitHub (and its download), leave.
 - **News publishers see that you read them.** With web search on, the app downloads the public feeds of seven news publishers, the pictures of the stories on the News page, and the articles the assistant reads, from your computer. They see your network address, as any site you visit does. An article you open on the News page loads as the publisher made it, with its own scripts, trackers and ads, as in a browser. What you type is not sent to them, except the ticker of a share, a fund or a commodity you ask about, which goes to Yahoo Finance. Turn web search off in **Settings** under *Tools* to stop it.
 - **The news can be wrong.** A headline is one newsroom's report. The assistant is told to say who reported it and when, and not to trade on it, but it cannot check it.
 - **A local server's address is yours to choose.** If you point Ollama or LM Studio at another machine, your conversations go to that machine.
@@ -61,4 +62,5 @@ Fixes are released for the latest version only.
 - **A stop-loss is placed after the entry.** If the exchange refuses it, the position is open without one and the ticket says so. Stops trigger market orders and can fill worse than their trigger.
 - If your system has no keychain, keys are kept in memory for the session and the wallet must be connected again next launch.
 - `OCTONEO_MAINNET_URL` and `OCTONEO_TESTNET_URL` send a network's requests, signed ones included, to another origin. They exist for tests.
-- Installers are not signed with a developer certificate or notarized, because this repository holds no certificates. macOS builds carry an ad-hoc signature only, so macOS and Windows warn before the first launch of a downloaded copy.
+- Installers are not signed with an Apple Developer ID or a Windows certificate, nor notarized, so macOS and Windows warn before the first launch of a downloaded copy. An update installed from inside the app needs no such step.
+- **macOS ties keychain access to the app's signature.** A build signed ad hoc gets a new signature every version, so after each update macOS asks once more before the app may read its stored keys. The release workflow signs with a stable code-signing identity when one is configured (the `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD` and `APPLE_SIGNING_IDENTITY` secrets; a self-signed certificate is enough), and then that permission carries over from one update to the next.
