@@ -95,10 +95,10 @@ A desktop app cannot talk to a wallet extension, because extensions live in the 
 
 1. The app creates a new API wallet key and keeps it in memory.
 2. It serves the approval page on `127.0.0.1`, on a random port, behind a random path, for ten minutes.
-3. The page finds the wallets in your browser; when there is more than one, you pick. It connects your wallet, asks the app for the message above, and asks your wallet to sign it with `eth_signTypedData_v4`. The message carries a fresh nonce, so confirm the wallet prompt within about ten seconds.
+3. The page finds the wallets in your browser; when there is more than one, you pick. It connects your wallet, asks it to switch to BNB Smart Chain, the network the message names, then asks the app for the message above and asks your wallet to sign it with `eth_signTypedData_v4`. The message carries a fresh nonce, so confirm the wallet prompt within about ten seconds.
 4. The app checks that the signature came from the account that connected, sends it to the exchange, and on success stores the API wallet key in the keychain. The page shuts down.
 
-What crosses that page is your wallet's address and one signature. The page loads nothing from the internet, answers only its own secret path and only the requests of its own task, and refuses requests that arrive under another host name. It shows each step and where you are in it, and counts down the seconds the exchange gives the signature.
+What crosses that page is your wallet's address and one signature. The page loads nothing from the internet, answers only its own secret path and only the requests of its own task, and refuses requests that arrive under another host name. Before you sign, it shows what the key can and cannot do and how long the approval lasts. It shows each step and where you are in it, and counts down the seconds the exchange gives the signature.
 
 To look at the page without the app, `cargo run -p octoneo-core --example wallet_page -- connect` serves it against a stand-in for the exchange.
 
@@ -115,7 +115,7 @@ You can instead create an API wallet on the exchange's API wallet page (`/en/api
 
 ## Deposits and withdrawals
 
-Funds move between your own wallet and your trading account on the exchange. Both directions start in **Settings** under *Wallet*, or on the **Account** page, and both happen on the same kind of page as the approval: served on your computer, opened in the browser where your wallet is. The code is in [`exchange/funding.rs`](../crates/octoneo-core/src/exchange/funding.rs).
+Funds move between your own wallet and your trading account on the exchange. Both directions start in **Settings** under *Wallets*, or on the **Account** page, and both happen on the same kind of page as the approval: served on your computer, opened in the browser where your wallet is. The code is in [`exchange/funding.rs`](../crates/octoneo-core/src/exchange/funding.rs).
 
 | Trading network | Funds move on |
 | --- | --- |
@@ -129,7 +129,7 @@ The page must be opened with the wallet that is connected in the app. A deposit 
 Your wallet sends the deposit; the app only builds the transactions.
 
 1. The page lists the networks and assets the exchange accepts now. Tokenised shares are left out.
-2. You choose a network, an asset and an amount. The app checks the vault it knows for that network against the one the exchange reports at that moment. If they differ, nothing is built and the page says so.
+2. You choose an amount, and the network and the asset when there is more than one. When the page can read your wallet's balance there, it shows it under the amount, with 25%, 50%, 75% and Max; for a network's own coin, Max keeps some for gas. The app checks the vault it knows for that network against the one the exchange reports at that moment. If they differ, nothing is built and the page says so.
 3. For a token, your wallet first allows the vault to take **exactly that amount**, unless an earlier allowance already covers it. A network's own coin needs no allowance.
 4. Your wallet sends `depositFor(token, your wallet, amount, 1)` to the vault. The last argument names the futures account.
 5. The page tells the app the transaction's hash, waits for the network to confirm it, and tells the app the result. The exchange credits the account a little later, usually within a few minutes.
@@ -152,7 +152,7 @@ The mainnet vaults are the ones in the exchange's API documentation. The testnet
 
 The exchange carries out a withdrawal only when your own wallet has signed it twice. The key the app holds takes no part.
 
-1. The page shows what the account may withdraw now, per asset and network, with the exchange's fee and what is left of the daily limit.
+1. The page shows what the account may withdraw now, per asset and network, with 25%, 50%, 75% and Max of it. As you type an amount, it shows the exchange's fee, what you receive and what is left of the daily limit. The fee is set when the app prepares the withdrawal, so until then the fee and what you receive are marked *about*; the exact figures appear with the first signature.
 2. **First signature: the withdrawal.** Your wallet signs typed data that names the amount, the fee, the network and the destination, which is your own wallet:
 
    ```
@@ -161,7 +161,7 @@ The exchange carries out a withdrawal only when your own wallet has signed it tw
    message  { type: "Withdraw", destination: <your wallet>, destination Chain: "BSC", token: "USDT", amount: "40", fee: "0.5", nonce: <microseconds>, … }
    ```
 
-3. **Second signature: the request.** Your wallet signs the request that carries the first signature, as `Message(string msg)` in the same domain trading requests use, with `chainId` `1666` on mainnet and `714` on testnet. This proves to the exchange that you are the one asking. The request is accepted for about a minute, so confirm this prompt promptly.
+3. **Second signature: the request.** Your wallet signs the request that carries the first signature, as `Message(string msg)` in the same domain trading requests use, with `chainId` `1666` on mainnet and `714` on testnet. This proves to the exchange that you are the one asking. The request is accepted for about a minute, so the page counts down 45 seconds for this prompt: confirm it before they run out.
 4. The app checks that both signatures came from the connected wallet, sends the request once, and records the exchange's id for it under **Activity**.
 
 If no clear answer comes back, the app does not treat that as a refusal. It tells you the withdrawal may or may not have been accepted, and to check your balance before asking again.

@@ -48,7 +48,7 @@ The app checks a model before it keeps it: the key or token must be accepted, an
 
 ## Connect a wallet
 
-OctoNeo trades through an **API wallet**: a separate key that your own wallet approves for trading perpetuals. It is approved without spot trading and without withdrawal. Open **Settings**, then **Wallet**, and choose one of two ways. Each network has its own wallet.
+OctoNeo trades through an **API wallet**: a separate key that your own wallet approves for trading perpetuals. It is approved without spot trading and without withdrawal. Open **Settings**, then **Wallets**, and choose one of two ways. Each network has its own wallet.
 
 | Way | What happens | Good for |
 | --- | --- | --- |
@@ -65,14 +65,14 @@ Things to know:
 
 ## Deposit and withdraw
 
-Funds move between your own wallet and your trading account. **Deposit** and **Withdraw** are in **Settings** under *Wallet*, and on the **Account** page. Each opens a page the app serves on your computer, in the browser where your wallet is, like the approval does.
+Funds move between your own wallet and your trading account. **Deposit** and **Withdraw** are in **Settings** under *Wallets*, and on the **Account** page. Each opens a page the app serves on your computer, in the browser where your wallet is, like the approval does.
 
 | | What your wallet does | What the app does |
 | --- | --- | --- |
 | Deposit | Sends the deposit to the exchange's vault, after allowing the vault exactly that amount of the token | Builds the transactions, checks the vault with the exchange first, and records the deposit under **Activity** |
 | Withdraw | Signs the withdrawal, then the request that carries it | Checks both signatures are yours, sends the request once, and records it |
 
-![Depositing from your own wallet, on the page the app serves on your computer](docs/images/deposit-light.png)
+![Depositing from your own wallet, on the page the app serves on your computer: from your wallet to your trading account, the amount, and what happens before you confirm](docs/images/deposit-light.png)
 
 - **Where funds move.** Mainnet: BNB Smart Chain, Ethereum and Arbitrum One. Testnet: BNB Smart Chain Testnet and Sepolia.
 - **Only your own wallet.** A deposit is credited to the connected wallet, and a withdrawal is paid out to it. There is no field for another address.
