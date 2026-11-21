@@ -19,7 +19,7 @@ function kinds(run: RunView): CardView["kind"][] {
 describe("mock backend: markets", () => {
   it("boots on testnet with quotes, a funded wallet, a connected model and an empty conversation", async () => {
     const snapshot = await instant().boot();
-    expect(snapshot.version).toBe("0.10.0");
+    expect(snapshot.version).toBe("0.10.1");
     expect(snapshot.network).toBe("testnet");
     expect(snapshot.focus).toBe("BTCUSDT");
     expect(snapshot.instruments).toHaveLength(10);
