@@ -14,7 +14,9 @@
  *   dialog=trade                                 open the order form
  *   ask=<prompt>                                 send a prompt on startup (seed=live does this for you)
  *   platform=macos                               lay the window out as the macOS app does
- *   update=available|manual|upToDate|error       simulate a desktop update check on startup
+ *   update=available|downloading|ready|installed|manual|upToDate|error|downloadError|installError
+ *                                                simulate the desktop updater: what the first check finds,
+ *                                                a download under way or done, or the launch after an update
  *
  * The mock backend reads its own parameters (seed, network, wallet, …); see `api/mock.ts`.
  */
@@ -35,7 +37,8 @@ export interface DevParams {
   dialog?: "trade";
   ask?: string;
   platform?: "macos";
-  update?: boolean;
+  /** The simulated updater state, as written in the URL; present turns update checks on in the browser. */
+  update?: string;
 }
 
 const PAGES: readonly Page[] = ["chat", "markets", "market", "grid", "news", "account", "activity"];
@@ -69,6 +72,6 @@ export function devParams(): DevParams {
     dialog: oneOf(params.get("dialog"), ["trade"] as const),
     ask: ask || undefined,
     platform: oneOf(params.get("platform"), ["macos"] as const),
-    update: params.has("update") || undefined,
+    update: params.has("update") ? (params.get("update") ?? "") : undefined,
   };
 }

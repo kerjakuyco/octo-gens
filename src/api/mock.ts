@@ -99,7 +99,21 @@ export type MockSeed = "empty" | "conversation" | "filled" | "unconfirmed" | "ex
 export type MockWallet = "connected" | "deposit" | "none" | "error";
 export type MockTicket = "long" | "short" | "close";
 export type MockLocal = "up" | "down" | "retry";
-export type MockUpdate = "available" | "manual" | "upToDate" | "error" | "installError";
+/**
+ * What the simulated desktop updater does: find an update (`available` with automatic downloads off,
+ * `downloading` that holds half-way, `ready` once downloaded), find one that cannot install itself
+ * (`manual`), find nothing (`upToDate`, or `installed`, the launch right after an update), or fail.
+ */
+export type MockUpdate =
+  | "available"
+  | "downloading"
+  | "ready"
+  | "installed"
+  | "manual"
+  | "upToDate"
+  | "error"
+  | "downloadError"
+  | "installError";
 export type MockFeed = "missing" | "error" | "loading" | "empty";
 
 export interface MockOptions {
@@ -3758,7 +3772,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
         if (mode === "error") {
           throw new Error("Could not reach GitHub Releases.");
         }
-        if (mode === "upToDate") {
+        if (mode === "upToDate" || mode === "installed") {
           return { status: "upToDate", currentVersion: "0.10.1", releaseUrl: releasesUrl };
         }
         return {
@@ -3767,7 +3781,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
           currentVersion: "0.10.1",
           date: "2026-12-18T00:00:00Z",
           notes:
-            "### What's new in 0.11.0\n- Redesigned cross-platform sidebar with inline chat filter.\n- Full-width Market Details workspace with toggleable EMA, Bollinger, S/R, and live order overlays.\n- Semi-automatic updates backed by signed GitHub Releases.",
+            "### What's new\n- New versions download in the background, and OctoNeo asks before it restarts.\n- Settings → About shows when OctoNeo last looked for a new version.\n- Smaller fixes and polish.",
           releaseUrl: `${releasesUrl}/tag/v0.11.0`,
           canInstall: mode !== "manual",
         };
@@ -3776,7 +3790,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
     downloadUpdate: async (onEvent: (event: UpdateProgress) => void) => {
       await ready;
       const mode = options.update ?? "upToDate";
-      if (mode !== "available" && mode !== "installError") {
+      if (!["available", "downloading", "ready", "downloadError", "installError"].includes(mode)) {
         throw new Error("Check for updates first.");
       }
       const total = 18_400_000;
@@ -3784,7 +3798,12 @@ export function createMockBackend(options: MockOptions = {}): Backend {
       onEvent({ event: "started", contentLength: total });
       for (let i = 1; i <= steps; i += 1) {
         if (speed > 0) await new Promise((done) => setTimeout(done, 110 * speed));
+        if (mode === "downloadError" && i === 3) {
+          throw new Error("Could not download or verify the update: the connection was reset.");
+        }
         onEvent({ event: "progress", downloaded: Math.round((total * i) / steps), contentLength: total });
+        // Holds half-way, so the download can be looked at.
+        if (mode === "downloading" && i === 3) await new Promise(() => {});
       }
       onEvent({ event: "downloaded" });
     },
@@ -3877,6 +3896,16 @@ export function mockOptionsFromUrl(search: string): MockOptions {
     web: flag(params.get("web")),
     feed: oneOf(params.get("feed"), ["missing", "error", "loading", "empty"] as const),
     speed: numberOf(params.get("speed")),
-    update: oneOf(params.get("update"), ["available", "manual", "upToDate", "error", "installError"] as const),
+    update: oneOf(params.get("update"), [
+      "available",
+      "downloading",
+      "ready",
+      "installed",
+      "manual",
+      "upToDate",
+      "error",
+      "downloadError",
+      "installError",
+    ] as const),
   };
 }

@@ -107,19 +107,40 @@ export interface UpdateState {
   info: UpdateInfo | null;
   downloaded: number;
   contentLength: number | null;
+  /** What went wrong last: a manual check (status `error`), or a download or install (status `available`). */
   error: string;
+  failure: "" | "check" | "download" | "install";
+  /** When the last check finished, in milliseconds. */
   checkedAt: number | null;
   /** Release version the trader chose to skip for sidebar reminders. */
   skippedVersion: string;
+  /** Download an update that can install itself as soon as it is found. On unless turned off; remembered. */
+  auto: boolean;
+  /** The app started the download under way by itself, so the sidebar stays quiet about it. */
+  background: boolean;
+  /** A downloaded update put off with Later: the sidebar says nothing more about it until the next launch. */
+  deferredVersion: string;
+  /** The trader asked to restart once the task under way is done. */
+  restartQueued: boolean;
+  /** Said once, on the first launch after OctoNeo restarted into a new version. */
+  updated: { version: string; url: string } | null;
 }
 
-/** True when the sidebar and About tab should surface an active update indicator. */
+/** True when the sidebar and the About tab should show that an update needs the trader. */
 export function hasVisibleUpdate(update: UpdateState): boolean {
-  if (update.status === "downloading" || update.status === "ready" || update.status === "installing") return true;
-  if (update.status === "available" && update.info) {
-    return update.info.version !== update.skippedVersion;
+  const version = update.info?.version;
+  switch (update.status) {
+    case "installing":
+      return true;
+    case "ready":
+      return Boolean(version) && version !== update.deferredVersion;
+    case "downloading":
+      return !update.background;
+    case "available":
+      return Boolean(version) && version !== update.skippedVersion;
+    default:
+      return false;
   }
-  return false;
 }
 
 export interface AppState {
@@ -209,6 +230,14 @@ function remember(key: string, value: string): void {
   }
 }
 
+function forget(key: string): void {
+  try {
+    globalThis.localStorage?.removeItem(`octogens.${key}`);
+  } catch {
+    // Nothing to do: storage that cannot be read holds nothing to forget.
+  }
+}
+
 function wide(query: string): boolean {
   return typeof window !== "undefined" && window.matchMedia(query).matches;
 }
@@ -237,8 +266,14 @@ export const app = createStore<AppState>({
     downloaded: 0,
     contentLength: null,
     error: "",
+    failure: "",
     checkedAt: null,
     skippedVersion: remembered("skippedUpdate") ?? "",
+    auto: remembered("autoUpdate") !== "0",
+    background: false,
+    deferredVersion: "",
+    restartQueued: false,
+    updated: null,
   },
   composerFocus: 0,
   composerPreset: null,
@@ -319,10 +354,15 @@ export async function start(): Promise<void> {
     app.set(patch);
     backend.onSnapshot(applyPushed);
     if (dev.ask) void ask(dev.ask);
-    if (isDesktop()) {
-      setTimeout(() => void checkForUpdates({ silent: true }), 2500);
-    } else if (dev.update) {
-      void checkForUpdates({ silent: true });
+    if (isDesktop() || dev.update !== undefined) {
+      // The browser mock shows a found update as it is, as when automatic downloads are off.
+      if (dev.update === "available") setUpdate({ auto: false });
+      if (dev.update === "installed") {
+        setUpdate({ updated: { version: snapshot.version, url: releaseTagUrl(snapshot.version) } });
+      } else {
+        sayIfUpdated(snapshot.version);
+      }
+      startUpdateChecks(isDesktop() ? FIRST_UPDATE_CHECK_MS : 0);
     }
   } catch (error) {
     started = false;
@@ -784,13 +824,65 @@ export function onArticle(listener: (event: ArticleEvent) => void): () => void {
 
 /* ---------------------------------------------------------------- updates */
 
+/** How often a running app looks for a new version. */
+const UPDATE_EVERY_MS = 6 * 60 * 60 * 1000;
+/** The first look waits for the window to settle after launch. */
+const FIRST_UPDATE_CHECK_MS = 2500;
+/** A look prompted by focus or a regained connection waits at least this long after the last try. */
+const UPDATE_RETRY_MS = 60 * 1000;
+/** How long "Restarting to update…" shows before a queued restart goes ahead. */
+const RESTART_PAUSE_MS = 1500;
+/** An install that neither restarts the app nor fails within this time is given up on. */
+const INSTALL_TIMEOUT_MS = 30 * 1000;
+const RELEASES_URL = "https://github.com/kerjakuyco/octo-neo/releases";
+
+let updateChecksOn = false;
+let updateTimer: ReturnType<typeof setTimeout> | null = null;
+let lastUpdateTry = 0;
+let stopWatchingIdle: (() => void) | null = null;
+let installTimer: ReturnType<typeof setTimeout> | null = null;
+
 function setUpdate(patch: Partial<UpdateState>): void {
   app.set({ update: { ...app.get().update, ...patch } });
 }
 
+function releaseTagUrl(version: string): string {
+  const clean = version.trim().replace(/^v/i, "");
+  return /^[0-9A-Za-z.+-]+$/.test(clean) ? `${RELEASES_URL}/tag/v${clean}` : RELEASES_URL;
+}
+
+/** Whether something is running that a restart would cut short. */
+function busyNow(state: AppState): boolean {
+  return Boolean(state.live) || Boolean(state.working) || Boolean(state.snapshot?.busy);
+}
+
+/** Looks for a new version now and then: shortly after launch, every six hours, and when the window comes back after a long gap. */
+function startUpdateChecks(firstDelay: number): void {
+  updateChecksOn = true;
+  scheduleUpdateCheck(firstDelay);
+  if (typeof window === "undefined" || typeof window.addEventListener !== "function") return;
+  const lookIfStale = () => {
+    const { checkedAt } = app.get().update;
+    const now = Date.now();
+    const stale = checkedAt === null || now - checkedAt >= UPDATE_EVERY_MS;
+    if (stale && now - lastUpdateTry >= UPDATE_RETRY_MS) void checkForUpdates({ silent: true });
+  };
+  window.addEventListener("focus", lookIfStale);
+  window.addEventListener("online", lookIfStale);
+}
+
+function scheduleUpdateCheck(delay: number): void {
+  if (updateTimer) clearTimeout(updateTimer);
+  updateTimer = setTimeout(() => {
+    updateTimer = null;
+    void checkForUpdates({ silent: true });
+  }, delay);
+}
+
 /**
  * Checks GitHub Releases (and signed `latest.json` when configured) for a newer
- * version. Silent startup checks never raise an error state when offline.
+ * version. Silent checks never raise an error state when offline. A version that
+ * can install itself is downloaded in the background when automatic downloads are on.
  */
 export async function checkForUpdates(options?: { silent?: boolean }): Promise<boolean> {
   const silent = options?.silent ?? false;
@@ -805,17 +897,17 @@ export async function checkForUpdates(options?: { silent?: boolean }): Promise<b
   }
   if (silent && current.status === "ready") return true;
 
-  setUpdate({ status: "checking", error: "" });
+  lastUpdateTry = Date.now();
+  setUpdate({ status: "checking", error: "", failure: "" });
   try {
     const result = await core().checkUpdate();
     const checkedAt = Date.now();
     if (result.status === "available") {
       const { status: _status, ...info } = result;
       void _status;
-      const prev = app.get().update;
-      const keepReady = prev.status === "ready" && prev.info?.version === info.version;
+      const keepReady = current.status === "ready" && current.info?.version === info.version;
       // An explicit manual check un-skips the discovered version so the trader can act on it.
-      let skippedVersion = prev.skippedVersion;
+      let skippedVersion = app.get().update.skippedVersion;
       if (!silent && skippedVersion === info.version) {
         skippedVersion = "";
         remember("skippedUpdate", "");
@@ -823,12 +915,14 @@ export async function checkForUpdates(options?: { silent?: boolean }): Promise<b
       setUpdate({
         status: keepReady ? "ready" : "available",
         info,
-        downloaded: keepReady ? prev.downloaded : 0,
-        contentLength: keepReady ? prev.contentLength : null,
+        downloaded: keepReady ? current.downloaded : 0,
+        contentLength: keepReady ? current.contentLength : null,
         error: "",
+        failure: "",
         checkedAt,
         skippedVersion,
       });
+      downloadIfWanted();
       return true;
     }
     setUpdate({
@@ -837,17 +931,28 @@ export async function checkForUpdates(options?: { silent?: boolean }): Promise<b
       downloaded: 0,
       contentLength: null,
       error: "",
+      failure: "",
       checkedAt,
     });
     return true;
   } catch (error) {
     if (silent) {
-      setUpdate({ status: current.info ? "available" : "idle", error: "" });
+      // A look the trader did not ask for changes nothing when it fails, offline for instance.
+      setUpdate({ status: current.status, error: current.error, failure: current.failure });
       return false;
     }
-    setUpdate({ status: "error", error: errorText(error), checkedAt: Date.now() });
+    setUpdate({ status: "error", error: errorText(error), failure: "check", checkedAt: Date.now() });
     return false;
+  } finally {
+    if (updateChecksOn) scheduleUpdateCheck(UPDATE_EVERY_MS);
   }
+}
+
+/** Starts a background download for a found update that can install itself, unless the trader said not to. */
+function downloadIfWanted(): void {
+  const { status, info, auto, skippedVersion } = app.get().update;
+  if (status !== "available" || !info?.canInstall || !auto || info.version === skippedVersion) return;
+  void downloadUpdate({ background: true });
 }
 
 function applyUpdateProgress(progress: UpdateProgress): void {
@@ -860,40 +965,108 @@ function applyUpdateProgress(progress: UpdateProgress): void {
   }
 }
 
-/** Downloads and cryptographically verifies the available update without restarting yet. */
-export async function downloadUpdate(): Promise<boolean> {
+/**
+ * Downloads and cryptographically verifies the available update without restarting yet.
+ * A download that fails leaves the update available, with the reason, to try again.
+ */
+export async function downloadUpdate(options?: { background?: boolean }): Promise<boolean> {
   const current = app.get().update;
   if (!backend || !current.info?.canInstall) return false;
   if (current.status === "downloading" || current.status === "installing" || current.status === "ready") {
     return current.status === "ready";
   }
 
-  setUpdate({ status: "downloading", downloaded: 0, contentLength: null, error: "" });
+  setUpdate({
+    status: "downloading",
+    background: options?.background ?? false,
+    downloaded: 0,
+    contentLength: null,
+    error: "",
+    failure: "",
+  });
   try {
     await core().downloadUpdate(applyUpdateProgress);
-    setUpdate({ status: "ready", error: "" });
+    setUpdate({ status: "ready", error: "", failure: "" });
     return true;
   } catch (error) {
-    setUpdate({ status: "error", error: errorText(error) });
+    setUpdate({ status: "available", error: errorText(error), failure: "download" });
     return false;
   }
 }
 
-/** Applies the verified downloaded update and restarts OctoNeo once idle. */
+/**
+ * Restarts into the downloaded update. While a task is running it waits instead: the
+ * restart then happens by itself once the app is idle.
+ */
 export async function installUpdate(): Promise<boolean> {
   const state = app.get();
   if (!backend || state.update.status !== "ready") return false;
-  if (state.live || state.working || state.snapshot?.busy) {
-    notify("Wait for the active task to finish before restarting to update.", "error");
-    return false;
+  if (busyNow(state)) {
+    setUpdate({ restartQueued: true });
+    watchForIdle();
+    return true;
   }
+  return beginInstall(0);
+}
 
-  setUpdate({ status: "installing", error: "" });
+/** Drops a restart that was waiting for the running task to finish. */
+export function cancelQueuedRestart(): void {
+  stopIdleWatch();
+  setUpdate({ restartQueued: false });
+}
+
+function watchForIdle(): void {
+  if (stopWatchingIdle) return;
+  const look = () => {
+    const state = app.get();
+    if (!state.update.restartQueued || state.update.status !== "ready") {
+      stopIdleWatch();
+      return;
+    }
+    if (!busyNow(state)) void beginInstall(RESTART_PAUSE_MS);
+  };
+  stopWatchingIdle = app.subscribe(look);
+  look();
+}
+
+function stopIdleWatch(): void {
+  stopWatchingIdle?.();
+  stopWatchingIdle = null;
+}
+
+async function beginInstall(pause: number): Promise<boolean> {
+  stopIdleWatch();
+  const { info } = app.get().update;
+  setUpdate({ status: "installing", restartQueued: false, error: "", failure: "" });
+  if (pause > 0) {
+    await new Promise((done) => setTimeout(done, pause));
+    if (busyNow(app.get())) {
+      // Something started while "Restarting to update…" showed: wait for it again.
+      setUpdate({ status: "ready", restartQueued: true });
+      watchForIdle();
+      return true;
+    }
+  }
+  // Remembered so the next launch can say the update went through.
+  if (info) remember("installingUpdate", JSON.stringify({ version: info.version, url: info.releaseUrl }));
   try {
     await core().installUpdate();
+    // A successful install restarts the app before this point; never leave it spinning if not.
+    if (installTimer) clearTimeout(installTimer);
+    installTimer = setTimeout(() => {
+      installTimer = null;
+      if (app.get().update.status !== "installing") return;
+      setUpdate({
+        status: "available",
+        failure: "install",
+        error: "OctoNeo did not restart to finish the update. Quit and open it again, or download the new version from the release page.",
+      });
+    }, INSTALL_TIMEOUT_MS);
     return true;
   } catch (error) {
-    setUpdate({ status: "error", error: errorText(error) });
+    forget("installingUpdate");
+    setUpdate({ status: "available", error: errorText(error), failure: "install" });
+    notify("OctoNeo could not install the update. Settings → About has the download link.", "error");
     return false;
   }
 }
@@ -902,4 +1075,42 @@ export async function installUpdate(): Promise<boolean> {
 export function skipUpdate(version: string): void {
   remember("skippedUpdate", version);
   setUpdate({ skippedVersion: version });
+}
+
+/** Puts off a downloaded update: the sidebar says nothing more about it until the next launch or a newer version. */
+export function deferUpdate(): void {
+  const version = app.get().update.info?.version;
+  if (!version) return;
+  cancelQueuedRestart();
+  setUpdate({ deferredVersion: version });
+}
+
+/** Turns background downloads of new versions on or off. */
+export function setAutoDownload(on: boolean): void {
+  remember("autoUpdate", on ? "1" : "0");
+  setUpdate({ auto: on });
+  if (on) downloadIfWanted();
+}
+
+/** Clears the one-time "Updated to" line. */
+export function dismissUpdated(): void {
+  setUpdate({ updated: null });
+}
+
+/** On the first launch after an update, says once which version OctoNeo now runs. */
+function sayIfUpdated(version: string): void {
+  const raw = remembered("installingUpdate");
+  if (!raw) return;
+  forget("installingUpdate");
+  try {
+    const parsed = JSON.parse(raw) as { version?: unknown; url?: unknown };
+    if (typeof parsed.version !== "string") return;
+    const clean = (value: string) => value.trim().replace(/^v/i, "");
+    if (clean(parsed.version) !== clean(version)) return;
+    const url =
+      typeof parsed.url === "string" && parsed.url.startsWith(`${RELEASES_URL}/`) ? parsed.url : releaseTagUrl(version);
+    setUpdate({ updated: { version: clean(version), url } });
+  } catch {
+    // Not what this app wrote: nothing to say.
+  }
 }

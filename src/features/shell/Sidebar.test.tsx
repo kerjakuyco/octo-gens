@@ -87,9 +87,11 @@ describe("Sidebar", () => {
     expect(closedTag).toContain("inert");
   });
 
-  it("shows a compact update pill in the footer until the version is skipped", () => {
+  it("shows a found update quietly, a downloaded one as one clear card, and stays quiet while it downloads by itself", () => {
+    const base = state.app.get().update;
     state.app.set({
       update: {
+        ...base,
         status: "available",
         info: {
           version: "0.7.0",
@@ -99,29 +101,65 @@ describe("Sidebar", () => {
           releaseUrl: "https://github.com/kerjakuyco/octo-neo/releases/tag/v0.7.0",
           canInstall: true,
         },
-        downloaded: 0,
-        contentLength: null,
-        error: "",
         checkedAt: Date.now(),
         skippedVersion: "",
       },
     });
     const availableHtml = renderToStaticMarkup(<Sidebar overlay={false} />);
     expect(availableHtml).toContain("foot-update");
-    expect(availableHtml).toContain("Update v0.7.0");
+    expect(availableHtml).toContain("OctoNeo 0.7.0 is out");
 
     state.skipUpdate("0.7.0");
     const skippedHtml = renderToStaticMarkup(<Sidebar overlay={false} />);
     expect(skippedHtml).not.toContain("foot-update");
 
+    // A background download says nothing; one the trader started shows its progress.
+    state.app.set({
+      update: { ...state.app.get().update, status: "downloading", background: true, downloaded: 9_200_000, contentLength: 18_400_000 },
+    });
+    expect(renderToStaticMarkup(<Sidebar overlay={false} />)).not.toContain("foot-update");
+    state.app.set({ update: { ...state.app.get().update, background: false } });
+    expect(renderToStaticMarkup(<Sidebar overlay={false} />)).toContain("Downloading update 50%");
+
+    state.app.set({ update: { ...state.app.get().update, status: "ready" } });
+    const readyHtml = renderToStaticMarkup(<Sidebar overlay={false} />);
+    expect(readyHtml).toContain('class="foot-ready"');
+    expect(readyHtml).toContain("OctoNeo 0.7.0 is ready");
+    expect(readyHtml).toContain("Restart to update");
+    expect(readyHtml).toContain("Later");
+
+    // While a task runs, the restart offers to wait for it, and says so once asked.
+    state.app.set({ working: "Sending the order" });
+    expect(renderToStaticMarkup(<Sidebar overlay={false} />)).toContain("Restart when done");
+    state.app.set({ update: { ...state.app.get().update, restartQueued: true } });
+    const queuedHtml = renderToStaticMarkup(<Sidebar overlay={false} />);
+    expect(queuedHtml).toContain("Restarts when the current task is done.");
+    expect(queuedHtml).toContain("Cancel");
+    state.app.set({ working: "", update: { ...state.app.get().update, restartQueued: false } });
+
+    state.app.set({ update: { ...state.app.get().update, status: "installing" } });
+    expect(renderToStaticMarkup(<Sidebar overlay={false} />)).toContain("Restarting to update…");
+
+    // Later keeps the sidebar quiet about this version.
+    state.app.set({ update: { ...state.app.get().update, status: "ready" } });
+    state.deferUpdate();
+    expect(renderToStaticMarkup(<Sidebar overlay={false} />)).not.toContain("foot-ready");
+  });
+
+  it("says once that OctoNeo was updated, with a link to what is new", () => {
     state.app.set({
       update: {
         ...state.app.get().update,
-        status: "ready",
+        status: "upToDate",
+        info: null,
+        updated: { version: "0.10.1", url: "https://github.com/kerjakuyco/octo-neo/releases/tag/v0.10.1" },
       },
     });
-    const readyHtml = renderToStaticMarkup(<Sidebar overlay={false} />);
-    expect(readyHtml).toContain("foot-update");
-    expect(readyHtml).toContain("Restart for v0.7.0");
+    const html = renderToStaticMarkup(<Sidebar overlay={false} />);
+    expect(html).toContain("Updated to OctoNeo 0.10.1");
+    expect(html).toContain("What’s new");
+    expect(html).toContain('aria-label="Dismiss"');
+    state.dismissUpdated();
+    expect(renderToStaticMarkup(<Sidebar overlay={false} />)).not.toContain("Updated to OctoNeo");
   });
 });

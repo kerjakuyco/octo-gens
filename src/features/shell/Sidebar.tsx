@@ -8,10 +8,16 @@ import { useResolvedTheme } from "../../lib/theme";
 import { filterThreads, groupThreads } from "../../lib/threads";
 import { openNews } from "../news/store";
 import {
+  type UpdateState,
+  cancelQueuedRestart,
+  deferUpdate,
   deleteThread,
+  dismissUpdated,
   hasVisibleUpdate,
+  installUpdate,
   navigate,
   newThread,
+  openExternal,
   openSettings,
   openThread,
   setTheme,
@@ -187,6 +193,66 @@ interface SidebarProps {
   overlay: boolean;
   /** Whether the overlay drawer is currently open. Always true when docked inline. */
   open?: boolean;
+}
+
+/** The downloaded update: restart now, or later. While a task runs, the restart waits for it. */
+function ReadyCard({ update, busy }: { update: UpdateState; busy: boolean }) {
+  const version = update.info?.version ?? "";
+  if (update.status === "installing") {
+    return (
+      <div className="foot-ready" data-status="installing" role="status">
+        <p className="foot-ready-title">
+          <span className="spinner" aria-hidden="true" />
+          <span className="truncate">Restarting to update…</span>
+        </p>
+      </div>
+    );
+  }
+  return (
+    <section className="foot-ready" aria-label="Update ready">
+      <p className="foot-ready-title" role="status">
+        <span className="dot" data-tone="up" />
+        <span className="truncate num">OctoNeo {version} is ready</span>
+      </p>
+      {update.restartQueued ? (
+        <>
+          <p className="foot-ready-sub">Restarts when the current task is done.</p>
+          <div className="foot-ready-actions">
+            <button type="button" className="btn btn-ghost btn-sm" onClick={cancelQueuedRestart}>
+              Cancel
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="foot-ready-actions">
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => void installUpdate()}>
+            {busy ? "Restart when done" : "Restart to update"}
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={deferUpdate}>
+            Later
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Said once after OctoNeo restarted into a new version. */
+function UpdatedLine({ updated }: { updated: NonNullable<UpdateState["updated"]> }) {
+  return (
+    <div className="foot-updated" role="status">
+      <Icon name="check" size={14} />
+      <span className="foot-updated-text">
+        <span className="foot-updated-title num">Updated to OctoNeo {updated.version}</span>
+        <button type="button" className="link foot-updated-link" onClick={() => openExternal(updated.url)}>
+          What’s new
+        </button>
+      </span>
+      <button type="button" className="foot-updated-close" aria-label="Dismiss" onClick={dismissUpdated}>
+        <Icon name="close" size={13} />
+      </button>
+    </div>
+  );
 }
 
 /** Navigation, conversations and footer controls. Docked beside the page on a wide window, animated drawer on a narrow one. */
@@ -403,30 +469,27 @@ export function Sidebar({ overlay, open = true }: SidebarProps) {
       </div>
 
       <footer className="sidebar-foot">
-        {showUpdate ? (
+        {update.updated ? <UpdatedLine updated={update.updated} /> : null}
+        {showUpdate && (update.status === "ready" || update.status === "installing") ? (
+          <ReadyCard update={update} busy={locked} />
+        ) : showUpdate ? (
           <button
             type="button"
             className="foot-update"
             data-status={update.status}
             onClick={() => openSettings("about")}
           >
-            {update.status === "downloading" || update.status === "installing" ? (
+            {update.status === "downloading" ? (
               <span className="spinner" aria-hidden="true" />
-            ) : update.status === "ready" ? (
-              <span className="dot" data-tone="up" />
             ) : (
               <Icon name="download" size={15} />
             )}
             <span className="grow truncate num">
               {update.status === "downloading"
                 ? downloadPct !== null
-                  ? `Downloading ${downloadPct}%`
-                  : "Downloading update"
-                : update.status === "installing"
-                  ? "Installing update"
-                  : update.status === "ready"
-                    ? `Restart for v${update.info?.version ?? ""}`
-                    : `Update v${update.info?.version ?? ""}`}
+                  ? `Downloading update ${downloadPct}%`
+                  : "Downloading update…"
+                : `OctoNeo ${update.info?.version ?? ""} is out`}
             </span>
             {update.status === "available" ? (
               <span className="foot-badge" data-tone="info">

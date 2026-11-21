@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useId, useMemo, useRef } from "react";
+import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Theme, Timeframe } from "../../api/types";
 import { BusyMark } from "../../components/BusyMark";
 import { Dialog } from "../../components/Dialog";
@@ -9,13 +9,16 @@ import { activeWallet } from "../../lib/market";
 import {
   type ChartOverlays,
   type SettingsTab,
+  cancelQueuedRestart,
   checkForUpdates,
   closeSettings,
+  deferUpdate,
   downloadUpdate,
   hasVisibleUpdate,
   installUpdate,
   openExternal,
   openSettings,
+  setAutoDownload,
   setChartTimeframe,
   setTheme,
   skipUpdate,
@@ -150,9 +153,26 @@ function formatReleaseDate(iso: string | null): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(parsed);
 }
 
-function formatCheckedTime(ts: number | null): string {
+/** "just now", "5 minutes ago", "3 hours ago", "yesterday": when the last check finished. */
+export function formatCheckedAgo(ts: number | null, now: number): string {
   if (!ts) return "";
-  return new Intl.DateTimeFormat(undefined, { timeStyle: "short" }).format(new Date(ts));
+  const minutes = Math.floor((now - ts) / 60_000);
+  if (minutes < 1) return "just now";
+  const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  if (minutes < 60) return relative.format(-minutes, "minute");
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return relative.format(-hours, "hour");
+  return relative.format(-Math.floor(hours / 24), "day");
+}
+
+/** The time now, renewed every `ms`, so a relative time stays right while the dialog is open. */
+function useNow(ms: number): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), ms);
+    return () => clearInterval(id);
+  }, [ms]);
+  return now;
 }
 
 function GeneralTab() {
@@ -262,6 +282,7 @@ function UpdateCard() {
   const update = useApp((state) => state.update);
   const busy = useBusy();
   const progressId = useId();
+  const now = useNow(60_000);
   const { info, status } = update;
   const hasTotal = typeof update.contentLength === "number" && update.contentLength > 0;
   const pct =
@@ -269,42 +290,49 @@ function UpdateCard() {
       ? Math.min(100, Math.round((update.downloaded / update.contentLength) * 100))
       : null;
   const releaseDate = formatReleaseDate(info?.date ?? null);
-  const checkedTime = formatCheckedTime(update.checkedAt);
+  const checked = formatCheckedAgo(update.checkedAt, now);
   const isSkipped = Boolean(info && update.skippedVersion === info.version);
+  const releaseUrl = info?.releaseUrl ?? RELEASES_URL;
+  const selfInstall = Boolean(info?.canInstall) && update.failure !== "install";
+  const canCheck = status === "idle" || status === "upToDate" || status === "available";
 
   return (
-    <section className="update-card" aria-label="Software updates">
+    <section className="update-card" aria-label="Software updates" data-status={status}>
       <div className="update-head">
         <div className="update-meta">
           {status === "available" && info ? (
             <>
-              <p className="update-title num">Version {info.version} available</p>
+              <p className="update-title num">OctoNeo {info.version} is available</p>
               <p className="update-sub">
-                {releaseDate ? `Released ${releaseDate}` : "New GitHub release ready"}
+                {releaseDate ? `Released ${releaseDate}` : "A new version is out"}
                 {isSkipped ? " · Skipped" : ""}
               </p>
             </>
           ) : status === "downloading" && info ? (
             <>
-              <p className="update-title num">Downloading version {info.version}</p>
+              <p className="update-title num">Downloading OctoNeo {info.version}</p>
               <p className="update-sub" role="status">
-                Verifies the release signature before installing.
+                Checked against the release signature before it installs.
               </p>
             </>
           ) : status === "ready" && info ? (
             <>
               <p className="update-title num" role="status">
                 <span className="dot" data-tone="up" />
-                Version {info.version} ready to install
+                OctoNeo {info.version} is ready
               </p>
               <p className="update-sub">
-                {busy ? "Wait for the active task to finish before restarting." : "Restart OctoNeo to apply the update."}
+                {update.restartQueued
+                  ? "Restarts when the current task is done."
+                  : busy
+                    ? "OctoNeo can restart by itself when the current task is done."
+                    : "Restart to finish. It takes a few seconds."}
               </p>
             </>
-          ) : status === "installing" && info ? (
-            <p className="update-title num" role="status">
+          ) : status === "installing" ? (
+            <p className="update-title" role="status">
               <span className="spinner" aria-hidden="true" />
-              Installing version {info.version}…
+              Restarting to update…
             </p>
           ) : status === "checking" ? (
             <p className="update-title" role="status">
@@ -314,29 +342,29 @@ function UpdateCard() {
           ) : status === "upToDate" ? (
             <>
               <p className="update-title" role="status">
-                You are up to date
+                OctoNeo is up to date
               </p>
-              {checkedTime ? <p className="update-sub num">Last checked at {checkedTime}</p> : null}
+              {checked ? <p className="update-sub">Last checked {checked}</p> : null}
             </>
           ) : status === "error" ? (
             <>
-              <p className="update-title">Update check failed</p>
+              <p className="update-title">Couldn’t check for updates</p>
               <p className="update-error" role="alert">
                 {update.error}
               </p>
             </>
           ) : (
             <>
-              <p className="update-title">Software updates</p>
-              <p className="update-sub">Checks GitHub Releases for newer desktop builds.</p>
+              <p className="update-title">Updates</p>
+              <p className="update-sub">OctoNeo looks for a new version every few hours.</p>
             </>
           )}
         </div>
 
-        {status === "idle" || status === "upToDate" ? (
+        {canCheck ? (
           <button type="button" className="btn btn-sm btn-secondary" onClick={() => void checkForUpdates()}>
             <Icon name="refresh" size={14} />
-            Check for updates
+            Check now
           </button>
         ) : null}
       </div>
@@ -360,7 +388,21 @@ function UpdateCard() {
         </div>
       ) : null}
 
-      {info && (status === "available" || status === "ready") && info.notes ? (
+      {status === "available" && update.error ? (
+        <p className="update-error" role="alert">
+          {update.error}
+        </p>
+      ) : null}
+
+      {status === "available" && info && !selfInstall ? (
+        <p className="update-sub">
+          {info.canInstall
+            ? "Download it from the release page and install it over this copy: your wallet, settings and conversations stay."
+            : `This copy of OctoNeo can’t update itself. Download ${info.version} from the release page and install it over this one: your wallet, settings and conversations stay.`}
+        </p>
+      ) : null}
+
+      {info && (status === "available" || status === "downloading" || status === "ready") && info.notes ? (
         <details className="update-notes">
           <summary>Release notes</summary>
           <div className="update-notes-body">
@@ -369,75 +411,102 @@ function UpdateCard() {
         </details>
       ) : null}
 
-      {status === "available" && info && !info.canInstall ? (
-        <p className="update-sub">
-          In-app install is not available for this build. Download the installer directly from GitHub Releases.
-        </p>
-      ) : null}
-
       {status === "available" && info ? (
         <div className="update-actions">
-          {info.canInstall ? (
+          {selfInstall ? (
             <button type="button" className="btn btn-primary btn-sm" onClick={() => void downloadUpdate()}>
-              <Icon name="download" size={14} />
-              Download update
+              <Icon name={update.failure === "download" ? "refresh" : "download"} size={14} />
+              {update.failure === "download" ? "Try again" : "Download update"}
             </button>
           ) : (
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => openExternal(info.releaseUrl)}>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => openExternal(releaseUrl)}>
               <Icon name="external" size={14} />
-              Download on GitHub
+              Download from GitHub
             </button>
           )}
-          {!isSkipped ? (
+          {!selfInstall && info.canInstall ? (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => void downloadUpdate()}>
+              Try again
+            </button>
+          ) : null}
+          {!isSkipped && update.failure === "" ? (
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => skipUpdate(info.version)}>
               Skip version
             </button>
           ) : null}
-          {info.canInstall ? (
-            <button type="button" className="link update-ext-link" onClick={() => openExternal(info.releaseUrl)}>
-              GitHub release
+          {selfInstall ? (
+            <button type="button" className="link update-ext-link" onClick={() => openExternal(releaseUrl)}>
+              Release page
             </button>
-          ) : (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => void checkForUpdates()}>
-              Check again
-            </button>
-          )}
+          ) : null}
         </div>
       ) : null}
 
       {status === "ready" ? (
         <div className="update-actions">
-          <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => void installUpdate()}>
-            Restart to update
-          </button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={closeSettings}>
-            Later
-          </button>
+          {update.restartQueued ? (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={cancelQueuedRestart}>
+              Cancel
+            </button>
+          ) : (
+            <>
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => void installUpdate()}>
+                {busy ? "Restart when done" : "Restart to update"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  deferUpdate();
+                  closeSettings();
+                }}
+              >
+                Later
+              </button>
+            </>
+          )}
         </div>
       ) : null}
 
       {status === "error" ? (
         <div className="update-actions">
-          {info?.canInstall ? (
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => void downloadUpdate()}>
-              Retry download
-            </button>
-          ) : (
-            <button type="button" className="btn btn-sm btn-secondary" onClick={() => void checkForUpdates()}>
-              Try again
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => openExternal(info?.releaseUrl ?? RELEASES_URL)}
-          >
+          <button type="button" className="btn btn-sm btn-secondary" onClick={() => void checkForUpdates()}>
+            Try again
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => openExternal(releaseUrl)}>
             <Icon name="external" size={14} />
-            Open GitHub Releases
+            Open the release page
           </button>
         </div>
       ) : null}
+
+      {checked && status !== "upToDate" && status !== "checking" && status !== "error" ? (
+        <p className="update-checked">Last checked {checked}</p>
+      ) : null}
     </section>
+  );
+}
+
+/** Whether new versions download by themselves. */
+function AutoUpdateRow() {
+  const auto = useApp((state) => state.update.auto);
+  return (
+    <div className="settings-card">
+      <label className="switch settings-row">
+        <span className="settings-row-main">
+          <span className="settings-row-title">Download updates automatically</span>
+          <span className="settings-row-desc">New versions download in the background. OctoNeo asks before it restarts.</span>
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          {...({ switch: "" } as Record<string, string>)}
+          checked={auto}
+          onChange={(event) => setAutoDownload(event.currentTarget.checked)}
+        />
+        <span className="switch-track" aria-hidden="true" />
+      </label>
+    </div>
   );
 }
 
@@ -466,6 +535,7 @@ function AboutTab() {
           <h3 className="settings-section-title">Updates</h3>
         </div>
         <UpdateCard />
+        <AutoUpdateRow />
       </section>
 
       <section className="settings-section" aria-label="Resources">

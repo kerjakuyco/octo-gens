@@ -1045,6 +1045,11 @@
   font-size: var(--text-sm);
 }
 
+.update-checked {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
 .update-error {
   color: var(--down);
   font-size: var(--text-sm);
