@@ -1612,64 +1612,161 @@ html:not(.js) .nav-item-label {
   gap: 4px;
 }
 
-/* Wallet: one step of a deposit. */
-.b-field {
+/* Wallet: the top of the deposit page's card. From and To, the amount with its shares, what it comes
+   to, the button, and the steps after it, which the panel's edge cuts off. */
+.b-ui-wallet {
+  gap: 8px;
+}
+
+.b-route {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-2);
 }
 
-.b-field-label {
-  color: var(--text-3);
-  font-size: 0.75rem;
-}
-
-.b-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.b-option {
-  padding: 4px 10px;
-  border: 1px solid var(--line-2);
-  border-radius: 8px;
+.b-route > .icon {
+  align-self: center;
   color: var(--text-2);
-  font-size: 0.75rem;
+}
+
+.b-route-end {
+  display: grid;
+  min-width: 0;
+  padding: 5px 10px 6px;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  background: var(--panel);
+  line-height: 1.3;
+}
+
+.b-route-end span {
+  color: var(--text-2);
+  font-size: 0.6875rem;
+}
+
+.b-route-end strong {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.b-option[data-selected] {
-  border-color: color-mix(in srgb, var(--text) 70%, transparent);
+.b-amount-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+  color: var(--text-2);
+  font-size: 0.75rem;
+}
+
+.b-pcts {
+  display: flex;
+  gap: 4px;
+}
+
+.b-pcts span {
+  display: grid;
+  place-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--pill);
   color: var(--text);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .b-amount {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--line-2);
+  gap: 10px;
+  min-height: 42px;
+  margin-top: -2px;
+  padding: 4px 6px 4px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
 }
 
 .b-amount-value {
-  font-size: 2rem;
-  font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-}
-
-.b-amount-unit {
-  color: var(--text-2);
+  font-size: 1.5rem;
   font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
+.b-asset {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: var(--pill);
+  background: var(--panel-3);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.b-asset .icon {
+  color: var(--text-2);
+}
+
+.b-sum {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 12px 9px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-2);
+}
+
+.b-sum > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.b-sum dt {
+  flex: none;
+  color: var(--text-2);
+}
+
+.b-sum dd {
+  min-width: 0;
+  margin: 0;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.b-chain {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.b-ui-wallet .b-button {
+  justify-self: stretch;
+  height: 34px;
+  border-radius: var(--radius-1);
+  font-weight: 600;
+}
+
+/* The steps after the form: three to five. */
 .b-steps {
   display: grid;
   gap: 8px;
   margin: 2px 0 0;
   padding: 0;
   list-style: none;
-  counter-reset: b-step;
+  counter-reset: b-step 2;
 }
 
 .b-steps li {

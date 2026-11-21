@@ -3,7 +3,7 @@ import { REPO, RELEASES, ISSUES, VERSION, code, doc, docPage, esc, facts, out, s
 /** Where the installers of this version are attached, and the release they belong to. */
 const FILES = `${RELEASES}/download/v${VERSION}`;
 const RELEASE = `${RELEASES}/tag/v${VERSION}`;
-const RELEASED = "November 20, 2026";
+const RELEASED = "November 21, 2026";
 
 /**
  * The installers, by system. The first file of each is the one most people want, drawn as the white

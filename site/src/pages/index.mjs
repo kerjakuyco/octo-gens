@@ -14,7 +14,7 @@ const COPY = {
   hero: {
     // The pill above the headline: the release, and what it brought. On a phone the words in
     // `wide` are read but not drawn, so the pill keeps to one line.
-    news: { chip: "New", text: [["wide", "Version "], ["", `${VERSION}: a new Account and Activity`], ["wide", ", built around your positions and grid bots"]] },
+    news: { chip: "New", text: [["wide", "Version "], ["", `${VERSION}: redesigned wallet pages`], ["wide", ", and every market in the order form"]] },
     title: ["Ask about any market.", "Confirm every order."],
     lead: "OctoNeo is an open-source AI assistant for perpetual futures, leveraged contracts that never expire, on a decentralized exchange. It reads the market, sizes trades to your risk and drafts orders.",
     primary: "Download OctoNeo",
@@ -135,7 +135,7 @@ const BOOK = {
     ["62,922.65", "1.31", 2.361],
   ],
 };
-const DEPOSIT = { networks: ["BNB Smart Chain Testnet", "Sepolia"], asset: "USDT", amount: "250", steps: ["Allow the amount", "Send the deposit", "Wait for the network"] };
+const DEPOSIT = { network: "BNB Smart Chain Testnet", asset: "USDT", amount: "250", steps: ["Allow the amount", "Send the deposit", "Wait for the network"] };
 const MODELS = [
   ["OpenRouter", "Cloud · Lantern 2 Large", "Active"],
   ["Cloudflare AI Gateway", "Cloud", "Connect"],
@@ -246,12 +246,14 @@ ${facts([["Order size", ticketFact("Order size")], ["Leverage", ticketFact("Leve
       label: "Wallet",
       href: "/wallet/",
       explore: "the wallet",
-      area: `Sample deposit on testnet, on the page OctoNeo serves on your computer: ${DEPOSIT.amount} ${DEPOSIT.asset} on ${DEPOSIT.networks[0]}. Your wallet allows the amount and sends the deposit, then the network confirms it.`,
+      area: `Sample deposit on testnet, on the page OctoNeo serves on your computer: from your wallet to your trading account. The amount is ${DEPOSIT.amount} ${DEPOSIT.asset}, with 25%, 50%, 75% and Max beside it, and the network is ${DEPOSIT.network}. Then a Deposit ${DEPOSIT.amount} ${DEPOSIT.asset} button: your wallet allows the amount and sends the deposit, then the network confirms it.`,
       ui: `<p class="b-title">Deposit to your trading account</p>
-<div class="b-field"><span class="b-field-label">Network</span><span class="b-options">${DEPOSIT.networks.map((n, i) => `<span class="b-option"${i ? "" : " data-selected"}>${n}</span>`).join("")}</span></div>
-<div class="b-amount"><span class="b-amount-value num">${DEPOSIT.amount}</span><span class="b-amount-unit">${DEPOSIT.asset}</span></div>
+<div class="b-route"><span class="b-route-end"><span>From</span><strong>Your wallet</strong></span>${icon("arrow", 14)}<span class="b-route-end"><span>To</span><strong>Trading account</strong></span></div>
+<div class="b-amount-head"><span>Amount</span><span class="b-pcts">${["25%", "50%", "75%", "Max"].map((share) => `<span>${share}</span>`).join("")}</span></div>
+<div class="b-amount"><span class="b-amount-value num">${DEPOSIT.amount}</span><span class="b-asset">${DEPOSIT.asset}${icon("chevronDown", 12)}</span></div>
+<dl class="b-sum"><div><dt>Network</dt><dd><span class="b-chain">${mark("bnb", 13)}${DEPOSIT.network}</span></dd></div></dl>
 ${drawnButton(`Deposit ${DEPOSIT.amount} ${DEPOSIT.asset}`, "primary")}
-<ol class="b-steps">${DEPOSIT.steps.map((step) => `<li>${step}</li>`).join("")}</ol>`,
+<ol class="b-steps" start="3">${DEPOSIT.steps.map((step) => `<li>${step}</li>`).join("")}</ol>`,
     }),
     panel({
       key: "models",

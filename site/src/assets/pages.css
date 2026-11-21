@@ -1541,17 +1541,6 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.ui-facts-plain > div {
-  display: grid;
-  grid-template-columns: 6.5rem minmax(0, 1fr);
-  justify-content: start;
-}
-
-.ui-facts-plain dd {
-  text-align: left;
-  white-space: normal;
-}
-
 /* A conversation: the message, what was checked, the cards, the answer, the ticket. */
 .ui-thread {
   display: grid;
@@ -2207,35 +2196,48 @@
   font-size: 0.75rem;
 }
 
-/* The wallet's pages: an address on this computer, then the deposit beside the withdrawal. */
-.ui-address {
-  display: flex;
+/* The wallet's pages, as the app serves them: the page's header with its network, then a card for
+   the deposit beside one for the withdrawal, and the line under them. The page's own surfaces map to
+   the site's: the page on --panel, a card on --panel-2, the boxes in it on --panel-3, so the quiet
+   text in a card is --text-2. */
+.ui-wallet .ui-bar {
+  border-bottom: 0;
+}
+
+.ui-brand {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  min-width: 0;
+  gap: 8px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-.ui-address-host {
-  padding: 5px 12px;
-  border-radius: var(--pill, 999px);
-  background: var(--panel-2);
-  font-family: ui-monospace, monospace;
-  font-size: 0.8125rem;
-}
-
-.ui-address .ui-muted {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.ui-brand img {
+  display: block;
 }
 
 .ui-net {
-  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--pill, 999px);
+  color: var(--text-2);
+  font-size: 0.8125rem;
   white-space: nowrap;
 }
 
+.ui-net::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+
 .ui-net strong {
-  margin-right: 4px;
   color: var(--text);
   font-weight: 600;
 }
@@ -2243,39 +2245,106 @@
 .ui-flows {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+  padding: 4px 20px 0;
 }
 
 .ui-flow {
+  display: grid;
+  gap: 14px;
   min-width: 0;
-  padding: 30px 32px 30px;
-}
-
-.ui-flow + .ui-flow {
-  border-left: 1px solid var(--line);
+  padding: 22px 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  background: var(--panel-2);
 }
 
 .ui-flow-title {
-  font-size: 1.3125rem;
-  font-weight: 600;
+  font-size: 1.1875rem;
+  font-weight: 650;
   line-height: 1.25;
   letter-spacing: -0.02em;
 }
 
 .ui-flow-lead {
-  margin-top: 6px;
+  margin-top: -8px;
+  color: var(--text-2);
+  font-size: 0.8125rem;
+}
+
+/* From and To: two boxes in a tray, the arrow between; a withdrawal adds its one destination. */
+.ui-route {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-3);
+}
+
+.ui-route-ends {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 6px;
+}
+
+.ui-route-end {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  padding: 8px 11px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--panel-2);
+  line-height: 1.35;
+}
+
+.ui-route-end > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-route-label {
+  color: var(--text-2);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.ui-route-end strong {
+  font-weight: 600;
+}
+
+.ui-route-end span:last-child,
+.ui-route-end code {
+  color: var(--text-2);
+  font-size: 0.75rem;
+}
+
+.ui-route-arrow {
+  display: inline-flex;
+  align-self: center;
   color: var(--text-2);
 }
 
+.ui-route-note {
+  padding: 0 4px 2px;
+  color: var(--text-2);
+  font-size: 0.75rem;
+}
+
+/* The steps: done in ink with a check, the current one ringed, the rest grey. */
 .ui-steps {
-  margin-top: 24px;
+  margin-top: 4px;
 }
 
 .ui-step {
   position: relative;
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr);
   gap: 12px;
-  padding-bottom: 16px;
+  padding-bottom: 14px;
 }
 
 .ui-step:last-child {
@@ -2285,9 +2354,9 @@
 .ui-step:not(:last-child)::before {
   content: "";
   position: absolute;
-  top: 30px;
+  top: 28px;
   bottom: 4px;
-  left: 12.5px;
+  left: 11.5px;
   width: 1px;
   background: var(--line-2);
 }
@@ -2295,12 +2364,12 @@
 .ui-step-mark {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border: 1px solid var(--line-2);
   border-radius: 50%;
-  color: var(--text-3);
-  font-size: 0.75rem;
+  color: var(--text-2);
+  font-size: 0.6875rem;
   font-weight: 600;
 }
 
@@ -2312,79 +2381,225 @@
 
 .ui-step[data-state="now"] .ui-step-mark {
   border-color: var(--text);
+  box-shadow: 0 0 0 4px var(--panel-3);
   color: var(--text);
+}
+
+.ui-step-text {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
 }
 
 .ui-step-title {
   font-size: 0.9375rem;
   font-weight: 500;
-  line-height: 26px;
+  line-height: 24px;
 }
 
 .ui-step[data-state="next"] .ui-step-title {
-  color: var(--text-3);
-}
-
-.ui-step-note {
-  color: var(--text-3);
-  font-size: 0.8125rem;
-}
-
-.ui-step-note code {
-  margin-left: 6px;
   color: var(--text-2);
 }
 
-.ui-form {
-  display: grid;
-  justify-items: start;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.ui-options {
+/* The connected wallet, as a chip, and the way to change it. */
+.ui-wallet-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: -2px;
 }
 
-.ui-options span {
-  padding: 6px 12px;
+.ui-wallet-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 3px 11px 3px 3px;
   border: 1px solid var(--line-2);
-  border-radius: var(--radius-1);
+  border-radius: var(--pill, 999px);
+  background: var(--panel-3);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.ui-wallet-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--bg);
+}
+
+.ui-wallet-chip strong {
+  font-weight: 600;
+}
+
+.ui-wallet-chip code {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+}
+
+.ui-wallet-link {
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  text-decoration-color: var(--text-3);
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+/* The current step's form: the amount, what it comes to, the button. */
+.ui-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.ui-amount-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
   color: var(--text-2);
   font-size: 0.8125rem;
+  font-weight: 500;
 }
 
-.ui-options [data-on] {
-  border-color: var(--text);
+.ui-pcts {
+  display: flex;
+  gap: 5px;
+}
+
+.ui-pcts span {
+  display: grid;
+  place-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--pill, 999px);
   color: var(--text);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .ui-amount {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  width: 100%;
-  max-width: 300px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--text-2);
+  gap: 12px;
+  min-height: 56px;
+  padding: 6px 8px 6px 16px;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
 }
 
 .ui-amount strong {
-  font-size: 2.125rem;
+  font-size: 1.75rem;
   font-weight: 500;
   line-height: 1.15;
   letter-spacing: -0.02em;
 }
 
-.ui-amount span {
-  color: var(--text-2);
+.ui-asset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--pill, 999px);
+  background: var(--panel-3);
+  font-size: 0.8125rem;
   font-weight: 600;
 }
 
-.ui-form .ui-facts {
-  gap: 5px;
+.ui-asset .icon {
+  color: var(--text-2);
+}
+
+.ui-amount-note {
+  margin-top: -2px;
+  color: var(--text-2);
+  font-size: 0.8125rem;
+}
+
+.ui-sum {
+  display: grid;
+  gap: 6px;
+  padding: 11px 14px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-3);
+  font-size: 0.8125rem;
+}
+
+.ui-sum > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ui-sum dt {
+  flex: none;
+  color: var(--text-2);
+}
+
+.ui-sum dd {
+  min-width: 0;
+  text-align: right;
+}
+
+.ui-sum code {
+  font-size: 0.75rem;
+}
+
+.ui-sum-total {
+  margin-top: 3px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line-2);
+  font-weight: 600;
+}
+
+.ui-sum-total dt {
+  color: var(--text);
+}
+
+.ui-chain {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ui-chain svg {
+  flex: none;
+}
+
+.ui-wallet .ui-button {
+  justify-content: center;
+  height: 40px;
+  border-radius: var(--radius-1);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Under the cards: where the page comes from. */
+.ui-served {
+  padding: 16px 20px 18px;
+  color: var(--text-3);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.ui-served .icon {
+  margin-right: 6px;
+  vertical-align: -2px;
 }
 
 /* Settings: its sections in three groups down the side; then the open section's head, the model in
@@ -2803,11 +3018,6 @@
     border-left: 0;
   }
 
-  .ui-flow + .ui-flow {
-    border-top: 1px solid var(--line);
-    border-left: 0;
-  }
-
   .ui-code-body {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -3163,20 +3373,42 @@
     display: none;
   }
 
-  .ui-address .ui-muted {
-    display: none;
+  /* The two pages stack, each without its lead or the link to change the wallet; From and To stay
+     side by side and wrap. */
+  .ui-flows {
+    gap: 10px;
+    padding: 0 10px;
   }
 
   .ui-flow {
-    padding: 22px 16px;
+    gap: 12px;
+    padding: 18px 14px 20px;
+    border-radius: 14px;
+  }
+
+  .ui-flow-lead,
+  .ui-wallet-link {
+    display: none;
+  }
+
+  .ui-route-end > * {
+    white-space: normal;
+  }
+
+  .ui-step {
+    padding-bottom: 12px;
+  }
+
+  .ui-amount {
+    min-height: 50px;
   }
 
   .ui-amount strong {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
   }
 
-  .ui-flow .ui-step-note code {
-    display: inline-block;
+  .ui-served {
+    padding: 14px 16px 16px;
   }
 
   .ui-row {
