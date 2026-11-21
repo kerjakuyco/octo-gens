@@ -20,13 +20,13 @@ use std::time::{Duration, Instant};
 
 use chrono::{DateTime, TimeZone, Utc};
 use reqwest::{Client, Method};
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 use serde_json::Value;
 
 use crate::error::{DeskError, Result};
 use crate::model::{
     Account, AssetBalance, Candle, DayStats, Market, Network, OpenOrder, OrderAck, OrderBook, Position,
-    Quote, Side, Timeframe, decimal_text, non_negative, positive, signed,
+    Quote, Side, Timeframe, decimal_text, non_negative, positive, price_text, signed,
 };
 use crate::net::unreachable;
 use crate::{bail, desk_err};
@@ -343,6 +343,9 @@ fn market_from(symbol: &Value) -> Option<Market> {
     }
     // Market orders have their own lot rules; fall back to the general ones.
     let lot = filter(symbol, "MARKET_LOT_SIZE").or_else(|| filter(symbol, "LOT_SIZE"))?;
+    // How far from the mark price the other side of the book may be for a market order to be taken.
+    // A band that would leave out the mark price itself is not one, so it is not used.
+    let band = filter(symbol, "PERCENT_PRICE");
     Some(Market {
         symbol: field(symbol, "symbol")?,
         base: field(symbol, "baseAsset")?,
@@ -355,7 +358,74 @@ fn market_from(symbol: &Value) -> Option<Market> {
         maint_margin: amount(symbol, "maintMarginPercent")
             .map(|pct| pct / Decimal::from(100))
             .unwrap_or(Decimal::new(25, 3)),
+        band_up: band.and_then(|f| price(f, "multiplierUp")).filter(|up| *up >= Decimal::ONE),
+        band_down: band.and_then(|f| price(f, "multiplierDown")).filter(|down| *down <= Decimal::ONE),
     })
+}
+
+/// Said on testnet when a market order is refused because the book is far from the mark price.
+const DRIFTED: &str = "On testnet the order book can drift away from the mark price.";
+/// Said on testnet when the side of the book an order needs is empty.
+const EMPTIED: &str = "On testnet a market's order book can sit empty for a while.";
+
+/// How far `price` is from `mark` in percent, for a sentence that sets it beside a band of `band`
+/// percent: to one decimal, or to two, rounded away from the band, when one would land on its edge.
+fn beyond(price: Decimal, mark: Decimal, band: Decimal) -> String {
+    let gap = price
+        .checked_div(mark)
+        .and_then(|ratio| (ratio - Decimal::ONE).abs().checked_mul(Decimal::from(100)))
+        .unwrap_or_default();
+    let one = gap.round_dp_with_strategy(1, RoundingStrategy::MidpointAwayFromZero);
+    let shown = if one > band { one } else { gap.round_dp_with_strategy(2, RoundingStrategy::AwayFromZero) };
+    format!("{}%", decimal_text(shown))
+}
+
+/// Why the exchange would not take a market order on `side` right now, or `None` when it would.
+///
+/// It takes one only while the best price on the other side of the book lies within its band around
+/// the mark price (its PERCENT_PRICE filter): a buy while the best ask is at most `mark × limit`, a
+/// sell while the best bid is at least `mark × limit`. With nothing on that side there is no price
+/// to fill at. Levels with nothing resting on them do not count.
+pub fn band_refusal(
+    network: Network,
+    side: Side,
+    book: &OrderBook,
+    mark: Decimal,
+    limit: Decimal,
+) -> Option<String> {
+    let note = |text: &str| if network == Network::Testnet { format!(" {text}") } else { String::new() };
+    let (levels, other, past) = match side {
+        Side::Buy => (&book.asks, "sell orders to buy from", "above"),
+        Side::Sell => (&book.bids, "buy orders to sell to", "below"),
+    };
+    let resting = levels.iter().filter(|(_, size)| !size.is_zero()).map(|(price, _)| *price);
+    let best = match side {
+        Side::Buy => resting.min(),
+        Side::Sell => resting.max(),
+    };
+    let Some(best) = best else {
+        return Some(format!(
+            "A market {side} cannot fill right now: the order book has no {other}.{}",
+            note(EMPTIED)
+        ));
+    };
+    let edge = mark.checked_mul(limit)?;
+    let outside = match side {
+        Side::Buy => best > edge,
+        Side::Sell => best < edge,
+    };
+    if !outside {
+        return None;
+    }
+    let band = (limit - Decimal::ONE).abs() * Decimal::from(100);
+    Some(format!(
+        "A market {side} would be refused right now: the best price to {side} at, {}, is {} {past} the mark price, {}, and the exchange takes market orders only within {}% of it.{}",
+        price_text(best),
+        beyond(best, mark, band),
+        price_text(mark),
+        decimal_text(band),
+        note(DRIFTED)
+    ))
 }
 
 /// Futures the news files a commodity under.
@@ -569,6 +639,14 @@ impl ExchangeClient {
             (_, Some(-4168)) => desk_err!(
                 "Your account is in Multi-Assets mode, which allows only cross margin. Draft the ticket again and it will use cross margin."
             ),
+            // The book moved out of the exchange's band after it was last looked at (see [`band_refusal`]).
+            (_, Some(-4131)) => {
+                let note =
+                    if self.network == Network::Testnet { format!(" {DRIFTED}") } else { String::new() };
+                desk_err!(
+                    "The best price on the other side of the book is too far from the mark price, outside the band the exchange allows for market orders, so nothing was placed (code -4131).{note}"
+                )
+            }
             (_, Some(-1021 | -4225 | -4226)) => desk_err!(
                 "The exchange rejected the request's timing ({}). Check this computer's clock, then try again.",
                 failure.message

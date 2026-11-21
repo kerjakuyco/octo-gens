@@ -601,6 +601,117 @@ async fn failures_tell_the_trader_what_to_do() {
     );
 }
 
+#[test]
+fn the_band_market_orders_are_held_to_is_read_with_the_rules() {
+    // As the exchange lists it, with its band for limit orders beside the one for market orders.
+    let banded = |up: &str, down: &str| {
+        let mut row = symbol("SOLUSDT", "SOL", "USDT", "TRADING");
+        row["filters"].as_array_mut().expect("filters").push(json!({"filterType": "PERCENT_PRICE",
+            "multiplierUp": up, "multiplierDown": down, "ltMultiplierUp": "1.0300", "ltMultiplierDown": "0.9700",
+            "multiplierDecimal": "4"}));
+        market_from(&row).expect("listed")
+    };
+    let sol = banded("1.0500", "0.9100");
+    assert_eq!((sol.band_up, sol.band_down), (Some(dec("1.05")), Some(dec("0.91"))));
+    // A listing without the filter has no band, so its market orders are not checked.
+    let plain = market_from(&symbol("BTCUSDT", "BTC", "USDT", "TRADING")).expect("listed");
+    assert_eq!((plain.band_up, plain.band_down), (None, None));
+    // A band that would leave out the mark price itself, or that cannot be read, is not used.
+    let inverted = banded("0.9800", "1.0200");
+    assert_eq!((inverted.band_up, inverted.band_down), (None, None));
+    let unreadable = banded("", "0");
+    assert_eq!((unreadable.band_up, unreadable.band_down), (None, None));
+}
+
+fn book(bids: &[(&str, &str)], asks: &[(&str, &str)]) -> OrderBook {
+    let levels = |rows: &[(&str, &str)]| rows.iter().map(|(price, size)| (dec(price), dec(size))).collect();
+    OrderBook { bids: levels(bids), asks: levels(asks), as_of: Utc::now() }
+}
+
+#[test]
+fn a_market_order_is_held_to_the_band_the_exchange_keeps_around_the_mark_price() {
+    // Testnet as it was read: bitcoin's book over 6% above its mark price, with a band of 2%.
+    let mark = dec("58008.7");
+    let drifted = book(&[("61638.3", "1.959")], &[("61652", "0.002"), ("61651.9", "0.001")]);
+    assert_eq!(
+        band_refusal(Network::Testnet, Side::Buy, &drifted, mark, dec("1.02")).as_deref(),
+        Some(
+            "A market buy would be refused right now: the best price to buy at, 61,651.90, is 6.3% above the mark price, 58,008.70, and the exchange takes market orders only within 2% of it. On testnet the order book can drift away from the mark price."
+        )
+    );
+    // Selling into that book is fine: its best bid is above the mark price, and the band only limits
+    // how far below it a sell may go.
+    assert_eq!(band_refusal(Network::Testnet, Side::Sell, &drifted, mark, dec("0.98")), None);
+
+    // A book far below the mark price turns sells away instead. Mainnet says nothing about testnet.
+    let sunk = book(&[("53000", "1"), ("54000", "2")], &[("54010", "1")]);
+    assert_eq!(
+        band_refusal(Network::Mainnet, Side::Sell, &sunk, mark, dec("0.95")).as_deref(),
+        Some(
+            "A market sell would be refused right now: the best price to sell at, 54,000.00, is 6.9% below the mark price, 58,008.70, and the exchange takes market orders only within 5% of it."
+        )
+    );
+    assert_eq!(band_refusal(Network::Mainnet, Side::Buy, &sunk, mark, dec("1.05")), None);
+
+    // On the edge of the band is inside it. Just past it, the distance is told to two decimals, rounded
+    // away from the band, so that it never reads as inside.
+    let thousand = dec("1000");
+    let edge = book(&[("980", "1")], &[("1020", "1")]);
+    assert_eq!(band_refusal(Network::Mainnet, Side::Buy, &edge, thousand, dec("1.02")), None);
+    assert_eq!(band_refusal(Network::Mainnet, Side::Sell, &edge, thousand, dec("0.98")), None);
+    let past = book(&[("979.6", "1")], &[("1020.01", "1")]);
+    assert_eq!(
+        band_refusal(Network::Mainnet, Side::Buy, &past, thousand, dec("1.02")).as_deref(),
+        Some(
+            "A market buy would be refused right now: the best price to buy at, 1,020.01, is 2.01% above the mark price, 1,000.00, and the exchange takes market orders only within 2% of it."
+        )
+    );
+    assert!(
+        band_refusal(Network::Mainnet, Side::Sell, &past, thousand, dec("0.98"))
+            .is_some_and(|reason| reason.contains("979.60, is 2.04% below the mark price, 1,000.00,")),
+    );
+
+    // A side with nothing resting on it has no price to fill at.
+    let bare = book(&[], &[("58020", "0")]);
+    assert_eq!(
+        band_refusal(Network::Testnet, Side::Buy, &bare, mark, dec("1.02")).as_deref(),
+        Some(
+            "A market buy cannot fill right now: the order book has no sell orders to buy from. On testnet a market's order book can sit empty for a while."
+        )
+    );
+    assert_eq!(
+        band_refusal(Network::Mainnet, Side::Sell, &bare, mark, dec("0.98")).as_deref(),
+        Some("A market sell cannot fill right now: the order book has no buy orders to sell to.")
+    );
+}
+
+#[tokio::test]
+async fn a_market_order_refused_for_the_price_band_is_explained_plainly() {
+    let order = OrderRequest {
+        symbol: "BTCUSDT".into(),
+        side: Side::Buy,
+        kind: OrderKind::Market,
+        qty: dec("0.01"),
+        reduce_only: false,
+        client_id: "band-1".into(),
+    };
+    let refusal = "The best price on the other side of the book is too far from the mark price, outside the band the exchange allows for market orders, so nothing was placed (code -4131).";
+    for (network, expected) in [
+        (
+            Network::Testnet,
+            format!("{refusal} On testnet the order book can drift away from the mark price."),
+        ),
+        (Network::Mainnet, refusal.to_string()),
+    ] {
+        let server = MockServer::start().await;
+        let body = json!({"code": -4131, "msg": "The counterpart's best price does not meet the PERCENT_PRICE filter limit"});
+        fail(&server, "POST", "/fapi/v3/order", 400, body).await;
+        let venue = client(network, &server).await;
+        venue.set_wallet(Some(wallet()));
+        assert_eq!(rejected(venue.place_order(&order).await), expected, "{network:?}");
+    }
+}
+
 #[tokio::test]
 async fn an_answer_that_settles_nothing_is_not_read_as_a_refusal() {
     let order = OrderRequest {

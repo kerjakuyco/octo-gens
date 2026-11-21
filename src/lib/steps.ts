@@ -33,6 +33,7 @@ const LABELS: Record<string, string> = {
   call_server_tool: "Tool",
   "exchange.position": "Position check",
   "exchange.mark_price": "Price check",
+  "exchange.price_band": "Price band check",
   "exchange.margin_mode": "Margin mode",
   "exchange.leverage": "Leverage",
   "exchange.order": "Order",

@@ -21,7 +21,7 @@ use crate::model::{Market, Network, Side, cents, decimal_text, money, positive, 
 use crate::studio::view::{
     GridBotView, GridDraftView, GridLevelView, GridPreviewView, GridRequest, Snapshot, StepView,
 };
-use crate::studio::{Studio, new_id, timed};
+use crate::studio::{Studio, check_band, new_id, timed};
 use crate::{bail, desk_err};
 
 /// Estimated one-way maker fee fraction (0.02% = 0.0002).
@@ -311,9 +311,10 @@ impl Studio {
     }
 
     /// Places a grid's first orders: margin mode and leverage, the opening market order of a long
-    /// or short grid, then the resting limit orders. On success the bot is running. When something
-    /// was placed before a failure, the bot is marked as an error with a note that says what is
-    /// open, so the trader sees it and can stop it.
+    /// or short grid, then the resting limit orders. On success the bot is running. A long or short
+    /// grid whose opening order the exchange would refuse for its price band sends nothing at all.
+    /// When something was placed before a failure, the bot is marked as an error with a note that
+    /// says what is open, so the trader sees it and can stop it.
     async fn deploy_grid_orders(
         &self,
         client: &ExchangeClient,
@@ -322,6 +323,15 @@ impl Studio {
         steps: &mut Vec<StepView>,
     ) -> Result<String> {
         let symbol = bot.symbol.clone();
+        let prices: Vec<Decimal> = bot.levels.iter().map(|lvl| lvl.price).collect();
+        let (initial_leg, ladder) = plan_initial_deployment(bot.direction, &prices, mark, bot.qty_per_grid);
+
+        // A long or short grid opens at market. Look at the book before anything is sent.
+        if let Some((side, _)) = initial_leg
+            && let Err(refusal) = check_band(client, &symbol, side, steps).await
+        {
+            bail!("{} Nothing was sent.", refusal.0);
+        }
 
         // Configure margin mode & leverage before submitting orders.
         let mode_label = if bot.isolated { "isolated margin" } else { "cross margin" };
@@ -330,9 +340,6 @@ impl Studio {
                 .await;
         let lev_label = format!("{}x", bot.leverage);
         timed(steps, "exchange.leverage", &lev_label, client.set_leverage(&symbol, bot.leverage)).await?;
-
-        let prices: Vec<Decimal> = bot.levels.iter().map(|lvl| lvl.price).collect();
-        let (initial_leg, ladder) = plan_initial_deployment(bot.direction, &prices, mark, bot.qty_per_grid);
 
         let mut summary_parts = Vec::new();
         let mut opened = None;
@@ -703,7 +710,12 @@ impl Studio {
                 client_id: cid,
             };
             let detail = format!("{side} {} {} at market, reduce only", decimal_text(qty), bot.base);
-            match timed(steps, "exchange.order", &detail, self.send_order(client, &close_req)).await {
+            // A close goes out at market too. One the exchange would refuse is not sent.
+            let closed = match check_band(client, &bot.symbol, side, steps).await {
+                Ok(()) => timed(steps, "exchange.order", &detail, self.send_order(client, &close_req)).await,
+                Err(refusal) => Err(refusal),
+            };
+            match closed {
                 Ok(ack) => {
                     closed_msg = format!(
                         " Closed the {} {} position (order {}).",

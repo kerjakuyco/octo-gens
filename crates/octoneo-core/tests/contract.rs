@@ -329,6 +329,8 @@ fn every_view_sends_exactly_the_fields_the_interface_declares() {
         max_qty: dec("120"),
         min_notional: dec("5"),
         maint_margin: dec("0.025"),
+        band_up: Some(dec("1.02")),
+        band_down: Some(dec("0.98")),
     };
     let quote = Quote {
         symbol: "BTCUSDT".into(),

@@ -112,6 +112,17 @@ struct Exchange {
     history: HashMap<String, Value>,
     /// Prices that have moved away from the listing's.
     moved: HashMap<String, Decimal>,
+    /// Publish no price band for market orders, as a listing without a PERCENT_PRICE filter has none.
+    no_band: bool,
+    /// Order books that sit this many times the mark price, as testnet's can.
+    book_at: HashMap<String, Decimal>,
+    /// Order books with nothing in them.
+    empty_books: HashSet<String>,
+    /// The order book cannot be read.
+    fail_depth: bool,
+    /// Refuse every market order for the price band, as the exchange does when the book moved after
+    /// the desk looked at it.
+    band_race: bool,
     /// What becomes of the next orders instead of an answer: `true` takes the order and loses the
     /// answer, `false` loses the order itself. Either way the caller sees a 503.
     lose: VecDeque<bool>,
@@ -150,6 +161,11 @@ impl Exchange {
             reject_limits: false,
             history: HashMap::new(),
             moved: HashMap::new(),
+            no_band: false,
+            book_at: HashMap::new(),
+            empty_books: HashSet::new(),
+            fail_depth: false,
+            band_race: false,
             lose: VecDeque::new(),
             partial: None,
             fail_lookup: false,
@@ -356,6 +372,12 @@ impl Exchange {
             return (400, json!({"code": -2022, "msg": "ReduceOnly Order is rejected."}));
         }
         let kind = query["type"].as_str();
+        if kind == "MARKET" && self.band_race {
+            // Refused for the price band: nothing was taken, so nothing changed.
+            self.changes.pop();
+            let msg = "The counterpart's best price does not meet the PERCENT_PRICE filter limit";
+            return (400, json!({"code": -4131, "msg": msg}));
+        }
         let id = self.next_id;
         self.next_id += 1;
         if kind != "MARKET" {
@@ -413,11 +435,20 @@ impl Exchange {
                     .map(|l| {
                         // Gold is listed as what it is, the way the exchange says what a market tracks.
                         let kinds = if l.base == "XAU" { json!(["Commodities"]) } else { json!([]) };
+                        let mut filters = vec![
+                            json!({"filterType": "PRICE_FILTER", "tickSize": l.tick}),
+                            json!({"filterType": "MARKET_LOT_SIZE", "stepSize": l.step, "minQty": l.step, "maxQty": "120"}),
+                            json!({"filterType": "MIN_NOTIONAL", "notional": "5"}),
+                        ];
+                        // The majors keep market orders within 2% of the mark price, the rest within 5%.
+                        let (up, down) =
+                            if matches!(l.base, "BTC" | "ETH") { ("1.0200", "0.9800") } else { ("1.0500", "0.9500") };
+                        if !self.no_band {
+                            filters.push(json!({"filterType": "PERCENT_PRICE", "multiplierUp": up, "multiplierDown": down,
+                                "ltMultiplierUp": up, "ltMultiplierDown": down, "multiplierDecimal": "4"}));
+                        }
                         json!({"symbol": l.symbol, "baseAsset": l.base, "quoteAsset": l.quote, "status": "TRADING", "contractType": "PERPETUAL",
-                            "underlyingSubType": kinds, "maintMarginPercent": "2.5000", "filters": [
-                                {"filterType": "PRICE_FILTER", "tickSize": l.tick},
-                                {"filterType": "MARKET_LOT_SIZE", "stepSize": l.step, "minQty": l.step, "maxQty": "120"},
-                                {"filterType": "MIN_NOTIONAL", "notional": "5"}]})
+                            "underlyingSubType": kinds, "maintMarginPercent": "2.5000", "filters": filters})
                     })
                     .collect();
                 return (200, json!({"symbols": symbols}));
@@ -444,9 +475,16 @@ impl Exchange {
                 );
             }
             ("GET", "/fapi/v3/depth") => {
-                let Some(price) = symbol.and_then(|s| self.price(s)) else {
+                let Some((symbol, price)) = symbol.and_then(|s| Some((s, self.price(s)?))) else {
                     return unknown;
                 };
+                if self.fail_depth {
+                    return (500, json!({"code": -1001, "msg": "Internal error."}));
+                }
+                if self.empty_books.contains(symbol) {
+                    return (200, json!({"E": now, "bids": [], "asks": []}));
+                }
+                let price = price * self.book_at.get(symbol).copied().unwrap_or(Decimal::ONE);
                 let level = |factor: &str, size: &str| json!([(price * dec(factor)).to_string(), size]);
                 return (
                     200,
@@ -710,6 +748,12 @@ async fn count(server: &MockServer, route: &str) -> usize {
     server.received_requests().await.expect("recorded").iter().filter(|r| r.url.path() == route).count()
 }
 
+/// How many orders were sent to the exchange, whatever became of them.
+async fn orders_sent(server: &MockServer) -> usize {
+    let requests = server.received_requests().await.expect("recorded");
+    requests.iter().filter(|r| r.method.as_str() == "POST" && r.url.path() == "/fapi/v3/order").count()
+}
+
 /// Replies with each scripted response in turn, then with a 500.
 struct Script(Mutex<VecDeque<ResponseTemplate>>);
 
@@ -837,7 +881,17 @@ fn key_request(network: Network) -> WalletKeyRequest {
 
 /// A desk on testnet with a funded wallet connected, and the exchange behind it.
 async fn trading(dir: &Path, router: Option<&MockServer>) -> (Desk, MockServer, Venue) {
+    trading_with(dir, router, |_| {}).await
+}
+
+/// The same, with the exchange set up before the desk first reads it.
+async fn trading_with(
+    dir: &Path,
+    router: Option<&MockServer>,
+    setup: impl FnOnce(&mut Exchange),
+) -> (Desk, MockServer, Venue) {
     let (server, exchange) = stand_in(Network::Testnet).await;
+    setup(&mut exchange.lock().expect("exchange"));
     let desk = open(dir, Arc::default(), |config| {
         config.exchange_bases.insert(Network::Testnet, server.uri());
         if let Some(router) = router {
@@ -1147,12 +1201,18 @@ async fn a_ticket_from_the_form_becomes_a_signed_order_with_its_stop() {
         [
             "exchange.position",
             "exchange.mark_price",
+            "exchange.price_band",
             "exchange.margin_mode",
             "exchange.leverage",
             "exchange.order",
             "exchange.stop_loss",
             "exchange.take_profit"
         ]
+    );
+    assert_eq!(
+        (execution.steps[2].detail.as_str(), execution.steps[2].status, execution.steps[2].preview.as_str()),
+        ("buy BTCUSDT", StepStatus::Ok, ""),
+        "the book is near the mark price, inside the exchange's band"
     );
     {
         let venue = exchange.lock().expect("exchange");
@@ -3678,6 +3738,235 @@ async fn a_ticket_is_checked_again_at_the_price_it_would_fill_at() {
     move_to("62300");
     let placed = studio.submit_ticket(&ticket.id).await.expect("placed");
     assert!(placed.receipts[&ticket.id].contains("filled at 62,300.00. The stop-loss is set at 55,000.00."));
+}
+
+#[tokio::test]
+async fn a_market_order_the_exchange_would_refuse_for_its_price_band_is_not_sent() {
+    let folder = tempfile::tempdir().expect("tempdir");
+    let (desk, server, exchange) = trading(folder.path(), None).await;
+    let studio = &desk.studio;
+    // As on testnet: the book sits over 6% above the mark price, and the exchange takes market orders on
+    // bitcoin only within 2% of it.
+    exchange.lock().expect("exchange").book_at.insert("BTCUSDT".to_string(), dec("1.0625"));
+    let reason = "A market buy would be refused right now: the best price to buy at, 65,907.94, is 6.3% above the mark price, 62,000.00, and the exchange takes market orders only within 2% of it. On testnet the order book can drift away from the mark price.";
+
+    // A buy would be refused, so it is not sent, and nothing else is either. The book was read fresh
+    // to say so.
+    let ticket = studio
+        .prepare_ticket(order("BTCUSDT", Side::Buy, "0.01"))
+        .await
+        .expect("ticket")
+        .draft
+        .expect("draft");
+    let books = count(&server, "/fapi/v3/depth").await;
+    let refused = studio.submit_ticket(&ticket.id).await.expect_err("refused").to_string();
+    assert_eq!(refused, format!("{reason} Nothing was sent."));
+    assert_eq!(count(&server, "/fapi/v3/order").await, 0, "the order endpoint was never asked");
+    assert_eq!(count(&server, "/fapi/v3/depth").await, books + 1);
+    assert!(
+        exchange.lock().expect("exchange").changes.is_empty(),
+        "not even the margin mode or the leverage"
+    );
+    let after = studio.snapshot();
+    assert_eq!(
+        (after.failures.get(&ticket.id), after.receipts.get(&ticket.id), after.draft.is_none()),
+        (Some(&refused), None, true),
+        "the reason stays with the ticket, which is used up as every confirmed ticket is"
+    );
+    let run = &after.activity[0];
+    assert_eq!((run.status, run.output.as_str()), (RunStatus::Failed, refused.as_str()));
+    assert_eq!(
+        run.steps.iter().map(|s| (s.name.as_str(), s.status)).collect::<Vec<_>>(),
+        [
+            ("exchange.position", StepStatus::Ok),
+            ("exchange.mark_price", StepStatus::Ok),
+            ("exchange.price_band", StepStatus::Error)
+        ]
+    );
+    assert_eq!((run.steps[2].detail.as_str(), run.steps[2].preview.as_str()), ("buy BTCUSDT", reason));
+
+    // A sell into the same book is taken: its best bid is above the mark price, which the band allows.
+    let short = studio
+        .prepare_ticket(order("BTCUSDT", Side::Sell, "0.01"))
+        .await
+        .expect("ticket")
+        .draft
+        .expect("draft");
+    let placed = studio.submit_ticket(&short.id).await.expect("placed");
+    assert!(
+        placed.receipts[&short.id].starts_with("Sent on testnet: sell 0.01 BTCUSDT"),
+        "{}",
+        placed.receipts[&short.id]
+    );
+    let band = placed.activity[0].steps.iter().find(|s| s.name == "exchange.price_band").expect("checked");
+    assert_eq!((band.detail.as_str(), band.status), ("sell BTCUSDT", StepStatus::Ok));
+    assert_eq!(orders_sent(&server).await, 1);
+
+    // Closing that short buys at market, so the close is held back the same way. The position stays as it is.
+    let closing = studio.close_position("BTCUSDT").await.expect("close").draft.expect("draft");
+    let refused = studio.submit_ticket(&closing.id).await.expect_err("refused").to_string();
+    assert_eq!(refused, format!("{reason} Nothing was sent."));
+    assert_eq!(orders_sent(&server).await, 1);
+    assert_eq!(exchange.lock().expect("exchange").positions["BTCUSDT"].0, dec("-0.01"));
+
+    // A book with nothing on the side an order needs has no price to fill at.
+    {
+        let mut venue = exchange.lock().expect("exchange");
+        venue.book_at.clear();
+        venue.empty_books.insert("BTCUSDT".to_string());
+    }
+    let closing = studio.close_position("BTCUSDT").await.expect("close").draft.expect("draft");
+    let empty = studio.submit_ticket(&closing.id).await.expect_err("refused").to_string();
+    assert_eq!(
+        empty,
+        "A market buy cannot fill right now: the order book has no sell orders to buy from. On testnet a market's order book can sit empty for a while. Nothing was sent."
+    );
+    assert_eq!(orders_sent(&server).await, 1);
+
+    // Once the book is back near the mark price, the close drafted again goes through.
+    exchange.lock().expect("exchange").empty_books.clear();
+    let closing = studio.close_position("BTCUSDT").await.expect("close").draft.expect("draft");
+    let closed = studio.submit_ticket(&closing.id).await.expect("closed");
+    assert!(
+        closed.receipts[&closing.id].starts_with("Sent on testnet: buy 0.01 BTCUSDT"),
+        "{}",
+        closed.receipts[&closing.id]
+    );
+    assert!(exchange.lock().expect("exchange").positions.is_empty());
+}
+
+#[tokio::test]
+async fn a_price_band_that_cannot_be_checked_does_not_hold_an_order_back() {
+    // A market with no band published is not checked: the exchange decides.
+    let folder = tempfile::tempdir().expect("tempdir");
+    let (desk, server, _exchange) = trading_with(folder.path(), None, |venue| {
+        venue.no_band = true;
+        venue.book_at.insert("BTCUSDT".to_string(), dec("1.0625"));
+    })
+    .await;
+    let studio = &desk.studio;
+    let ticket = studio
+        .prepare_ticket(order("BTCUSDT", Side::Buy, "0.01"))
+        .await
+        .expect("ticket")
+        .draft
+        .expect("draft");
+    let placed = studio.submit_ticket(&ticket.id).await.expect("placed");
+    assert!(placed.receipts[&ticket.id].starts_with("Sent on testnet: buy 0.01 BTCUSDT"));
+    assert!(
+        placed.activity[0].steps.iter().all(|s| s.name != "exchange.price_band"),
+        "{:?}",
+        placed.activity[0].steps
+    );
+    assert_eq!(count(&server, "/fapi/v3/depth").await, 0, "there is no rule to read the book for");
+
+    // A band is published but the book cannot be read: the step says so, and the order goes out.
+    let folder = tempfile::tempdir().expect("tempdir");
+    let (desk, _server, exchange) = trading(folder.path(), None).await;
+    let studio = &desk.studio;
+    {
+        let mut venue = exchange.lock().expect("exchange");
+        venue.book_at.insert("BTCUSDT".to_string(), dec("1.0625"));
+        venue.fail_depth = true;
+    }
+    let ticket = studio
+        .prepare_ticket(order("BTCUSDT", Side::Buy, "0.01"))
+        .await
+        .expect("ticket")
+        .draft
+        .expect("draft");
+    let placed = studio.submit_ticket(&ticket.id).await.expect("placed");
+    assert!(placed.receipts[&ticket.id].starts_with("Sent on testnet: buy 0.01 BTCUSDT"));
+    let band = placed.activity[0].steps.iter().find(|s| s.name == "exchange.price_band").expect("a step");
+    assert_eq!(
+        (band.status, band.preview.as_str()),
+        (
+            StepStatus::Ok,
+            "Not checked: the order book or the mark price could not be read, so the exchange decides."
+        )
+    );
+}
+
+#[tokio::test]
+async fn a_band_refusal_from_the_exchange_itself_is_said_plainly() {
+    let folder = tempfile::tempdir().expect("tempdir");
+    let (desk, server, exchange) = trading(folder.path(), None).await;
+    let studio = &desk.studio;
+    // The book was near the mark price when the desk looked, and had moved by the time the order arrived.
+    exchange.lock().expect("exchange").band_race = true;
+    let ticket = studio
+        .prepare_ticket(order("BTCUSDT", Side::Buy, "0.01"))
+        .await
+        .expect("ticket")
+        .draft
+        .expect("draft");
+    let refused = studio.submit_ticket(&ticket.id).await.expect_err("refused").to_string();
+    assert_eq!(
+        refused,
+        "The best price on the other side of the book is too far from the mark price, outside the band the exchange allows for market orders, so nothing was placed (code -4131). On testnet the order book can drift away from the mark price."
+    );
+    assert_eq!(studio.snapshot().failures.get(&ticket.id), Some(&refused));
+    assert_eq!(
+        (orders_sent(&server).await, count(&server, "/fapi/v3/order").await),
+        (1, 1),
+        "sent once and not looked up: a refusal is definite"
+    );
+    assert!(exchange.lock().expect("exchange").positions.is_empty());
+}
+
+#[tokio::test]
+async fn grid_bots_hold_their_market_orders_to_the_price_band_too() {
+    let folder = tempfile::tempdir().expect("tempdir");
+    let (desk, _server, exchange) = trading(folder.path(), None).await;
+    let studio = &desk.studio;
+    let long =
+        || GridRequest { direction: GridDirection::Long, ..neutral_grid("ETH", "1700", "1900", 4, "300") };
+
+    // A long grid opens with a buy at market. With the book far above the mark price that buy would be
+    // refused, so the bot does not start and nothing is sent, not even its margin mode or leverage.
+    exchange.lock().expect("exchange").book_at.insert("ETHUSDT".to_string(), dec("1.0625"));
+    let refused = studio.start_grid(long()).await.expect_err("refused").to_string();
+    assert_eq!(
+        refused,
+        "A market buy would be refused right now: the best price to buy at, 1,913.46, is 6.3% above the mark price, 1,800.00, and the exchange takes market orders only within 2% of it. On testnet the order book can drift away from the mark price. Nothing was sent."
+    );
+    assert!(exchange.lock().expect("exchange").changes.is_empty());
+    let snapshot = studio.snapshot();
+    assert!(snapshot.grids.is_empty(), "a bot that placed nothing is not kept");
+    assert_eq!(
+        snapshot.activity[0].steps.iter().map(|s| (s.name.as_str(), s.status)).collect::<Vec<_>>(),
+        [("exchange.price_band", StepStatus::Error)]
+    );
+
+    // With the book back near the mark price the bot starts, and buys its position.
+    exchange.lock().expect("exchange").book_at.clear();
+    let started = studio.start_grid(long()).await.expect("started");
+    let id = started.grids[0].id.clone();
+    assert_eq!(started.grids[0].status, GridStatus::Running);
+    assert!(exchange.lock().expect("exchange").positions.contains_key("ETHUSDT"));
+
+    // Stopping it with Close position sells at market. With the book far below the mark price that sell
+    // would be refused: the bot's orders are cancelled, the close is not sent, and the bot's note says why.
+    exchange.lock().expect("exchange").book_at.insert("ETHUSDT".to_string(), dec("0.94"));
+    let before = exchange.lock().expect("exchange").changes.len();
+    let stopped = studio.stop_grid(&id, true).await.expect("stopped");
+    let bot = stopped.grids.iter().find(|bot| bot.id == id).expect("the bot");
+    assert_eq!(bot.status, GridStatus::Stopped);
+    assert!(
+        bot.last_note.ends_with(
+            "Could not close the position: A market sell would be refused right now: the best price to sell at, 1,691.15, is 6% below the mark price, 1,800.00, and the exchange takes market orders only within 2% of it. On testnet the order book can drift away from the mark price."
+        ),
+        "{}",
+        bot.last_note
+    );
+    let venue = exchange.lock().expect("exchange");
+    let sent = &venue.changes[before..];
+    assert!(sent.iter().all(|change| !change.starts_with("POST order")), "{sent:?}");
+    assert!(
+        sent.iter().any(|change| change.starts_with("DELETE order")),
+        "its orders were cancelled: {sent:?}"
+    );
+    assert!(venue.positions.contains_key("ETHUSDT"), "the position is still open");
 }
 
 #[tokio::test]

@@ -30,7 +30,7 @@ use crate::assistant::tools::{estimate_liquidation, stop_inside_liquidation};
 use crate::connect;
 use crate::error::{DeskError, Result};
 use crate::exchange::signing::{Address, AgentKey};
-use crate::exchange::{ExchangeClient, Markets, OrderKind, OrderRequest, Placement, Wallet};
+use crate::exchange::{ExchangeClient, Markets, OrderKind, OrderRequest, Placement, Wallet, band_refusal};
 use crate::grid::{GridBot, GridStatus};
 use crate::indicators::{MIN_BARS, analyze};
 use crate::instruments::{DEFAULT_SYMBOL, default_watchlist};
@@ -480,6 +480,61 @@ async fn timed<T>(
         preview: result.as_ref().err().map(|error| error.0.clone()).unwrap_or_default(),
     });
     result
+}
+
+/// Levels read from each side of the book for the price band check. Only the best one counts.
+const BAND_LEVELS: usize = 5;
+/// The step that checks a market order against the exchange's price band.
+const BAND_STEP: &str = "exchange.price_band";
+
+/// Checks a market order against the band the exchange keeps market orders in, before the order is
+/// sent, and records the check as a step.
+///
+/// The exchange takes a market order only while the best price on the other side of the book is near
+/// the mark price (see [`band_refusal`]), so the top of the book and the mark price are read fresh. An
+/// order it would refuse is refused here instead, with the reason, and is not sent. A market without a
+/// band is not checked, and a reading that fails does not hold the order back: the exchange decides then.
+async fn check_band(
+    client: &ExchangeClient,
+    symbol: &str,
+    side: Side,
+    steps: &mut Vec<StepView>,
+) -> Result<()> {
+    // The band is one of the market's rules, which are kept for a while.
+    // Rules that cannot be read are not checked.
+    let limit = match (client.market(symbol).await, side) {
+        (Ok(market), Side::Buy) => market.band_up,
+        (Ok(market), Side::Sell) => market.band_down,
+        (Err(_), _) => None,
+    };
+    let Some(limit) = limit else {
+        return Ok(());
+    };
+    let started = Instant::now();
+    let (book, premium) = tokio::join!(client.depth(symbol, BAND_LEVELS), client.premium(symbol));
+    let (refusal, preview) = match (book, premium) {
+        (Ok(book), Ok(premium)) => {
+            let refusal = band_refusal(client.network(), side, &book, premium.mark, limit);
+            let preview = refusal.clone().unwrap_or_default();
+            (refusal, preview)
+        }
+        _ => (
+            None,
+            "Not checked: the order book or the mark price could not be read, so the exchange decides."
+                .to_string(),
+        ),
+    };
+    steps.push(StepView {
+        name: BAND_STEP.to_string(),
+        detail: format!("{side} {symbol}"),
+        status: if refusal.is_some() { StepStatus::Error } else { StepStatus::Ok },
+        ms: started.elapsed().as_millis() as u64,
+        preview,
+    });
+    match refusal {
+        Some(reason) => Err(DeskError::new(reason)),
+        None => Ok(()),
+    }
 }
 
 impl Studio {
@@ -1876,6 +1931,11 @@ impl Studio {
                     error.0
                 );
             }
+        }
+        // Opening, adding, reducing or closing, the order goes out at market.
+        // Look at the book before anything is sent.
+        if let Err(refusal) = check_band(client, symbol, draft.side, steps).await {
+            bail!("{} Nothing was sent.", refusal.0);
         }
         if draft.kind == DraftKind::Open {
             if live.is_none_or(|p| p.isolated != draft.isolated) {

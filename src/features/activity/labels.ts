@@ -4,6 +4,7 @@ import type { IconName } from "../../components/Icon";
 import { units } from "../../lib/format";
 import type { ActivityFilter, ActivityItem, ActivityKind, GridAction } from "../../lib/history";
 import type { JournalOutcome } from "../../lib/journal";
+import { ticketFailure } from "../../lib/ticket";
 
 export type Tone = "up" | "down" | "warn" | undefined;
 
@@ -77,7 +78,11 @@ export function eventTitle(item: ActivityItem): string {
   const amount = record.qty && record.base ? `${units(record.qty)} ${record.base}` : null;
   if (item.kind === "order" && record.side && amount) {
     if (record.status === "complete") return `${record.side === "buy" ? "Bought" : "Sold"} ${amount}`;
-    if (record.status === "failed") return `${record.side === "buy" ? "Buy" : "Sell"} ${amount} did not go through`;
+    if (record.status === "failed") {
+      // An order whose answer was lost may have gone through after all.
+      const outcome = ticketFailure(record.summary) === "unconfirmed" ? "not confirmed" : "did not go through";
+      return `${record.side === "buy" ? "Buy" : "Sell"} ${amount} ${outcome}`;
+    }
   }
   if (item.kind === "ticket" && amount) {
     const what = record.reduceOnly ? "Reduce" : record.side === "buy" ? "Long" : "Short";
@@ -88,11 +93,20 @@ export function eventTitle(item: ActivityItem): string {
 
 /** Where an event stands, as a chip. */
 export function eventStatus(item: ActivityItem): { label: string; tone: Tone } {
-  const { status } = item.record;
+  const { status, summary } = item.record;
+  const orderLike = item.kind === "ticket" || item.kind === "order";
+  // An order whose answer was lost may exist, so it is neither placed nor failed.
+  if (status === "failed" && orderLike && ticketFailure(summary) === "unconfirmed") {
+    return { label: "Unconfirmed", tone: "warn" };
+  }
   if (item.kind === "ticket") {
     if (status === "pending") return { label: "Waiting for you", tone: "warn" };
     if (status === "complete") return { label: "Placed", tone: "up" };
-    if (status === "failed") return { label: "Not sent", tone: "down" };
+    if (status === "failed") {
+      return ticketFailure(summary) === "unfilled"
+        ? { label: "Not filled", tone: "down" }
+        : { label: "Not placed", tone: "down" };
+    }
     if (status === "expired") return { label: "Expired", tone: undefined };
   }
   if (status === "failed") return { label: "Failed", tone: "down" };

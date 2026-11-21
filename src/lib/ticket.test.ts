@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Snapshot, TicketView } from "../api/types";
-import { confirmLabel, ticketAction, ticketStatus } from "./ticket";
+import { confirmLabel, failureTitle, ticketAction, ticketFailure, ticketStatus } from "./ticket";
 
 const ticket: TicketView = {
   id: "a3f9c2e17b604d55a3f9c2e17b604d55",
@@ -55,6 +55,38 @@ describe("ticketStatus", () => {
   it("keeps a sent ticket done after a newer draft arrives", () => {
     const snapshot = snapshotWith({ draft: { ...ticket, id: "newer" }, receipts: { [ticket.id]: "Sent." } });
     expect(ticketStatus(ticket, snapshot)).toEqual({ state: "done", note: "Sent." });
+  });
+});
+
+describe("failureTitle", () => {
+  // The reasons as the core words them.
+  const id = ticket.id;
+  const lost = `The exchange did not say whether it took the order (HTTP 503). The order may or may not have reached the exchange. Check your open orders and positions for client ID ${id} before sending it again.`;
+  const absent = `The exchange did not say whether it took the order (HTTP 503). The exchange shows no order with client ID ${id}, so it was most likely not placed. Check your positions before sending it again.`;
+  const banded =
+    "A market buy would be refused right now: the best price to buy at, 61,651.90, is 6.3% above the mark price, 58,008.70, and the exchange takes market orders only within 2% of it. On testnet the order book can drift away from the mark price. Nothing was sent.";
+  const empty =
+    "A market sell cannot fill right now: the order book has no buy orders to sell to. On testnet a market's order book can sit empty for a while. Nothing was sent.";
+  const refused =
+    "The best price on the other side of the book is too far from the mark price, outside the band the exchange allows for market orders, so nothing was placed (code -4131). On testnet the order book can drift away from the mark price.";
+  const stale = "The BTCUSDT position changed after this ticket was drafted. Nothing was sent; draft it again.";
+  const unfilled = "The exchange took the order but did not fill it (status expired). Nothing was opened or closed.";
+
+  it("calls an order unconfirmed only when it may exist after all", () => {
+    expect(ticketFailure(lost)).toBe("unconfirmed");
+    expect(failureTitle(lost)).toBe("Order unconfirmed.");
+  });
+
+  it("says an order was not placed when it was refused, stopped before it was sent, or left no trace", () => {
+    for (const note of [banded, empty, refused, stale, absent, "Exchange: Margin is insufficient (code -2019)"]) {
+      expect(ticketFailure(note)).toBe("unplaced");
+      expect(failureTitle(note)).toBe("Order not placed.");
+    }
+  });
+
+  it("says an order the exchange took without filling was not filled", () => {
+    expect(ticketFailure(unfilled)).toBe("unfilled");
+    expect(failureTitle(unfilled)).toBe("Order not filled.");
   });
 });
 

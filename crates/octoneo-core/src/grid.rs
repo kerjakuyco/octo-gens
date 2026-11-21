@@ -642,6 +642,8 @@ mod tests {
             max_qty: dec("100"),
             min_notional: dec("5"),
             maint_margin: dec("0.005"),
+            band_up: None,
+            band_down: None,
         }
     }
 

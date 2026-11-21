@@ -181,6 +181,12 @@ pub struct Market {
     pub min_notional: Decimal,
     /// Maintenance margin as a fraction of position value at the lowest tier.
     pub maint_margin: Decimal,
+    /// The exchange takes a market buy only while the best ask is at most this multiple of the
+    /// mark price. `None` where it publishes no such band.
+    pub band_up: Option<Decimal>,
+    /// The exchange takes a market sell only while the best bid is at least this multiple of the
+    /// mark price. `None` where it publishes no such band.
+    pub band_down: Option<Decimal>,
 }
 
 impl Market {
@@ -493,6 +499,8 @@ mod tests {
             max_qty: dec("120"),
             min_notional: dec("5"),
             maint_margin: dec("0.025"),
+            band_up: None,
+            band_down: None,
         }
     }
 

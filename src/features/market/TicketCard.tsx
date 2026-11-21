@@ -3,7 +3,7 @@ import type { TicketView } from "../../api/types";
 import { Icon } from "../../components/Icon";
 import { leverage, money, price, units } from "../../lib/format";
 import { instrumentFor } from "../../lib/market";
-import { confirmLabel, ticketAction, ticketStatus } from "../../lib/ticket";
+import { confirmLabel, failureTitle, ticketAction, ticketStatus } from "../../lib/ticket";
 import { dismissTicket, focusMarket, submitTicket, useApp, useSnapshot } from "../../state/app";
 
 function Line({ label, children }: { label: string; children: ReactNode }) {
@@ -106,7 +106,7 @@ export function TicketCard({ ticket }: { ticket: TicketView }) {
         <p className="note" data-tone="warn" role="alert">
           <Icon name="alert" size={16} />
           <span>
-            <strong>Order unconfirmed.</strong> {status.note}
+            <strong>{failureTitle(status.note)}</strong> {status.note}
           </span>
         </p>
       ) : null}

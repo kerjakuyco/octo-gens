@@ -12,6 +12,10 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 - **macOS keeps OctoNeo's keychain access across updates.** Releases are signed with a lasting OctoNeo certificate, so macOS no longer asks again for the keys OctoNeo keeps in the keychain each time the app updates. Coming from an earlier version, it asks once more.
 
+### Fixed
+
+- **Market orders the exchange would refuse.** Before a market order goes out, from a ticket, the Account page or a grid bot, OctoNeo now checks the order book against the band around the mark price that the exchange allows, and when the order would be refused it says so with the prices instead of sending it. Testnet order books can drift away from the mark price, which made every market buy there fail with code -4131. A refused order now reads **Order not placed**; **Order unconfirmed** is kept for an order whose outcome is unknown.
+
 ## 0.10.1
 
 The wallet pages, redesigned, and every market in the order form and on Grid bots.
