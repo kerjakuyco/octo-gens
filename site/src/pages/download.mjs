@@ -176,7 +176,7 @@ ${facts([
         {
           id: "updates",
           title: "Updates and help",
-          body: `<p>OctoNeo checks GitHub for a newer release when it starts. When one is out, a note in the sidebar and Settings, About &amp; Updates show its release notes and link to the download, and you can skip a version you do not want. Fixes are released for the latest version only, so keep the app up to date. The ${out(doc("CHANGELOG.md"), "changelog")} lists what changed in each version. To report a bug or suggest an idea, open an ${out(ISSUES, "issue on GitHub")}; to report a security problem, follow the ${out(doc("SECURITY.md"), "security policy")} instead.</p>
+          body: `<p>OctoNeo looks for a new version when it starts and every six hours, downloads it in the background, and installs it when you choose to restart, after checking it against the release’s signature, on Windows, macOS and Linux. Settings, About &amp; Updates shows the release notes and the progress, and automatic downloads can be turned off. Coming from 0.10.1 or earlier, install the new version from this page once; later ones arrive by themselves. Fixes are released for the latest version only, so keep the app up to date. The ${out(doc("CHANGELOG.md"), "changelog")} lists what changed in each version. To report a bug or suggest an idea, open an ${out(ISSUES, "issue on GitHub")}; to report a security problem, follow the ${out(doc("SECURITY.md"), "security policy")} instead.</p>
 <p>The source is at ${out(REPO, "github.com/kerjakuyco/octo-neo")}.</p>`,
         },
       ],

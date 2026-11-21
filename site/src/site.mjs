@@ -6,7 +6,7 @@ export const SPONSOR = "https://github.com/sponsors/kerjakuyco";
 export const ISSUES = `${REPO}/issues`;
 export const ADVISORY = `${REPO}/security/advisories/new`;
 export const TRADINGVIEW = "https://www.tradingview.com";
-export const VERSION = "0.10.1";
+export const VERSION = "0.10.2";
 
 /** A file in the repository, on GitHub. */
 export const doc = (path, anchor = "") => `${REPO}/blob/main/${path}${anchor ? `#${anchor}` : ""}`;

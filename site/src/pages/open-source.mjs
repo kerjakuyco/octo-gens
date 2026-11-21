@@ -236,6 +236,7 @@ ${shell([
             head: ["Version", "What changed"],
             stack: true,
             rows: [
+              ["0.10.2", "Updates that install themselves: OctoNeo downloads a new version in the background, checks its signature and asks before it restarts, on Windows, macOS and Linux. Market orders are checked against the exchange’s price band before they are sent."],
               ["0.10.1", "The wallet pages, redesigned: what is about to happen before you sign, 25%, 50%, 75% and Max, and the seconds left on a timed signature. The order form and Grid bots list every market."],
               ["0.10.0", "Account and Activity, redesigned: a grid bot’s orders are marked and cancelling them asks first, and Activity shows what the app did as a timeline beside the journal."],
               ["0.9.0", "Grid bots, on their own page and in the chat, and commands in the message box for trading, research and analysis."],
