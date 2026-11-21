@@ -1052,6 +1052,29 @@
   cursor: pointer;
 }
 
+/* The contract is a button that opens the list of every market; its chevron sits inside it. */
+.trade-market-slot {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.trade-market-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 3px 6px 3px 4px;
+}
+
+.trade-market-trigger > svg {
+  flex: none;
+  color: var(--muted);
+}
+
+.trade-market-trigger[aria-expanded="true"] {
+  background: var(--surface-strong);
+}
+
 .trade-market-select:hover {
   background: var(--surface-strong);
 }

@@ -5,6 +5,7 @@ import { Segmented } from "../../components/Segmented";
 import { direction as tone, fundingRate, money, percent, price } from "../../lib/format";
 import { GRID_MAX_COUNT, GRID_MIN_COUNT } from "../../lib/grid";
 import { focusMarket, openSettings, prefillComposer, useSnapshot } from "../../state/app";
+import { MarketChip, useCatalog } from "../chat/MarketPicker";
 import { InstrumentMark } from "../market/InstrumentMark";
 import { DIRECTIONS, SPACINGS, directionTone } from "./labels";
 import type { GridForm } from "./useGridForm";
@@ -151,24 +152,25 @@ export function GridBuilder({ form, canTrade, available, maxLeverage, reviewing,
       <div className="gb-market">
         <InstrumentMark base={instrument.base} />
         <div className="gb-market-pick">
-          <label htmlFor={ids.market} className="visually-hidden">
-            Market
-          </label>
-          <select
-            id={ids.market}
-            className="input gb-market-select"
+          <MarketChip
+            label="Market"
             value={form.symbol}
-            onChange={(event) => form.setSymbol(event.target.value)}
-          >
-            {form.markets.map((item) => (
-              <option key={item.symbol} value={item.symbol}>
-                {item.base} / {item.quote || "USDT"}
-              </option>
-            ))}
-          </select>
+            positionsOnly={false}
+            onPick={(symbol) => form.setSymbol(symbol)}
+            slotClass="gb-market-slot"
+            triggerClass="gb-market-trigger"
+            trigger={
+              <>
+                <span className="truncate">
+                  {instrument.base} / {instrument.quote || "USDT"}
+                </span>
+                <Icon name="chevronDown" size={14} />
+              </>
+            }
+          />
           <p className="gb-market-facts num">
             <span>
-              <span className="muted">Price</span> {quote ? price(form.mark) : "—"}
+              <span className="muted">Price</span> {form.mark > 0 ? price(form.mark) : "—"}
             </span>
             <QuoteFacts symbol={form.symbol} />
           </p>
@@ -400,9 +402,11 @@ export function GridBuilder({ form, canTrade, available, maxLeverage, reviewing,
   );
 }
 
-/** The day's change and the funding rate of the market picked, from the latest quote. */
+/** The day's change and the funding rate of the market picked, from its quote or the list of every market. */
 function QuoteFacts({ symbol }: { symbol: string }) {
-  const quote = useSnapshot().quotes[symbol];
+  const snapshot = useSnapshot();
+  const row = useCatalog(snapshot.network).rows?.find((item) => item.symbol === symbol);
+  const quote = snapshot.quotes[symbol] ?? row;
   return (
     <>
       <span>

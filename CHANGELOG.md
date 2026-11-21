@@ -4,6 +4,10 @@ Notable changes to OctoNeo. The format follows [Keep a Changelog](https://keepac
 
 ## Unreleased
 
+### Fixed
+
+- **Every market in the order form and on Grid bots.** Both listed only the markets on your watchlist. They now open a searchable list of every market the exchange lists, the watchlist first and then the most traded, each with its price and its move today, and a market off the watchlist is loaded with its own price, funding and levels once picked.
+
 ## 0.10.0
 
 Account and Activity, redesigned around your positions and your grid bots.

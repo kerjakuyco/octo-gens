@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import type { GridBotView, GridDirection, GridRequest, GridSpacing, InstrumentView } from "../../api/types";
+import type { GridBotView, GridDirection, GridRequest, GridSpacing, InstrumentView, Network } from "../../api/types";
+import { loadCatalog, useCatalog } from "../chat/MarketPicker";
 import {
   GRID_MAX_COUNT,
   GRID_MIN_COUNT,
@@ -15,7 +16,7 @@ import {
 } from "../../lib/grid";
 import { usePolled } from "../../lib/hooks";
 import { instrumentFor } from "../../lib/market";
-import { request, useApp, useSnapshot } from "../../state/app";
+import { request, selectSymbol, useApp, useSnapshot } from "../../state/app";
 
 /** How far either side of the price a new range starts. */
 const DEFAULT_HALF_RANGE = 0.06;
@@ -104,16 +105,20 @@ export function useGridForm(): GridForm {
     return list;
   }, [snapshot, preferred]);
 
-  const [picked, setPicked] = useState<string | null>(null);
-  const symbol =
-    (picked && markets.some((item) => item.symbol === picked) ? picked : null) ??
-    (preferred && markets.some((item) => item.symbol === preferred) ? preferred : null) ??
-    (markets.some((item) => item.symbol === snapshot.focus) ? snapshot.focus : null) ??
-    markets[0]?.symbol ??
-    "BTCUSDT";
+  // Any market the exchange lists can be picked, not only the watchlist. A pick belongs to its network:
+  // after a switch it stays only if the watchlist there has it, so the form never shows a market not listed.
+  const [picked, setPicked] = useState<{ symbol: string; network: Network } | null>(null);
+  const kept =
+    picked && (picked.network === snapshot.network || markets.some((item) => item.symbol === picked.symbol))
+      ? picked.symbol
+      : null;
+  const symbol = kept ?? preferred ?? (snapshot.focus || markets[0]?.symbol || "BTCUSDT");
   const instrument = instrumentFor(snapshot, symbol);
   const quote = snapshot.quotes[symbol];
-  const mark = Number(quote?.markPrice ?? quote?.price ?? 0) || 0;
+  // A market off the watchlist has no quote until it is loaded; the list of every market has its price meanwhile.
+  const catalog = useCatalog(snapshot.network);
+  const row = catalog.rows?.find((item) => item.symbol === symbol);
+  const mark = Number(quote?.markPrice ?? quote?.price ?? row?.markPrice ?? row?.price ?? 0) || 0;
 
   const [direction, setDirectionRaw] = useState<GridDirection>("neutral");
   const [spacing, setSpacingRaw] = useState<GridSpacing>("arithmetic");
@@ -202,7 +207,10 @@ export function useGridForm(): GridForm {
     stopAbovePrice,
 
     setSymbol: (next) => {
-      setPicked(next);
+      setPicked({ symbol: next, network: snapshot.network });
+      loadCatalog(snapshot.network);
+      // The market's own quote, funding and levels come once it is the one in focus, as on its page.
+      if (!snapshot.quotes[next]) void selectSymbol(next);
       setLowerDraft(null);
       setUpperDraft(null);
       setStart("");
@@ -247,7 +255,7 @@ export function useGridForm(): GridForm {
       setSuggestion(next.id);
     },
     reuse: (bot) => {
-      setPicked(bot.symbol);
+      setPicked({ symbol: bot.symbol, network: bot.network });
       setDirectionRaw(bot.direction);
       setSpacingRaw(bot.spacing);
       setLowerDraft(bot.lowerPrice);

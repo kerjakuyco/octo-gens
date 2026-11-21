@@ -315,6 +315,46 @@
   border-color: var(--border-strong);
 }
 
+/* The market: a button that opens the list of every market, drawn like the field it replaced. */
+.gb-market-slot {
+  display: inline-flex;
+  min-width: 0;
+  justify-self: start;
+}
+
+.gb-market-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  height: 28px;
+  padding: 0 8px 0 6px;
+  border: 1px solid transparent;
+  border-radius: var(--r-small);
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  transition:
+    border-color var(--t-fast),
+    background-color var(--t-fast);
+}
+
+.gb-market-trigger:hover,
+.gb-market-trigger[aria-expanded="true"] {
+  border-color: var(--border-strong);
+}
+
+.gb-market-trigger > svg {
+  flex: none;
+  color: var(--faint);
+  transition: transform var(--t-base) var(--ease-out);
+}
+
+.gb-market-trigger[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+
 .gb-market-facts {
   display: flex;
   flex-wrap: wrap;

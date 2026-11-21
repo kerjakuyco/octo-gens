@@ -1,6 +1,7 @@
 import {
   type CSSProperties,
   type KeyboardEvent,
+  type ReactNode,
   useEffect,
   useId,
   useLayoutEffect,
@@ -245,17 +246,38 @@ interface MarketChipProps {
   positionsOnly: boolean;
   onPick: (symbol: string) => void;
   /** Hands the keyboard back to the message box once a market is picked. */
-  onDone: () => void;
+  onDone?: () => void;
   style?: CSSProperties;
+  /** What the button shows instead of the chip's mark and name, for a form that draws its own field. */
+  trigger?: ReactNode;
+  /** The button's class, in place of the chip's. */
+  triggerClass?: string;
+  /** The wrapper's class, in place of the chip's slot. */
+  slotClass?: string;
 }
 
-/** A command's market, as a chip that opens a searchable list of markets. */
-export function MarketChip({ label, value, prefix, positionsOnly, onPick, onDone, style }: MarketChipProps) {
+/**
+ * A market, as a button that opens a searchable list of every market: the watchlist first, then the
+ * rest, most traded first. The message box draws it as a chip; a form can give it its own look.
+ */
+export function MarketChip({
+  label,
+  value,
+  prefix,
+  positionsOnly,
+  onPick,
+  onDone = () => {},
+  style,
+  trigger,
+  triggerClass = "cmd-chip",
+  slotClass = "cmd-chip-slot",
+}: MarketChipProps) {
   const snapshot = useSnapshot();
   const catalog = useCatalog(snapshot.network);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [active, setActive] = useState(0);
+  /** The highlighted option; null keeps it on the market already chosen. */
+  const [active, setActive] = useState<number | null>(null);
   const presence = usePresence(open, 120);
   const button = useRef<HTMLButtonElement>(null);
   const pop = useRef<HTMLDivElement>(null);
@@ -267,23 +289,24 @@ export function MarketChip({ label, value, prefix, positionsOnly, onPick, onDone
     () => marketOptions(snapshot, catalog.rows, query, positionsOnly),
     [snapshot, catalog.rows, query, positionsOnly],
   );
-  const index = items.length > 0 ? Math.min(active, items.length - 1) : -1;
+  // A market off the watchlist is only listed once every market is read, which may be after the list opens.
+  // Until then nothing is highlighted, so Enter cannot swap it for another market.
+  const chosen = active === null ? items.findIndex((option) => option.symbol === value) : -1;
+  const waiting = active === null && chosen < 0 && catalog.loading;
+  const index = items.length > 0 && !waiting ? Math.min(active ?? Math.max(0, chosen), items.length - 1) : -1;
   const name = marketName(value);
 
   function close(refocus: "chip" | "field" | "none") {
     setOpen(false);
     setQuery("");
-    setActive(0);
+    setActive(null);
     if (refocus === "chip") button.current?.focus();
     else if (refocus === "field") onDone();
   }
 
   function show() {
     loadCatalog(snapshot.network);
-    const start = marketOptions(snapshot, catalog.rows, "", positionsOnly).items.findIndex(
-      (option) => option.symbol === value,
-    );
-    setActive(Math.max(0, start));
+    setActive(null);
     setQuery("");
     setOpen(true);
   }
@@ -352,21 +375,25 @@ export function MarketChip({ label, value, prefix, positionsOnly, onPick, onDone
   }
 
   return (
-    <span className="cmd-chip-slot" style={style}>
+    <span className={slotClass} style={style}>
       <button
         ref={button}
         type="button"
-        className="cmd-chip"
+        className={triggerClass}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? popId : undefined}
         aria-label={`${label}: ${name}`}
         onClick={() => (open ? close("none") : show())}
       >
-        {prefix ? <span className="cmd-chip-prefix">{prefix}</span> : null}
-        <InstrumentMark base={baseOf(value)} size="sm" />
-        <span className="truncate">{name}</span>
-        <Icon name="chevronDown" size={13} />
+        {trigger ?? (
+          <>
+            {prefix ? <span className="cmd-chip-prefix">{prefix}</span> : null}
+            <InstrumentMark base={baseOf(value)} size="sm" />
+            <span className="truncate">{name}</span>
+            <Icon name="chevronDown" size={13} />
+          </>
+        )}
       </button>
       {presence.mounted ? (
         <div ref={pop} id={popId} className="mk-pop" data-state={presence.closing ? "closing" : "open"}>

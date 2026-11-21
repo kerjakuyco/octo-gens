@@ -22,9 +22,11 @@ import {
   closeTrade,
   openSettings,
   prepareTicket,
+  selectSymbol,
   useApp,
   useSnapshot,
 } from "../../state/app";
+import { MarketChip, loadCatalog, useCatalog } from "../chat/MarketPicker";
 import { InstrumentMark } from "./InstrumentMark";
 import { TicketCard } from "./TicketCard";
 
@@ -141,7 +143,9 @@ function TradeForm({
   const wallet = activeWallet(snapshot);
   const instrument = instrumentFor(snapshot, symbol);
   const quote = instrument.quote || "USDT";
-  const quoteRow = snapshot.quotes[symbol] ?? null;
+  // A market off the watchlist has no quote until it is loaded; the list of every market has its price meanwhile.
+  const catalogRow = useCatalog(snapshot.network).rows?.find((item) => item.symbol === symbol) ?? null;
+  const quoteRow = snapshot.quotes[symbol] ?? catalogRow;
   const markPrice = Number(quoteRow?.markPrice ?? quoteRow?.price ?? 0);
   const hasMark = Number.isFinite(markPrice) && markPrice > 0;
   const available = Number(account?.available ?? 0);
@@ -149,14 +153,6 @@ function TradeForm({
   const position = account?.positions.find((item) => item.symbol === symbol) ?? null;
   const marginMode = account?.multiAssets ? "Cross" : risk.isolated ? "Isolated" : "Cross";
   const isMainnet = snapshot.network === "mainnet";
-
-  const markets = useMemo(
-    () =>
-      snapshot.instruments.some((item) => item.symbol === symbol)
-        ? snapshot.instruments
-        : [instrumentFor(snapshot, symbol), ...snapshot.instruments],
-    [snapshot, symbol],
-  );
 
   const ticks = useMemo(() => leverageTicks(risk.maxLeverage), [risk.maxLeverage]);
   const clampedLeverage = Math.min(Math.max(1, leverage), risk.maxLeverage);
@@ -317,31 +313,31 @@ function TradeForm({
         <div className="trade-contract">
           <div className="trade-market-pick">
             <InstrumentMark base={instrument.base} size="sm" />
-            <div className="trade-market-select-wrap">
-              <label className="visually-hidden" htmlFor={ids.market}>
-                Contract
-              </label>
-              <select
-                id={ids.market}
-                name="symbol"
-                className="trade-market-select"
-                value={symbol}
-                onChange={(event) => {
-                  setSymbol(event.target.value);
-                  setStopLoss("");
-                  setTakeProfit("");
-                  setTouched({});
-                  setSubmitted(false);
-                }}
-              >
-                {markets.map((item) => (
-                  <option key={item.symbol} value={item.symbol}>
-                    {item.base}-{item.quote || "USDT"} Perp
-                  </option>
-                ))}
-              </select>
-              <Icon name="chevronDown" size={14} />
-            </div>
+            <MarketChip
+              label="Contract"
+              value={symbol}
+              positionsOnly={false}
+              slotClass="trade-market-slot"
+              triggerClass="trade-market-select trade-market-trigger"
+              trigger={
+                <>
+                  <span className="truncate">
+                    {instrument.base}-{quote} Perp
+                  </span>
+                  <Icon name="chevronDown" size={14} />
+                </>
+              }
+              onPick={(next) => {
+                setSymbol(next);
+                setStopLoss("");
+                setTakeProfit("");
+                setTouched({});
+                setSubmitted(false);
+                loadCatalog(snapshot.network);
+                // Its own quote and limits come once it is the market in focus, as on its page.
+                if (!snapshot.quotes[next]) void selectSymbol(next);
+              }}
+            />
             {hasMark ? (
               <div className="trade-mark-meta num">
                 <span className="trade-mark-price">{price(markPrice)}</span>
